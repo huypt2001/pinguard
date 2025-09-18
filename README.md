@@ -7,7 +7,6 @@ PinGuard is a comprehensive, enterprise-grade security scanning and remediation 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![Build Status](https://github.com/reicalasso/pinGuard/workflows/CI/badge.svg)](https://github.com/reicalasso/pinGuard/actions)
-[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](https://hub.docker.com/r/pinguard/pinguard)
 [![Release](https://img.shields.io/github/v/release/reicalasso/pinGuard)](https://github.com/reicalasso/pinGuard/releases)
 
 ## 🚀 Key Features
@@ -94,31 +93,14 @@ pinGuard --version
 
 ### **Package Manager Installation**
 
-#### Debian/Ubuntu
-```bash
-# Add PinGuard repository
-echo "deb [trusted=yes] https://apt.pinguard.dev/ stable main" | sudo tee /etc/apt/sources.list.d/pinguard.list
-sudo apt update
+> **Note**: Official package repositories are coming soon! For now, please use the Quick Install script or pre-built binaries below.
 
-# Install PinGuard
-sudo apt install pinguard
-```
-
-#### CentOS/RHEL/Fedora
-```bash
-# Add PinGuard repository
-sudo tee /etc/yum.repos.d/pinguard.repo << EOF
-[pinguard]
-name=PinGuard Repository
-baseurl=https://rpm.pinguard.dev/stable
-enabled=1
-gpgcheck=1
-gpgkey=https://rpm.pinguard.dev/pubkey.gpg
-EOF
-
-# Install PinGuard
-sudo dnf install pinguard  # or sudo yum install pinguard
-```
+#### Future Package Manager Support
+- **Debian/Ubuntu**: `apt install pinguard` (Coming in v0.2.0)
+- **CentOS/RHEL/Fedora**: `dnf install pinguard` (Coming in v0.2.0)
+- **Arch Linux**: `pacman -S pinguard` (Coming in v0.2.0)
+- **Snap**: `snap install pinguard` (Coming in v0.2.0)
+- **Homebrew**: `brew install pinguard` (Coming in v0.3.0)
 
 ### **Pre-built Binaries**
 
@@ -174,15 +156,20 @@ sudo cp ../config.example.yaml /etc/pinGuard/config.yaml
 
 Perfect for containerized environments and quick testing:
 
+> **Note**: Official Docker images will be available on GitHub Container Registry after CI/CD pipeline setup.
+
+#### Building Local Docker Image
 ```bash
-# Pull the latest official image
-docker pull ghcr.io/reicalasso/pinguard:latest
+# Clone and build Docker image locally
+git clone https://github.com/reicalasso/pinGuard.git
+cd pinGuard
+docker build -f docker/Dockerfile -t pinguard:latest .
 
 # Quick system scan (read-only host mount)
 docker run --rm --privileged \
   -v /:/host:ro \
   -v $(pwd)/reports:/app/reports \
-  ghcr.io/reicalasso/pinguard:latest \
+  pinguard:latest \
   scan --output /app/reports/scan_results.json
 
 # Interactive mode with persistent configuration
@@ -190,18 +177,20 @@ docker run -it --privileged \
   -v /:/host:ro \
   -v pinguard-config:/etc/pinGuard \
   -v pinguard-data:/var/lib/pinGuard \
-  ghcr.io/reicalasso/pinguard:latest bash
+  pinguard:latest bash
 ```
 
-#### Docker Compose Setup
+#### Docker Compose Setup (Local Build)
 
-Create a `docker-compose.yml` for production deployment:
+Create a `docker-compose.yml` for development:
 
 ```yaml
 version: '3.8'
 services:
   pinguard:
-    image: ghcr.io/reicalasso/pinguard:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
     privileged: true
     volumes:
       - /:/host:ro
@@ -217,6 +206,10 @@ volumes:
   pinguard-config:
   pinguard-data:
 ```
+
+#### Future Official Images
+- **GitHub Container Registry**: `ghcr.io/reicalasso/pinguard:latest` (Coming soon)
+- **Docker Hub**: `pinguard/pinguard:latest` (Coming in v0.2.0)
 
 ## 🚀 Quick Start
 
@@ -533,6 +526,12 @@ Security is our top priority. Please see [SECURITY.md](SECURITY.md) for:
 - Security best practices
 
 ## 🗺️ Roadmap
+
+### **Version 0.1.1** (Q4 2025)
+- [ ] **Official Docker Images**: GitHub Container Registry and Docker Hub publishing
+- [ ] **Package Repositories**: APT, YUM, and Snap package distribution
+- [ ] **CI/CD Pipeline**: Automated building and testing
+- [ ] **Binary Releases**: Automated GitHub releases with checksums
 
 ### **Version 0.2.0** (Q4 2025)
 - [ ] **Enhanced Compliance Reporting**: Full CIS Benchmark, NIST CSF, ISO 27001 support
