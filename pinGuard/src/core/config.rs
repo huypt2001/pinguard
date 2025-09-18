@@ -27,6 +27,7 @@ pub struct ScannerConfig {
     pub enabled_modules: Vec<String>,
     pub package_audit: PackageAuditConfig,
     pub kernel_check: KernelCheckConfig,
+    pub web_security: WebSecurityConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,6 +41,18 @@ pub struct PackageAuditConfig {
 pub struct KernelCheckConfig {
     pub check_eol: bool,
     pub check_patches: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebSecurityConfig {
+    pub enabled: bool,
+    pub target_ports: Vec<u16>,
+    pub timeout_seconds: u64,
+    pub check_ssl_certificates: bool,
+    pub check_security_headers: bool,
+    pub check_server_configs: bool,
+    pub check_owasp_vulnerabilities: bool,
+    pub exclude_hosts: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,6 +125,7 @@ impl Config {
                     "user_audit".to_string(),
                     "network_audit".to_string(),
                     "container_security".to_string(),
+                    "web_security".to_string(),
                 ],
                 package_audit: PackageAuditConfig {
                     check_cve: true,
@@ -121,6 +135,16 @@ impl Config {
                 kernel_check: KernelCheckConfig {
                     check_eol: true,
                     check_patches: true,
+                },
+                web_security: WebSecurityConfig {
+                    enabled: true,
+                    target_ports: vec![80, 443, 8080, 8443, 8000, 8888, 9000, 3000, 4000, 5000],
+                    timeout_seconds: 10,
+                    check_ssl_certificates: true,
+                    check_security_headers: true,
+                    check_server_configs: true,
+                    check_owasp_vulnerabilities: true,
+                    exclude_hosts: vec![],
                 },
             },
             report: ReportConfig {

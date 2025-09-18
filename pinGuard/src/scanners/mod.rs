@@ -6,10 +6,8 @@ pub mod permission_audit;
 pub mod service_audit;
 pub mod user_audit;
 pub mod container_security;
+pub mod web_security_scanner;
 // Other modules will be added progressively
-// pub mod service_audit;
-// pub mod user_audit;
-// pub mod network_audit;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

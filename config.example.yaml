@@ -15,6 +15,7 @@ scanner:
     user_audit: true         # Audit user accounts and policies
     network_audit: true      # Check network configurations and open ports
     container_security: true # Check Docker containers and images security
+    web_security: true       # Web application security scanning
   
   # Performance settings
   concurrent_scans: true     # Run multiple scans in parallel
@@ -26,6 +27,17 @@ scanner:
   deep_scan: false          # Enable deep scanning (slower but more thorough)
   skip_system_files: false # Skip system files in permission audit
   include_dev_packages: true # Include development packages in audit
+
+  # Web Application Security Scanner settings
+  web_security:
+    enabled: true
+    target_ports: [80, 443, 8080, 8443, 8000, 8888, 9000, 3000, 4000, 5000]
+    timeout_seconds: 10
+    check_ssl_certificates: true
+    check_security_headers: true
+    check_server_configs: true
+    check_owasp_vulnerabilities: true
+    exclude_hosts: []  # Hosts to exclude from scanning
 
 # =============================================================================
 # REPORT CONFIGURATION
