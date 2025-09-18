@@ -17,9 +17,10 @@ COPY pinGuard/Cargo.toml pinGuard/Cargo.lock ./
 
 # Create a dummy main.rs to build dependencies
 RUN mkdir src && echo "fn main() {}" > src/main.rs
+RUN mkdir benches && echo 'fn main() {}' > benches/benchmarks.rs
 
 # Build dependencies (this layer will be cached)
-RUN cargo build --release && rm -rf src
+RUN cargo build --release && rm -rf src benches
 
 # Copy the actual source code
 COPY pinGuard/src ./src
