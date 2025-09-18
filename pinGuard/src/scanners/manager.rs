@@ -1,7 +1,7 @@
 use super::{ScanError, ScanResult, Scanner};
 use crate::core::config::Config;
 use crate::scanners::{
-    kernel_check::KernelCheck, network_audit::NetworkAudit, package_audit::PackageAudit,
+    kernel_check::KernelCheck, network_audit::NetworkAudit,
     permission_audit::PermissionAudit, service_audit::ServiceAudit, user_audit::UserAudit,
     container_security::ContainerSecurityScanner, web_security_scanner::WebSecurityScanner,
 };
@@ -20,7 +20,6 @@ impl Default for ScannerManager {
 impl ScannerManager {
     pub fn new() -> Self {
         let scanners: Vec<Box<dyn Scanner>> = vec![
-            Box::new(PackageAudit::new()),
             Box::new(KernelCheck),
             Box::new(PermissionAudit),
             Box::new(ServiceAudit),

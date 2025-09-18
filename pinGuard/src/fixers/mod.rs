@@ -5,13 +5,16 @@ use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 use thiserror::Error;
 
+// Legacy fixers
 pub mod firewall_configurator;
 pub mod kernel_updater;
 pub mod manager;
-pub mod package_updater;
 pub mod permission_fixer;
 pub mod service_hardener;
 pub mod user_policy_fixer;
+
+// Enhanced fixers using new trait system
+pub mod enhanced_package_updater;
 
 /// Fixer trait - every fixer module implements this trait
 pub trait Fixer {

@@ -10,4 +10,15 @@ pub mod report;
 pub mod scanners;
 pub mod scheduler;
 
-pub use scanners::{ScanError, ScanResult, Scanner};
+// Test utilities (only available during testing)
+#[cfg(test)]
+pub mod testing;
+
+// Re-export commonly used types from core
+pub use core::{
+    Category, Finding, Fixer, FixResult,
+    FixStatus, PinGuardError, PinGuardResult, ScanResult, ScanStatus, Scanner, Severity,
+};
+
+// Legacy re-exports for backward compatibility
+pub use scanners::{ScanError, ScanResult as LegacyScanResult, Scanner as LegacyScanner};

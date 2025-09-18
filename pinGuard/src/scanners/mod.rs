@@ -1,14 +1,17 @@
+// Original scanners (legacy)
 pub mod kernel_check;
 pub mod manager;
 pub mod network_audit;
-pub mod package_audit;
 pub mod permission_audit;
 pub mod service_audit;
 pub mod user_audit;
 pub mod container_security;
 pub mod web_security_scanner;
-// Other modules will be added progressively
 
+// Enhanced scanners using new trait system
+pub mod enhanced_package_audit;
+
+// Legacy re-exports for backward compatibility
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

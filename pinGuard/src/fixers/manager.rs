@@ -2,7 +2,7 @@ use super::{FixError, FixPlan, FixResult, FixStatus, Fixer};
 use crate::core::config::Config;
 use crate::fixers::{
     firewall_configurator::FirewallConfigurator, kernel_updater::KernelUpdater,
-    package_updater::PackageUpdater, permission_fixer::PermissionFixer,
+    permission_fixer::PermissionFixer,
     service_hardener::ServiceHardener, user_policy_fixer::UserPolicyFixer,
 };
 use crate::scanners::Finding;
@@ -21,7 +21,6 @@ impl Default for FixerManager {
 impl FixerManager {
     pub fn new() -> Self {
         let fixers: Vec<Box<dyn Fixer>> = vec![
-            Box::new(PackageUpdater),
             Box::new(KernelUpdater),
             Box::new(PermissionFixer),
             Box::new(ServiceHardener),
