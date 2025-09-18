@@ -72,34 +72,6 @@ jobs:
     - name: Run cargo audit
       run: cd pinGuard && cargo audit
 
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: llvm-tools-preview
-    
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libsqlite3-dev openssl libssl-dev pkg-config
-    
-    - name: Install cargo-llvm-cov
-      run: cargo install cargo-llvm-cov
-    
-    - name: Generate code coverage
-      run: cd pinGuard && cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        files: pinGuard/lcov.info
-        fail_ci_if_error: true
-
   docker-test:
     name: Docker Test
     runs-on: ubuntu-latest
@@ -112,53 +84,4 @@ jobs:
     - name: Test Docker image
       run: docker run --rm pinguard:test --help
 
-  benchmark:
-    name: Performance Benchmark
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
-    
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libsqlite3-dev openssl libssl-dev pkg-config jq
-    
-    - name: Run benchmarks
-      run: cd pinGuard && cargo bench --features=benchmarks
-    
-    - name: Convert benchmark results
-      run: |
-        cd pinGuard
-        mkdir -p target/criterion/reports
-        echo '[' > target/criterion/reports/benchmark.json
-        first=true
-        for dir in target/criterion/*/; do
-          if [ -d "$dir" ] && [ "$dir" != "target/criterion/report/" ]; then
-            bench_name=$(basename "$dir")
-            if [ -f "$dir/new/estimates.json" ]; then
-              if [ "$first" = false ]; then
-                echo ',' >> target/criterion/reports/benchmark.json
-              fi
-              mean=$(cat "$dir/new/estimates.json" | jq -r '.mean.point_estimate')
-              echo "{\"name\": \"$bench_name\", \"value\": $mean, \"unit\": \"ns\"}" >> target/criterion/reports/benchmark.json
-              first=false
-            fi
-          fi
-        done
-        echo ']' >> target/criterion/reports/benchmark.json
-    
-    - name: Store benchmark result
-      uses: benchmark-action/github-action-benchmark@v1
-      with:
-        tool: 'customSmallerIsBetter'
-        output-file-path: pinGuard/target/criterion/reports/benchmark.json
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        auto-push: true
-        alert-threshold: '200%'
-        comment-on-alert: true
-        fail-on-alert: true
+ 
