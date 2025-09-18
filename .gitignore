@@ -13,6 +13,7 @@ Cargo.lock
 
 # Configuration
 config.local.yaml
+config.yaml
 .env
 .env.local
 
