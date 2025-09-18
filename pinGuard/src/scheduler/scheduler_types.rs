@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 
 /// Schedule konfigürasyonu
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,7 +61,12 @@ impl ScheduleConfig {
 
     /// Quick scan için varsayılan config
     pub fn quick_daily(name: String, description: String) -> Self {
-        Self::new(name, description, "0 6,12,18 * * *".to_string(), ScanType::Quick)
+        Self::new(
+            name,
+            description,
+            "0 6,12,18 * * *".to_string(),
+            ScanType::Quick,
+        )
     }
 }
 

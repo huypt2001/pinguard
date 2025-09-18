@@ -41,14 +41,11 @@ pub type PinGuardResult<T> = Result<T, PinGuardError>;
 pub mod system {
     use super::PinGuardResult;
     use std::process::Command;
-    
+
     /// Get OS information
     pub fn get_os_info() -> PinGuardResult<String> {
-        let output = Command::new("lsb_release")
-            .arg("-d")
-            .arg("-s")
-            .output()?;
-            
+        let output = Command::new("lsb_release").arg("-d").arg("-s").output()?;
+
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
         } else {
@@ -57,44 +54,49 @@ pub mod system {
                 Ok(content) => {
                     for line in content.lines() {
                         if line.starts_with("PRETTY_NAME=") {
-                            return Ok(line.split('=').nth(1).unwrap_or("Unknown").trim_matches('"').to_string());
+                            return Ok(line
+                                .split('=')
+                                .nth(1)
+                                .unwrap_or("Unknown")
+                                .trim_matches('"')
+                                .to_string());
                         }
                     }
                     Ok("Unknown Linux".to_string())
-                },
+                }
                 Err(_) => Ok("Unknown".to_string()),
             }
         }
     }
-    
+
     /// Get kernel version
     pub fn get_kernel_version() -> PinGuardResult<String> {
-        let output = Command::new("uname")
-            .arg("-r")
-            .output()?;
-            
+        let output = Command::new("uname").arg("-r").output()?;
+
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
         } else {
-            Err(super::PinGuardError::ScanError("Failed to retrieve kernel version".to_string()))
+            Err(super::PinGuardError::ScanError(
+                "Failed to retrieve kernel version".to_string(),
+            ))
         }
     }
-    
+
     /// Check for root privileges
     pub fn check_root_privileges() -> bool {
         unsafe { libc::geteuid() == 0 }
     }
-    
+
     /// Get system uptime information
     pub fn get_uptime() -> PinGuardResult<String> {
-        let output = Command::new("uptime")
-            .arg("-p")
-            .output()?;
-            
+        let output = Command::new("uptime").arg("-p").output()?;
+
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
         } else {
-            Err(super::PinGuardError::ScanError("Failed to retrieve uptime information".to_string()))
+            Err(super::PinGuardError::ScanError(
+                "Failed to retrieve uptime information".to_string(),
+            ))
         }
     }
 }
@@ -103,7 +105,7 @@ pub mod system {
 pub mod file_utils {
     use super::PinGuardResult;
     use std::path::Path;
-    
+
     /// Check if a directory exists, create it if it doesn't
     pub fn ensure_directory_exists<P: AsRef<Path>>(path: P) -> PinGuardResult<()> {
         if !path.as_ref().exists() {
@@ -111,16 +113,16 @@ pub mod file_utils {
         }
         Ok(())
     }
-    
+
     /// Check file permissions
     pub fn check_file_permissions<P: AsRef<Path>>(path: P) -> PinGuardResult<u32> {
         use std::os::unix::fs::PermissionsExt;
-        
+
         let metadata = std::fs::metadata(&path)?;
         let permissions = metadata.permissions();
         Ok(permissions.mode())
     }
-    
+
     /// Safe file writing (atomic write)
     pub fn write_file_atomic<P: AsRef<Path>>(path: P, content: &str) -> PinGuardResult<()> {
         let temp_path = format!("{}.tmp", path.as_ref().display());

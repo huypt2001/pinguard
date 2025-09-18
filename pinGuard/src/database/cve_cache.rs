@@ -1,8 +1,8 @@
+use crate::database::{DatabaseError, DatabaseManager, DatabaseResult};
+use chrono::{DateTime, Duration, Utc};
 use rusqlite::{params, Row};
-use chrono::{DateTime, Utc, Duration};
 use serde::{Deserialize, Serialize};
-use tracing::{info, debug};
-use crate::database::{DatabaseManager, DatabaseError, DatabaseResult};
+use tracing::{debug, info};
 
 /// CVE data structure (data from NVD API)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -113,18 +113,24 @@ impl CveCache {
         debug!("Adding CVE to cache: {}", cve_data.cve_id);
 
         let expires_at = Utc::now() + self.cache_ttl;
-        
-        let affected_packages_json = serde_json::to_string(&cve_data.affected_packages)
-            .map_err(|e| DatabaseError::SerializationError(format!("Failed to serialize packages: {}", e)))?;
-        
-        let affected_versions_json = serde_json::to_string(&cve_data.affected_versions)
-            .map_err(|e| DatabaseError::SerializationError(format!("Failed to serialize versions: {}", e)))?;
-        
-        let references_json = serde_json::to_string(&cve_data.references)
-            .map_err(|e| DatabaseError::SerializationError(format!("Failed to serialize references: {}", e)))?;
-        
-        let cpe_matches_json = serde_json::to_string(&cve_data.cpe_matches)
-            .map_err(|e| DatabaseError::SerializationError(format!("Failed to serialize CPE matches: {}", e)))?;
+
+        let affected_packages_json =
+            serde_json::to_string(&cve_data.affected_packages).map_err(|e| {
+                DatabaseError::SerializationError(format!("Failed to serialize packages: {}", e))
+            })?;
+
+        let affected_versions_json =
+            serde_json::to_string(&cve_data.affected_versions).map_err(|e| {
+                DatabaseError::SerializationError(format!("Failed to serialize versions: {}", e))
+            })?;
+
+        let references_json = serde_json::to_string(&cve_data.references).map_err(|e| {
+            DatabaseError::SerializationError(format!("Failed to serialize references: {}", e))
+        })?;
+
+        let cpe_matches_json = serde_json::to_string(&cve_data.cpe_matches).map_err(|e| {
+            DatabaseError::SerializationError(format!("Failed to serialize CPE matches: {}", e))
+        })?;
 
         self.db.connection().execute(
             "INSERT OR REPLACE INTO cve_cache (
@@ -161,12 +167,10 @@ impl CveCache {
             "SELECT cve_id, description, severity, score, vector_string,
                     published_date, last_modified, affected_packages, affected_versions,
                     cve_references, cpe_matches, raw_nvd_data, cached_at, expires_at
-             FROM cve_cache WHERE cve_id = ?1"
+             FROM cve_cache WHERE cve_id = ?1",
         )?;
 
-        let result = stmt.query_row(params![cve_id], |row| {
-            self.row_to_cached_cve(row)
-        });
+        let result = stmt.query_row(params![cve_id], |row| self.row_to_cached_cve(row));
 
         match result {
             Ok(cached_cve) => {
@@ -201,19 +205,22 @@ impl CveCache {
                     published_date, last_modified, affected_packages, affected_versions,
                     references, cpe_matches, raw_nvd_data, cached_at, expires_at
              FROM cve_cache WHERE cve_id IN ({}) AND expires_at > ?{}",
-            placeholders, cve_ids.len() + 1
+            placeholders,
+            cve_ids.len() + 1
         );
 
         let mut stmt = self.db.connection().prepare(&query)?;
-        
-        let mut params: Vec<&dyn rusqlite::ToSql> = cve_ids.iter().map(|id| id as &dyn rusqlite::ToSql).collect();
+
+        let mut params: Vec<&dyn rusqlite::ToSql> = cve_ids
+            .iter()
+            .map(|id| id as &dyn rusqlite::ToSql)
+            .collect();
         let now = Utc::now();
         params.push(&now);
 
-        let cached_cves = stmt.query_map(&*params, |row| {
-            self.row_to_cached_cve(row)
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let cached_cves = stmt
+            .query_map(&*params, |row| self.row_to_cached_cve(row))?
+            .collect::<Result<Vec<_>, _>>()?;
 
         debug!("{} CVEs found in cache", cached_cves.len());
         Ok(cached_cves)
@@ -230,23 +237,32 @@ impl CveCache {
              FROM cve_cache 
              WHERE affected_packages LIKE ?1 
                AND expires_at > ?2
-             ORDER BY severity DESC, published_date DESC"
+             ORDER BY severity DESC, published_date DESC",
         )?;
 
-        let package_pattern = format!("%\"{}\"%" , package_name);
+        let package_pattern = format!("%\"{}\"%", package_name);
         let now = Utc::now();
 
-        let cached_cves = stmt.query_map(params![package_pattern, now], |row| {
-            self.row_to_cached_cve(row)
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let cached_cves = stmt
+            .query_map(params![package_pattern, now], |row| {
+                self.row_to_cached_cve(row)
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
-        debug!("{} CVEs found for package: {}", cached_cves.len(), package_name);
+        debug!(
+            "{} CVEs found for package: {}",
+            cached_cves.len(),
+            package_name
+        );
         Ok(cached_cves)
     }
 
     /// List CVEs by severity
-    pub fn list_cves_by_severity(&self, severity: CveSeverity, limit: Option<u32>) -> DatabaseResult<Vec<CachedCve>> {
+    pub fn list_cves_by_severity(
+        &self,
+        severity: CveSeverity,
+        limit: Option<u32>,
+    ) -> DatabaseResult<Vec<CachedCve>> {
         debug!("CVE list by severity: {}", severity);
 
         let limit_clause = match limit {
@@ -267,12 +283,17 @@ impl CveCache {
         let mut stmt = self.db.connection().prepare(&query)?;
         let now = Utc::now();
 
-        let cached_cves = stmt.query_map(params![severity.to_string(), now], |row| {
-            self.row_to_cached_cve(row)
-        })?
-        .collect::<Result<Vec<_>, _>>()?;
+        let cached_cves = stmt
+            .query_map(params![severity.to_string(), now], |row| {
+                self.row_to_cached_cve(row)
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
 
-        debug!("{} CVEs found for severity: {}", cached_cves.len(), severity);
+        debug!(
+            "{} CVEs found for severity: {}",
+            cached_cves.len(),
+            severity
+        );
         Ok(cached_cves)
     }
 
@@ -281,10 +302,10 @@ impl CveCache {
         info!("🧹 Cleaning up expired CVE cache entries...");
 
         let now = Utc::now();
-        let deleted_count = self.db.connection().execute(
-            "DELETE FROM cve_cache WHERE expires_at < ?1",
-            params![now],
-        )?;
+        let deleted_count = self
+            .db
+            .connection()
+            .execute("DELETE FROM cve_cache WHERE expires_at < ?1", params![now])?;
 
         if deleted_count > 0 {
             info!("{} expired CVE entries cleaned", deleted_count);
@@ -302,12 +323,18 @@ impl CveCache {
         let mut stats = CacheStats::default();
 
         // Total cache entries
-        let mut stmt = self.db.connection().prepare("SELECT COUNT(*) FROM cve_cache")?;
+        let mut stmt = self
+            .db
+            .connection()
+            .prepare("SELECT COUNT(*) FROM cve_cache")?;
         stats.total_entries = stmt.query_row([], |row| row.get(0))?;
 
         // Active cache entries (not expired)
         let now = Utc::now();
-        let mut stmt = self.db.connection().prepare("SELECT COUNT(*) FROM cve_cache WHERE expires_at > ?1")?;
+        let mut stmt = self
+            .db
+            .connection()
+            .prepare("SELECT COUNT(*) FROM cve_cache WHERE expires_at > ?1")?;
         stats.active_entries = stmt.query_row(params![now], |row| row.get(0))?;
 
         // Expired entries
@@ -315,7 +342,7 @@ impl CveCache {
 
         // Severity distribution
         let mut stmt = self.db.connection().prepare(
-            "SELECT severity, COUNT(*) FROM cve_cache WHERE expires_at > ?1 GROUP BY severity"
+            "SELECT severity, COUNT(*) FROM cve_cache WHERE expires_at > ?1 GROUP BY severity",
         )?;
         let severity_rows = stmt.query_map(params![now], |row| {
             Ok((row.get::<_, String>(0)?, row.get::<_, i32>(1)?))
@@ -334,9 +361,10 @@ impl CveCache {
         }
 
         // Cache size (approximate)
-        let mut stmt = self.db.connection().prepare(
-            "SELECT SUM(LENGTH(description) + LENGTH(raw_nvd_data)) FROM cve_cache"
-        )?;
+        let mut stmt = self
+            .db
+            .connection()
+            .prepare("SELECT SUM(LENGTH(description) + LENGTH(raw_nvd_data)) FROM cve_cache")?;
         stats.cache_size_bytes = stmt.query_row([], |row| row.get(0)).unwrap_or(0);
 
         debug!("CVE cache statistics prepared");
@@ -351,32 +379,37 @@ impl CveCache {
         let cpe_matches_json: String = row.get("cpe_matches")?;
 
         let affected_packages: Vec<String> = serde_json::from_str(&affected_packages_json)
-            .map_err(|e| rusqlite::Error::SqliteFailure(
-                rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_MISMATCH), 
-                Some(format!("JSON parse error: {}", e))
-            ))?;
+            .map_err(|e| {
+                rusqlite::Error::SqliteFailure(
+                    rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_MISMATCH),
+                    Some(format!("JSON parse error: {}", e)),
+                )
+            })?;
 
         let affected_versions: Vec<VersionRange> = serde_json::from_str(&affected_versions_json)
-            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
-                0, rusqlite::types::Type::Text, Box::new(e)
-            ))?;
+            .map_err(|e| {
+                rusqlite::Error::FromSqlConversionFailure(
+                    0,
+                    rusqlite::types::Type::Text,
+                    Box::new(e),
+                )
+            })?;
 
-        let references: Vec<String> = serde_json::from_str(&references_json)
-            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
-                0, rusqlite::types::Type::Text, Box::new(e)
-            ))?;
+        let references: Vec<String> = serde_json::from_str(&references_json).map_err(|e| {
+            rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
+        })?;
 
-        let cpe_matches: Vec<CpeMatch> = serde_json::from_str(&cpe_matches_json)
-            .map_err(|e| rusqlite::Error::FromSqlConversionFailure(
-                0, rusqlite::types::Type::Text, Box::new(e)
-            ))?;
+        let cpe_matches: Vec<CpeMatch> = serde_json::from_str(&cpe_matches_json).map_err(|e| {
+            rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
+        })?;
 
         let severity_str: String = row.get("severity")?;
-        let severity = severity_str.parse::<CveSeverity>()
-            .map_err(|e| rusqlite::Error::SqliteFailure(
-                rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_MISMATCH), 
-                Some(format!("Parse error: {}", e))
-            ))?;
+        let severity = severity_str.parse::<CveSeverity>().map_err(|e| {
+            rusqlite::Error::SqliteFailure(
+                rusqlite::ffi::Error::new(rusqlite::ffi::SQLITE_MISMATCH),
+                Some(format!("Parse error: {}", e)),
+            )
+        })?;
 
         Ok(CachedCve {
             data: CveData {

@@ -1,10 +1,10 @@
-pub mod package_audit;
 pub mod kernel_check;
+pub mod manager;
+pub mod network_audit;
+pub mod package_audit;
 pub mod permission_audit;
 pub mod service_audit;
 pub mod user_audit;
-pub mod network_audit;
-pub mod manager;
 // Other modules will be added progressively
 // pub mod service_audit;
 // pub mod user_audit;
@@ -144,13 +144,15 @@ impl ScanResult {
     }
 
     pub fn get_critical_findings(&self) -> Vec<&Finding> {
-        self.findings.iter()
+        self.findings
+            .iter()
             .filter(|f| f.severity == Severity::Critical)
             .collect()
     }
 
     pub fn get_high_findings(&self) -> Vec<&Finding> {
-        self.findings.iter()
+        self.findings
+            .iter()
             .filter(|f| f.severity == Severity::High)
             .collect()
     }

@@ -1,8 +1,8 @@
-use super::{Scanner, ScanResult, ScanError, Finding, Severity, Category, ScanStatus};
+use super::{Category, Finding, ScanError, ScanResult, ScanStatus, Scanner, Severity};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
-use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
 pub struct PermissionAudit;
@@ -32,37 +32,43 @@ impl Scanner for PermissionAudit {
     }
 
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool {
-        config.scanner.enabled_modules.contains(&"permission_audit".to_string())
+        config
+            .scanner
+            .enabled_modules
+            .contains(&"permission_audit".to_string())
     }
 
     fn scan(&self) -> Result<ScanResult, ScanError> {
         let start_time = Instant::now();
         let mut result = ScanResult::new("Permission Audit".to_string());
-        
+
         tracing::info!("Starting permission audit scan...");
-        
+
         // Kritik dosya ve dizinlerin listesi
         let critical_paths = self.get_critical_paths();
         result.set_items_scanned(critical_paths.len() as u32);
-        
+
         // Her bir kritik yolu kontrol et
         for rule in &critical_paths {
             if let Err(e) = self.check_path_permissions(rule, &mut result) {
                 tracing::warn!("Permission check failed for {}: {}", rule.path, e);
             }
         }
-        
+
         // Dünya yazılabilir dosyaları bul
         self.find_world_writable_files(&mut result)?;
-        
+
         // SUID/SGID dosyaları kontrol et
         self.check_suid_sgid_files(&mut result)?;
-        
+
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
-        
-        tracing::info!("Permission audit tamamlandı: {} bulgu", result.findings.len());
-        
+
+        tracing::info!(
+            "Permission audit tamamlandı: {} bulgu",
+            result.findings.len()
+        );
+
         Ok(result)
     }
 }
@@ -167,17 +173,20 @@ impl PermissionAudit {
     }
 
     /// Belirli bir yolun izinlerini kontrol et
-    fn check_path_permissions(&self, rule: &PermissionRule, result: &mut ScanResult) -> Result<(), ScanError> {
+    fn check_path_permissions(
+        &self,
+        rule: &PermissionRule,
+        result: &mut ScanResult,
+    ) -> Result<(), ScanError> {
         let path = Path::new(&rule.path);
-        
+
         if !path.exists() {
             // Dosya yoksa skip et
             return Ok(());
         }
 
-        let metadata = fs::metadata(path)
-            .map_err(|e| ScanError::IoError(e))?;
-        
+        let metadata = fs::metadata(path).map_err(|e| ScanError::IoError(e))?;
+
         let permissions = metadata.permissions();
         let mode = permissions.mode() & 0o777; // Sadece permission bitlerini al
 
@@ -221,9 +230,7 @@ impl PermissionAudit {
                 affected_item: rule.path.clone(),
                 current_value: Some(format!("{:o}", mode)),
                 recommended_value: Some("Remove world-write permission".to_string()),
-                references: vec![
-                    "https://www.cisecurity.org/controls/".to_string(),
-                ],
+                references: vec!["https://www.cisecurity.org/controls/".to_string()],
                 cve_ids: vec![],
                 fix_available: true,
             };
@@ -236,16 +243,16 @@ impl PermissionAudit {
     /// Find world-writable files
     fn find_world_writable_files(&self, result: &mut ScanResult) -> Result<(), ScanError> {
         tracing::info!("Checking world-writable files...");
-        
+
         let suspicious_dirs = vec!["/etc", "/usr", "/bin", "/sbin", "/lib", "/lib64"];
-        
+
         for dir in suspicious_dirs {
             if let Ok(entries) = fs::read_dir(dir) {
                 for entry in entries.flatten() {
                     if let Ok(metadata) = entry.metadata() {
                         let permissions = metadata.permissions();
                         let mode = permissions.mode() & 0o777;
-                        
+
                         // Dünya yazılabilir mi?
                         if mode & 0o002 != 0 {
                             let path = entry.path();
@@ -280,16 +287,16 @@ impl PermissionAudit {
     /// Check SUID/SGID files
     fn check_suid_sgid_files(&self, result: &mut ScanResult) -> Result<(), ScanError> {
         tracing::info!("Checking SUID/SGID files...");
-        
+
         let search_dirs = vec!["/usr/bin", "/usr/sbin", "/bin", "/sbin"];
-        
+
         for dir in search_dirs {
             if let Ok(entries) = fs::read_dir(dir) {
                 for entry in entries.flatten() {
                     if let Ok(metadata) = entry.metadata() {
                         let permissions = metadata.permissions();
                         let mode = permissions.mode();
-                        
+
                         // SUID bit kontrol et
                         if mode & 0o4000 != 0 {
                             let path = entry.path();
@@ -313,7 +320,7 @@ impl PermissionAudit {
                             };
                             result.add_finding(finding);
                         }
-                        
+
                         // SGID bit kontrol et
                         if mode & 0o2000 != 0 {
                             let path = entry.path();

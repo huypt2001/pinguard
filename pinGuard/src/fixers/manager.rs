@@ -1,14 +1,11 @@
-use super::{Fixer, FixResult, FixError, FixPlan, FixStatus};
+use super::{FixError, FixPlan, FixResult, FixStatus, Fixer};
 use crate::core::config::Config;
-use crate::scanners::Finding;
 use crate::fixers::{
-    package_updater::PackageUpdater,
-    kernel_updater::KernelUpdater,
-    permission_fixer::PermissionFixer,
-    service_hardener::ServiceHardener,
-    user_policy_fixer::UserPolicyFixer,
-    firewall_configurator::FirewallConfigurator,
+    firewall_configurator::FirewallConfigurator, kernel_updater::KernelUpdater,
+    package_updater::PackageUpdater, permission_fixer::PermissionFixer,
+    service_hardener::ServiceHardener, user_policy_fixer::UserPolicyFixer,
 };
+use crate::scanners::Finding;
 use std::io::{self, Write};
 
 pub struct FixerManager {
@@ -18,7 +15,7 @@ pub struct FixerManager {
 impl FixerManager {
     pub fn new() -> Self {
         let mut fixers: Vec<Box<dyn Fixer>> = Vec::new();
-        
+
         // Add existing fixers
         fixers.push(Box::new(PackageUpdater));
         fixers.push(Box::new(KernelUpdater));
@@ -26,16 +23,25 @@ impl FixerManager {
         fixers.push(Box::new(ServiceHardener));
         fixers.push(Box::new(UserPolicyFixer));
         fixers.push(Box::new(FirewallConfigurator));
-        
+
         Self { fixers }
     }
 
     /// Find and run appropriate fixer for a specific finding
-    pub fn fix_finding(&self, finding: &Finding, config: &Config, auto_approve: bool) -> Result<FixResult, FixError> {
+    pub fn fix_finding(
+        &self,
+        finding: &Finding,
+        config: &Config,
+        auto_approve: bool,
+    ) -> Result<FixResult, FixError> {
         // Find fixer that can fix the finding
-        let fixer = self.fixers.iter()
+        let fixer = self
+            .fixers
+            .iter()
             .find(|f| f.can_fix(finding))
-            .ok_or_else(|| FixError::UnsupportedFix(format!("No fixer available for: {}", finding.id)))?;
+            .ok_or_else(|| {
+                FixError::UnsupportedFix(format!("No fixer available for: {}", finding.id))
+            })?;
 
         tracing::info!("Fixer bulundu: {} -> {}", finding.id, fixer.name());
 
@@ -54,7 +60,12 @@ impl FixerManager {
     }
 
     /// Fix multiple findings in batch
-    pub fn fix_findings(&self, findings: &[Finding], config: &Config, auto_approve: bool) -> Vec<FixResult> {
+    pub fn fix_findings(
+        &self,
+        findings: &[Finding],
+        config: &Config,
+        auto_approve: bool,
+    ) -> Vec<FixResult> {
         let mut results = Vec::new();
 
         tracing::info!("{} findings fix process starting...", findings.len());
@@ -111,10 +122,13 @@ impl FixerManager {
         }
 
         print!("Do you want to apply this fix? [y/N]: ");
-        io::stdout().flush().map_err(|e| FixError::IoError(format!("Stdout flush error: {}", e)))?;
+        io::stdout()
+            .flush()
+            .map_err(|e| FixError::IoError(format!("Stdout flush error: {}", e)))?;
 
         let mut input = String::new();
-        io::stdin().read_line(&mut input)
+        io::stdin()
+            .read_line(&mut input)
             .map_err(|e| FixError::IoError(format!("Input read error: {}", e)))?;
 
         let response = input.trim().to_lowercase();
@@ -124,12 +138,27 @@ impl FixerManager {
     /// Print fix summary
     fn print_fix_summary(&self, results: &[FixResult]) {
         println!("Fix Summary:");
-        
-        let successful = results.iter().filter(|r| r.status == FixStatus::Success).count();
-        let failed = results.iter().filter(|r| r.status == FixStatus::Failed).count();
-        let cancelled = results.iter().filter(|r| r.status == FixStatus::Cancelled).count();
-        let requires_action = results.iter().filter(|r| r.status == FixStatus::RequiresUserAction).count();
-        let requires_reboot = results.iter().filter(|r| r.status == FixStatus::RequiresReboot).count();
+
+        let successful = results
+            .iter()
+            .filter(|r| r.status == FixStatus::Success)
+            .count();
+        let failed = results
+            .iter()
+            .filter(|r| r.status == FixStatus::Failed)
+            .count();
+        let cancelled = results
+            .iter()
+            .filter(|r| r.status == FixStatus::Cancelled)
+            .count();
+        let requires_action = results
+            .iter()
+            .filter(|r| r.status == FixStatus::RequiresUserAction)
+            .count();
+        let requires_reboot = results
+            .iter()
+            .filter(|r| r.status == FixStatus::RequiresReboot)
+            .count();
 
         println!("Total: {}", results.len());
         println!("Successful: {}", successful);
@@ -143,7 +172,9 @@ impl FixerManager {
             match result.status {
                 FixStatus::Success => println!("{}: {}", result.finding_id, result.message),
                 FixStatus::Failed => println!("{}: {}", result.finding_id, result.message),
-                FixStatus::RequiresUserAction => println!("{}: {}", result.finding_id, result.message),
+                FixStatus::RequiresUserAction => {
+                    println!("{}: {}", result.finding_id, result.message)
+                }
                 FixStatus::RequiresReboot => println!("{}: {}", result.finding_id, result.message),
                 FixStatus::Cancelled => println!("{}: {}", result.finding_id, result.message),
                 _ => {}
@@ -157,7 +188,10 @@ impl FixerManager {
         }
 
         // Backup information
-        let backup_count = results.iter().filter(|r| r.backup_created.is_some()).count();
+        let backup_count = results
+            .iter()
+            .filter(|r| r.backup_created.is_some())
+            .count();
         if backup_count > 0 {
             println!("\n{} files backed up:", backup_count);
             for result in results {
@@ -171,7 +205,7 @@ impl FixerManager {
     /// Sort findings by fix priority
     pub fn prioritize_fixes<'a>(&self, findings: &'a [Finding]) -> Vec<&'a Finding> {
         let mut prioritized = findings.iter().collect::<Vec<_>>();
-        
+
         prioritized.sort_by(|a, b| {
             // Priority order: Critical > High > Medium > Low
             let a_priority = match a.severity {
@@ -181,7 +215,7 @@ impl FixerManager {
                 crate::scanners::Severity::Low => 1,
                 crate::scanners::Severity::Info => 0,
             };
-            
+
             let b_priority = match b.severity {
                 crate::scanners::Severity::Critical => 4,
                 crate::scanners::Severity::High => 3,
@@ -189,22 +223,37 @@ impl FixerManager {
                 crate::scanners::Severity::Low => 1,
                 crate::scanners::Severity::Info => 0,
             };
-            
+
             b_priority.cmp(&a_priority)
         });
-        
+
         prioritized
     }
 
     /// Fix only findings in specific categories
-    pub fn fix_by_category(&self, findings: &[Finding], category: &crate::scanners::Category, config: &Config, auto_approve: bool) -> Vec<FixResult> {
-        let filtered_findings: Vec<&Finding> = findings.iter()
+    pub fn fix_by_category(
+        &self,
+        findings: &[Finding],
+        category: &crate::scanners::Category,
+        config: &Config,
+        auto_approve: bool,
+    ) -> Vec<FixResult> {
+        let filtered_findings: Vec<&Finding> = findings
+            .iter()
             .filter(|f| f.category == *category)
             .collect();
 
-        tracing::info!("{:?} category has {} findings to fix", category, filtered_findings.len());
+        tracing::info!(
+            "{:?} category has {} findings to fix",
+            category,
+            filtered_findings.len()
+        );
 
-        self.fix_findings(&filtered_findings.into_iter().cloned().collect::<Vec<_>>(), config, auto_approve)
+        self.fix_findings(
+            &filtered_findings.into_iter().cloned().collect::<Vec<_>>(),
+            config,
+            auto_approve,
+        )
     }
 
     /// Comprehensive system hardening
@@ -241,7 +290,10 @@ impl FixerManager {
             Err(e) => tracing::error!("Permission fixing failed: {}", e),
         }
 
-        tracing::info!("Comprehensive system hardening completed: {} operations", results.len());
+        tracing::info!(
+            "Comprehensive system hardening completed: {} operations",
+            results.len()
+        );
 
         Ok(results)
     }
@@ -252,14 +304,15 @@ impl FixerManager {
     }
 
     /// Filter findings that a specific fixer can fix
-    pub fn get_fixable_findings<'a>(&self, findings: &'a [Finding], fixer_name: &str) -> Vec<&'a Finding> {
-        let fixer = self.fixers.iter()
-            .find(|f| f.name() == fixer_name);
+    pub fn get_fixable_findings<'a>(
+        &self,
+        findings: &'a [Finding],
+        fixer_name: &str,
+    ) -> Vec<&'a Finding> {
+        let fixer = self.fixers.iter().find(|f| f.name() == fixer_name);
 
         if let Some(fixer) = fixer {
-            findings.iter()
-                .filter(|f| fixer.can_fix(f))
-                .collect()
+            findings.iter().filter(|f| fixer.can_fix(f)).collect()
         } else {
             Vec::new()
         }
@@ -267,10 +320,9 @@ impl FixerManager {
 
     /// List all unfixable findings
     pub fn get_unfixable_findings<'a>(&self, findings: &'a [Finding]) -> Vec<&'a Finding> {
-        findings.iter()
-            .filter(|finding| {
-                !self.fixers.iter().any(|fixer| fixer.can_fix(finding))
-            })
+        findings
+            .iter()
+            .filter(|finding| !self.fixers.iter().any(|fixer| fixer.can_fix(finding)))
             .collect()
     }
 }

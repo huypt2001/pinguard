@@ -1,33 +1,40 @@
-use std::time::{Duration, Instant};
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
 use crate::scanners::Finding;
+use serde::{Deserialize, Serialize};
+use std::time::{Duration, Instant};
+use thiserror::Error;
 
-pub mod package_updater;
+pub mod firewall_configurator;
 pub mod kernel_updater;
+pub mod manager;
+pub mod package_updater;
 pub mod permission_fixer;
 pub mod service_hardener;
 pub mod user_policy_fixer;
-pub mod firewall_configurator;
-pub mod manager;
 
 /// Fixer trait - every fixer module implements this trait
 pub trait Fixer {
     /// Name of the fixer
     fn name(&self) -> &'static str;
-    
+
     /// Check if this fixer can fix this finding
     fn can_fix(&self, finding: &Finding) -> bool;
-    
+
     /// Fix the finding - requires user confirmation
-    fn fix(&self, finding: &Finding, config: &crate::core::config::Config) -> Result<FixResult, FixError>;
-    
+    fn fix(
+        &self,
+        finding: &Finding,
+        config: &crate::core::config::Config,
+    ) -> Result<FixResult, FixError>;
+
     /// Dry run - show what would be done but don't execute
     fn dry_run(&self, finding: &Finding) -> Result<FixPlan, FixError>;
-    
+
     /// Is this fixer enabled?
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool {
-        config.fixer.enabled_modules.contains(&self.name().to_string())
+        config
+            .fixer
+            .enabled_modules
+            .contains(&self.name().to_string())
     }
 }
 
@@ -74,9 +81,9 @@ pub struct FixPlan {
 /// Risk level
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RiskLevel {
-    Low,    // Safe changes
-    Medium, // Changes requiring careful approach
-    High,   // Changes that might affect system stability
+    Low,      // Safe changes
+    Medium,   // Changes requiring careful approach
+    High,     // Changes that might affect system stability
     Critical, // Changes that might crash the system
 }
 
@@ -116,40 +123,40 @@ impl FixResult {
             timestamp: chrono::Utc::now().to_rfc3339(),
         }
     }
-    
+
     pub fn success(mut self, message: String) -> Self {
         self.status = FixStatus::Success;
         self.message = message;
         self
     }
-    
+
     pub fn failed(mut self, message: String) -> Self {
         self.status = FixStatus::Failed;
         self.message = message;
         self
     }
-    
+
     pub fn requires_reboot(mut self) -> Self {
         self.status = FixStatus::RequiresReboot;
         self.reboot_required = true;
         self
     }
-    
+
     pub fn add_command(mut self, command: String) -> Self {
         self.commands_executed.push(command);
         self
     }
-    
+
     pub fn add_file(mut self, file: String) -> Self {
         self.files_modified.push(file);
         self
     }
-    
+
     pub fn set_backup(mut self, backup_path: String) -> Self {
         self.backup_created = Some(backup_path);
         self
     }
-    
+
     pub fn set_duration(mut self, start_time: Instant) -> Self {
         self.duration = start_time.elapsed().as_millis() as u64;
         self
@@ -180,32 +187,32 @@ impl FixPlan {
             estimated_duration: Duration::from_secs(10),
         }
     }
-    
+
     pub fn add_command(mut self, command: String) -> Self {
         self.commands_to_execute.push(command);
         self
     }
-    
+
     pub fn add_file(mut self, file: String) -> Self {
         self.files_to_modify.push(file);
         self
     }
-    
+
     pub fn requires_backup(mut self) -> Self {
         self.backup_required = true;
         self
     }
-    
+
     pub fn requires_reboot(mut self) -> Self {
         self.reboot_required = true;
         self
     }
-    
+
     pub fn set_risk(mut self, risk: RiskLevel) -> Self {
         self.risk_level = risk;
         self
     }
-    
+
     pub fn set_duration(mut self, duration: Duration) -> Self {
         self.estimated_duration = duration;
         self
@@ -215,41 +222,45 @@ impl FixPlan {
 /// Helper function for user confirmation
 pub fn ask_user_confirmation(plan: &FixPlan) -> Result<bool, FixError> {
     use std::io::{self, Write};
-    
+
     println!("Fix Plan: {}", plan.description);
     println!("Fixer: {}", plan.fixer_name);
     println!("Risk Level: {:?}", plan.risk_level);
-    
+
     if !plan.commands_to_execute.is_empty() {
         println!("💻 Commands to execute:");
         for cmd in &plan.commands_to_execute {
             println!("   $ {}", cmd);
         }
     }
-    
+
     if !plan.files_to_modify.is_empty() {
         println!("Files to modify:");
         for file in &plan.files_to_modify {
             println!("   - {}", file);
         }
     }
-    
+
     if plan.backup_required {
         println!("Backup will be created");
     }
-    
+
     if plan.reboot_required {
         println!("System reboot will be required");
     }
-    
+
     println!("Estimated duration: {:?}", plan.estimated_duration);
-    
+
     print!("\nDo you want to proceed? [y/N]: ");
-    io::stdout().flush().map_err(|e| FixError::ConfigError(e.to_string()))?;
-    
+    io::stdout()
+        .flush()
+        .map_err(|e| FixError::ConfigError(e.to_string()))?;
+
     let mut input = String::new();
-    io::stdin().read_line(&mut input).map_err(|e| FixError::ConfigError(e.to_string()))?;
-    
+    io::stdin()
+        .read_line(&mut input)
+        .map_err(|e| FixError::ConfigError(e.to_string()))?;
+
     let response = input.trim().to_lowercase();
     Ok(response == "y" || response == "yes")
 }
@@ -258,36 +269,42 @@ pub fn ask_user_confirmation(plan: &FixPlan) -> Result<bool, FixError> {
 pub fn create_backup(file_path: &str) -> Result<String, FixError> {
     use std::fs;
     use std::path::Path;
-    
+
     let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S").to_string();
     let backup_path = format!("{}.backup_{}", file_path, timestamp);
-    
+
     if Path::new(file_path).exists() {
         fs::copy(file_path, &backup_path)
             .map_err(|e| FixError::BackupError(format!("Failed to backup {}: {}", file_path, e)))?;
-        
+
         tracing::info!("Backup created: {}", backup_path);
         Ok(backup_path)
     } else {
-        Err(FixError::BackupError(format!("Source file does not exist: {}", file_path)))
+        Err(FixError::BackupError(format!(
+            "Source file does not exist: {}",
+            file_path
+        )))
     }
 }
 
 /// Helper function to execute command
 pub fn execute_command(command: &str, args: &[&str]) -> Result<String, FixError> {
     use std::process::Command;
-    
+
     tracing::info!("Executing: {} {}", command, args.join(" "));
-    
+
     let output = Command::new(command)
         .args(args)
         .output()
         .map_err(|e| FixError::CommandError(format!("Failed to execute {}: {}", command, e)))?;
-    
+
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(FixError::CommandError(format!("Command failed: {}", stderr)));
+        return Err(FixError::CommandError(format!(
+            "Command failed: {}",
+            stderr
+        )));
     }
-    
+
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }

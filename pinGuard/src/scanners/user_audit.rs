@@ -1,7 +1,7 @@
-use super::{Scanner, ScanResult, ScanError, Finding, Severity, Category, ScanStatus};
+use super::{Category, Finding, ScanError, ScanResult, ScanStatus, Scanner, Severity};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
 pub struct UserAudit;
@@ -37,41 +37,44 @@ impl Scanner for UserAudit {
     }
 
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool {
-        config.scanner.enabled_modules.contains(&"user_audit".to_string())
+        config
+            .scanner
+            .enabled_modules
+            .contains(&"user_audit".to_string())
     }
 
     fn scan(&self) -> Result<ScanResult, ScanError> {
         let start_time = Instant::now();
         let mut result = ScanResult::new("User Audit".to_string());
-        
+
         tracing::info!("Starting user audit scan...");
-        
+
         // Kullanıcı hesaplarını al
         let users = self.get_user_accounts()?;
         result.set_items_scanned(users.len() as u32);
-        
+
         tracing::info!("{} kullanıcı hesabı tespit edildi", users.len());
-        
+
         // Kullanıcı güvenlik kontrolları
         self.check_user_security(&users, &mut result)?;
-        
+
         // Root yetkili kullanıcıları kontrol et
         self.check_privileged_users(&users, &mut result)?;
-        
+
         // Grup üyeliklerini kontrol et
         self.check_group_memberships(&mut result)?;
-        
+
         // Shadow dosyası kontrolü
         self.check_shadow_file(&mut result)?;
-        
+
         // Sudo konfigürasyonunu kontrol et
         self.check_sudo_configuration(&mut result)?;
-        
+
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
-        
+
         tracing::info!("User audit completed: {} findings", result.findings.len());
-        
+
         Ok(result)
     }
 }
@@ -79,11 +82,10 @@ impl Scanner for UserAudit {
 impl UserAudit {
     /// List user accounts
     fn get_user_accounts(&self) -> Result<Vec<UserAccount>, ScanError> {
-        let passwd_content = fs::read_to_string("/etc/passwd")
-            .map_err(|e| ScanError::IoError(e))?;
+        let passwd_content =
+            fs::read_to_string("/etc/passwd").map_err(|e| ScanError::IoError(e))?;
 
-        let shadow_content = fs::read_to_string("/etc/shadow")
-            .unwrap_or_default(); // Shadow dosyası okunamayabilir
+        let shadow_content = fs::read_to_string("/etc/shadow").unwrap_or_default(); // Shadow dosyası okunamayabilir
 
         let mut users = Vec::new();
 
@@ -135,7 +137,11 @@ impl UserAudit {
     }
 
     /// Kullanıcı güvenlik kontrolları
-    fn check_user_security(&self, users: &[UserAccount], result: &mut ScanResult) -> Result<(), ScanError> {
+    fn check_user_security(
+        &self,
+        users: &[UserAccount],
+        result: &mut ScanResult,
+    ) -> Result<(), ScanError> {
         tracing::info!("Kullanıcı güvenlik kontrolü yapılıyor...");
 
         for user in users {
@@ -144,15 +150,16 @@ impl UserAudit {
                 let finding = Finding {
                     id: format!("USER-EMPTY-PASS-{}", user.username.to_uppercase()),
                     title: format!("User with empty password: {}", user.username),
-                    description: format!("User '{}' has an empty password, which is a serious security risk.", user.username),
+                    description: format!(
+                        "User '{}' has an empty password, which is a serious security risk.",
+                        user.username
+                    ),
                     severity: Severity::Critical,
                     category: Category::User,
                     affected_item: user.username.clone(),
                     current_value: Some("empty password".to_string()),
                     recommended_value: Some("Set strong password".to_string()),
-                    references: vec![
-                        "https://www.cisecurity.org/controls/".to_string(),
-                    ],
+                    references: vec!["https://www.cisecurity.org/controls/".to_string()],
                     cve_ids: vec![],
                     fix_available: true,
                 };
@@ -164,15 +171,16 @@ impl UserAudit {
                 let finding = Finding {
                     id: format!("USER-UID-ZERO-{}", user.username.to_uppercase()),
                     title: format!("Non-root user with UID 0: {}", user.username),
-                    description: format!("User '{}' has UID 0 (root privileges) but is not the root user.", user.username),
+                    description: format!(
+                        "User '{}' has UID 0 (root privileges) but is not the root user.",
+                        user.username
+                    ),
                     severity: Severity::Critical,
                     category: Category::User,
                     affected_item: user.username.clone(),
                     current_value: Some("UID 0".to_string()),
                     recommended_value: Some("Change to unique UID".to_string()),
-                    references: vec![
-                        "https://www.cisecurity.org/controls/".to_string(),
-                    ],
+                    references: vec!["https://www.cisecurity.org/controls/".to_string()],
                     cve_ids: vec![],
                     fix_available: true,
                 };
@@ -180,7 +188,10 @@ impl UserAudit {
             }
 
             // Shell kontrolü - riskli shell'ler
-            if user.shell.contains("bash") || user.shell.contains("sh") || user.shell.contains("zsh") {
+            if user.shell.contains("bash")
+                || user.shell.contains("sh")
+                || user.shell.contains("zsh")
+            {
                 if user.uid < 1000 && user.username != "root" {
                     let finding = Finding {
                         id: format!("USER-SYSTEM-SHELL-{}", user.username.to_uppercase()),
@@ -205,7 +216,8 @@ impl UserAudit {
             }
 
             // Home directory kontrolü
-            if user.uid >= 1000 && !user.home_dir.starts_with("/home/") && user.username != "nobody" {
+            if user.uid >= 1000 && !user.home_dir.starts_with("/home/") && user.username != "nobody"
+            {
                 let finding = Finding {
                     id: format!("USER-HOME-DIR-{}", user.username.to_uppercase()),
                     title: format!("Unusual home directory: {}", user.username),
@@ -232,17 +244,24 @@ impl UserAudit {
     }
 
     /// Root yetkili kullanıcıları kontrol et
-    fn check_privileged_users(&self, _users: &[UserAccount], result: &mut ScanResult) -> Result<(), ScanError> {
+    fn check_privileged_users(
+        &self,
+        _users: &[UserAccount],
+        result: &mut ScanResult,
+    ) -> Result<(), ScanError> {
         tracing::info!("Checking privileged users...");
 
         // sudo grubu üyelerini kontrol et
         if let Ok(group_content) = fs::read_to_string("/etc/group") {
             for line in group_content.lines() {
-                if line.starts_with("sudo:") || line.starts_with("wheel:") || line.starts_with("admin:") {
+                if line.starts_with("sudo:")
+                    || line.starts_with("wheel:")
+                    || line.starts_with("admin:")
+                {
                     let parts: Vec<&str> = line.split(':').collect();
                     if parts.len() >= 4 && !parts[3].is_empty() {
                         let members: Vec<&str> = parts[3].split(',').collect();
-                        
+
                         for member in members {
                             if !member.trim().is_empty() {
                                 let finding = Finding {
@@ -279,14 +298,16 @@ impl UserAudit {
         tracing::info!("Checking group memberships...");
 
         if let Ok(group_content) = fs::read_to_string("/etc/group") {
-            let sensitive_groups = vec!["root", "shadow", "adm", "disk", "sys", "lp", "mail", "news", "uucp"];
-            
+            let sensitive_groups = vec![
+                "root", "shadow", "adm", "disk", "sys", "lp", "mail", "news", "uucp",
+            ];
+
             for line in group_content.lines() {
                 let parts: Vec<&str> = line.split(':').collect();
                 if parts.len() >= 4 {
                     let group_name = parts[0];
                     let members = parts[3];
-                    
+
                     if sensitive_groups.contains(&group_name) && !members.is_empty() {
                         let finding = Finding {
                             id: format!("GROUP-SENSITIVE-{}", group_name.to_uppercase()),
@@ -323,7 +344,7 @@ impl UserAudit {
         if let Ok(metadata) = fs::metadata("/etc/shadow") {
             let permissions = metadata.permissions();
             let mode = permissions.mode() & 0o777;
-            
+
             if mode > 0o640 {
                 let finding = Finding {
                     id: "SHADOW-PERMISSIONS".to_string(),
@@ -398,9 +419,7 @@ impl UserAudit {
                         affected_item: "Sudo Configuration".to_string(),
                         current_value: Some(line.to_string()),
                         recommended_value: Some("Limit sudo permissions".to_string()),
-                        references: vec![
-                            "https://www.sudo.ws/security/".to_string(),
-                        ],
+                        references: vec!["https://www.sudo.ws/security/".to_string()],
                         cve_ids: vec![],
                         fix_available: true,
                     };

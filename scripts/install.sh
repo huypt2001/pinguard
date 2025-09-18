@@ -76,23 +76,68 @@ detect_architecture() {
     log_info "Detected architecture: $ARCH"
 }
 
+build_from_source() {
+    log_info "Building PinGuard from source..."
+    
+    # Check if Rust is installed
+    if ! command -v cargo &> /dev/null; then
+        log_info "Installing Rust..."
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        source ~/.cargo/env
+    fi
+    
+    # Create temporary directory
+    TEMP_DIR=$(mktemp -d)
+    cd "$TEMP_DIR"
+    
+    # Clone the repository
+    log_info "Cloning PinGuard repository..."
+    if ! git clone https://github.com/reicalasso/pinGuard.git; then
+        log_error "Failed to clone repository"
+        exit 1
+    fi
+    
+    cd pinGuard/pinGuard
+    
+    # Build the project
+    log_info "Building PinGuard (this may take a few minutes)..."
+    if ! cargo build --release; then
+        log_error "Failed to build PinGuard"
+        exit 1
+    fi
+    
+    # Install binary
+    if [[ -f "target/release/pinGuard" ]]; then
+        cp "target/release/pinGuard" "$INSTALL_DIR/"
+        chmod +x "$INSTALL_DIR/pinGuard"
+        log_success "PinGuard binary built and installed to $INSTALL_DIR/pinGuard"
+    else
+        log_error "Binary not found after build"
+        exit 1
+    fi
+    
+    # Cleanup
+    cd /
+    rm -rf "$TEMP_DIR"
+}
+
 install_dependencies() {
     log_info "Installing dependencies..."
     
     case $OS in
         ubuntu|debian)
             apt-get update
-            apt-get install -y curl wget tar sqlite3 openssl ca-certificates systemd
+            apt-get install -y curl wget tar sqlite3 openssl ca-certificates systemd git build-essential pkg-config libssl-dev
             ;;
         centos|rhel|fedora)
             if command -v dnf &> /dev/null; then
-                dnf install -y curl wget tar sqlite openssl ca-certificates systemd
+                dnf install -y curl wget tar sqlite openssl ca-certificates systemd git gcc pkg-config openssl-devel
             else
-                yum install -y curl wget tar sqlite openssl ca-certificates systemd
+                yum install -y curl wget tar sqlite openssl ca-certificates systemd git gcc pkg-config openssl-devel
             fi
             ;;
         *)
-            log_warning "Unknown OS. Please install curl, wget, tar, sqlite3, openssl, and systemd manually."
+            log_warning "Unknown OS. Please install curl, wget, tar, sqlite3, openssl, git, and build tools manually."
             ;;
     esac
 }
@@ -104,8 +149,9 @@ download_binary() {
     LATEST_RELEASE=$(curl -s "https://api.github.com/repos/reicalasso/pinGuard/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
     
     if [[ -z "$LATEST_RELEASE" ]]; then
-        log_error "Could not fetch latest release information"
-        exit 1
+        log_warning "No releases found, falling back to building from source"
+        build_from_source
+        return 0
     fi
     
     DOWNLOAD_URL="https://github.com/reicalasso/pinGuard/releases/download/${LATEST_RELEASE}/pinGuard-linux-${ARCH}.tar.gz"

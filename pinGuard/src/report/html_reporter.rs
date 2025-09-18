@@ -1,7 +1,7 @@
+use crate::report::{ReportError, Reporter, SecurityReport};
+use crate::scanners::{Category, Finding, ScanMetadata, ScanResult, ScanStatus, Severity};
 use std::fs;
 use std::path::Path;
-use crate::report::{Reporter, ReportError, SecurityReport};
-use crate::scanners::{ScanResult, ScanStatus, Finding, Severity, Category, ScanMetadata};
 
 /// Structure that generates reports in HTML format
 pub struct HtmlReporter {
@@ -85,22 +85,22 @@ impl HtmlReporter {
 
         // Executive Summary
         body.push_str(&self.generate_executive_summary(report));
-        
+
         // Security Score Dashboard
         body.push_str(&self.generate_security_dashboard(report));
-        
+
         // Findings Overview
         body.push_str(&self.generate_findings_overview(report));
-        
+
         // Detailed Findings
         body.push_str(&self.generate_detailed_findings(report));
-        
+
         // Statistics
         body.push_str(&self.generate_statistics_section(report));
-        
+
         // Recommendations
         body.push_str(&self.generate_recommendations_section(report));
-        
+
         // System Information
         body.push_str(&self.generate_system_info_section(report));
 
@@ -207,7 +207,7 @@ impl HtmlReporter {
                             <th>Items Scanned</th>
                         </tr>
                     </thead>
-                    <tbody>"#
+                    <tbody>"#,
         );
 
         for scan_result in &report.scan_results {
@@ -244,7 +244,7 @@ impl HtmlReporter {
                     </tbody>
                 </table>
             </div>
-        </section>"#
+        </section>"#,
         );
 
         overview
@@ -256,7 +256,7 @@ impl HtmlReporter {
             r#"
         <section class="detailed-findings">
             <h2>🔎 Detailed Findings</h2>
-            <div class="findings-list">"#
+            <div class="findings-list">"#,
         );
 
         for scan_result in &report.scan_results {
@@ -270,7 +270,10 @@ impl HtmlReporter {
                 ));
 
                 for finding in &scan_result.findings {
-                    let severity_class = format!("severity-{}", format!("{:?}", finding.severity).to_lowercase());
+                    let severity_class = format!(
+                        "severity-{}",
+                        format!("{:?}", finding.severity).to_lowercase()
+                    );
                     let severity_icon = match finding.severity {
                         crate::scanners::Severity::Critical => "",
                         crate::scanners::Severity::High => "",
@@ -336,7 +339,7 @@ impl HtmlReporter {
                 findings_html.push_str(
                     r#"
                     </div>
-                </div>"#
+                </div>"#,
                 );
             }
         }
@@ -344,7 +347,7 @@ impl HtmlReporter {
         findings_html.push_str(
             r#"
             </div>
-        </section>"#
+        </section>"#,
         );
 
         findings_html
@@ -360,7 +363,7 @@ impl HtmlReporter {
                 <div class="stats-card">
                     <h3>Findings by Category</h3>
                     <div class="chart-container">
-                        <div class="category-chart">"#
+                        <div class="category-chart">"#,
         );
 
         for (category, count) in &report.statistics.findings_by_category {
@@ -390,10 +393,16 @@ impl HtmlReporter {
                 </div>
                 <div class="stats-card">
                     <h3>Top Vulnerabilities</h3>
-                    <div class="vulnerabilities-list">"#
+                    <div class="vulnerabilities-list">"#,
         );
 
-        for (i, vuln) in report.statistics.top_vulnerabilities.iter().take(5).enumerate() {
+        for (i, vuln) in report
+            .statistics
+            .top_vulnerabilities
+            .iter()
+            .take(5)
+            .enumerate()
+        {
             stats_html.push_str(&format!(
                 r#"
                         <div class="vulnerability-item">
@@ -415,7 +424,7 @@ impl HtmlReporter {
                     </div>
                 </div>
             </div>
-        </section>"#
+        </section>"#,
         );
 
         stats_html
@@ -427,7 +436,7 @@ impl HtmlReporter {
             r#"
         <section class="recommendations">
             <h2>💡 Recommendations</h2>
-            <div class="recommendations-list">"#
+            <div class="recommendations-list">"#,
         );
 
         for (i, recommendation) in report.recommendations.iter().enumerate() {
@@ -445,7 +454,7 @@ impl HtmlReporter {
         recommendations_html.push_str(
             r#"
             </div>
-        </section>"#
+        </section>"#,
         );
 
         recommendations_html
@@ -876,7 +885,8 @@ impl HtmlReporter {
                 border: 1px solid #ddd;
             }
         }
-    </style>"#.to_string()
+    </style>"#
+            .to_string()
     }
 
     /// Get embedded JavaScript
@@ -968,10 +978,10 @@ impl HtmlReporter {
 
     /// Format timestamp
     fn format_timestamp(&self, timestamp: u64) -> String {
-        use std::time::{SystemTime, Duration};
-        
+        use std::time::{Duration, SystemTime};
+
         let datetime = SystemTime::UNIX_EPOCH + Duration::from_secs(timestamp);
-        
+
         // Basit format (chrono kullanmadan)
         format!("{:?}", datetime)
             .replace("SystemTime", "")
@@ -980,11 +990,16 @@ impl HtmlReporter {
     }
 
     /// Write HTML file
-    fn write_html_file(&self, html_content: &str, output_path: &str) -> Result<String, ReportError> {
+    fn write_html_file(
+        &self,
+        html_content: &str,
+        output_path: &str,
+    ) -> Result<String, ReportError> {
         // Create output directory
         if let Some(parent) = Path::new(output_path).parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| ReportError::IoError(format!("Failed to create output directory: {}", e)))?;
+            fs::create_dir_all(parent).map_err(|e| {
+                ReportError::IoError(format!("Failed to create output directory: {}", e))
+            })?;
         }
 
         // Write HTML file
@@ -996,7 +1011,11 @@ impl HtmlReporter {
 }
 
 impl Reporter for HtmlReporter {
-    fn generate_report(&self, report: &SecurityReport, output_path: &str) -> Result<String, ReportError> {
+    fn generate_report(
+        &self,
+        report: &SecurityReport,
+        output_path: &str,
+    ) -> Result<String, ReportError> {
         // Dosya uzantısını kontrol et ve gerekirse ekle
         let final_path = if output_path.ends_with(".html") {
             output_path.to_string()
@@ -1031,27 +1050,25 @@ pub fn generate_html_report(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scanners::{ScanResult, ScanStatus, Finding, Severity, Category};
+    use crate::scanners::{Category, Finding, ScanResult, ScanStatus, Severity};
     fn create_test_report() -> SecurityReport {
         let scan_result = ScanResult {
             scanner_name: "test_scanner".to_string(),
             scan_time: "2024-01-01T00:00:00Z".to_string(),
             status: ScanStatus::Success,
-            findings: vec![
-                Finding {
-                    id: "TEST-001".to_string(),
-                    title: "Test vulnerability".to_string(),
-                    description: "Test description".to_string(),
-                    severity: Severity::High,
-                    category: Category::Package,
-                    affected_item: "test-package".to_string(),
-                    current_value: Some("1.0.0".to_string()),
-                    recommended_value: Some("1.1.0".to_string()),
-                    references: vec!["https://example.com".to_string()],
-                    cve_ids: vec!["CVE-2023-12345".to_string()],
-                    fix_available: true,
-                }
-            ],
+            findings: vec![Finding {
+                id: "TEST-001".to_string(),
+                title: "Test vulnerability".to_string(),
+                description: "Test description".to_string(),
+                severity: Severity::High,
+                category: Category::Package,
+                affected_item: "test-package".to_string(),
+                current_value: Some("1.0.0".to_string()),
+                recommended_value: Some("1.1.0".to_string()),
+                references: vec!["https://example.com".to_string()],
+                cve_ids: vec!["CVE-2023-12345".to_string()],
+                fix_available: true,
+            }],
             metadata: ScanMetadata {
                 duration_ms: 5000,
                 items_scanned: 100,
@@ -1076,10 +1093,10 @@ mod tests {
     fn test_html_generation() {
         let reporter = HtmlReporter::new(None, true, false);
         let report = create_test_report();
-        
+
         let html_result = reporter.render_html(&report);
         assert!(html_result.is_ok());
-        
+
         let html_content = html_result.unwrap();
         assert!(html_content.contains("<!DOCTYPE html"));
         assert!(html_content.contains("pinGuard Security Report"));
@@ -1091,7 +1108,7 @@ mod tests {
     fn test_executive_summary_generation() {
         let reporter = HtmlReporter::default();
         let report = create_test_report();
-        
+
         let summary = reporter.generate_executive_summary(&report);
         assert!(summary.contains("Executive Summary"));
         assert!(summary.contains("Security Score"));

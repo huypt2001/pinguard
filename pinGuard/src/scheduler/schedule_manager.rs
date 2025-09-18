@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
 
 /// Schedule yöneticisi
 pub struct ScheduleManager {
@@ -15,11 +15,14 @@ impl ScheduleManager {
     /// Yeni schedule manager oluştur
     pub fn new(config_dir: &str) -> SchedulerResult<Self> {
         let config_dir = PathBuf::from(config_dir);
-        
+
         // Config dizinini oluştur
         if !config_dir.exists() {
             fs::create_dir_all(&config_dir)?;
-            info!("Schedule config dizini oluşturuldu: {}", config_dir.display());
+            info!(
+                "Schedule config dizini oluşturuldu: {}",
+                config_dir.display()
+            );
         }
 
         let mut manager = Self {
@@ -29,7 +32,7 @@ impl ScheduleManager {
 
         // Mevcut schedule'ları yükle
         manager.load_schedules()?;
-        
+
         Ok(manager)
     }
 
@@ -39,10 +42,11 @@ impl ScheduleManager {
 
         // Config dosyası yolu
         let config_path = self.config_dir.join(format!("{}.json", config.name));
-        
+
         // JSON'a serialize et
-        let json = serde_json::to_string_pretty(config)
-            .map_err(|e| SchedulerError::InvalidConfig(format!("JSON serialization error: {}", e)))?;
+        let json = serde_json::to_string_pretty(config).map_err(|e| {
+            SchedulerError::InvalidConfig(format!("JSON serialization error: {}", e))
+        })?;
 
         // Dosyaya yaz
         fs::write(&config_path, json)?;
@@ -50,13 +54,18 @@ impl ScheduleManager {
         // Memory'de sakla
         self.schedules.insert(config.name.clone(), config.clone());
 
-        info!("Schedule kaydedildi: {} -> {}", config.name, config_path.display());
+        info!(
+            "Schedule kaydedildi: {} -> {}",
+            config.name,
+            config_path.display()
+        );
         Ok(())
     }
 
     /// Schedule'ı yükle
     pub fn get_schedule(&self, name: &str) -> SchedulerResult<ScheduleConfig> {
-        self.schedules.get(name)
+        self.schedules
+            .get(name)
             .cloned()
             .ok_or_else(|| SchedulerError::ScheduleNotFound(name.to_string()))
     }
@@ -141,7 +150,7 @@ impl ScheduleManager {
         let content = fs::read_to_string(path)?;
         let config: ScheduleConfig = serde_json::from_str(&content)
             .map_err(|e| SchedulerError::InvalidConfig(format!("JSON parse error: {}", e)))?;
-        
+
         debug!("Schedule yüklendi: {} -> {}", config.name, path.display());
         Ok(config)
     }
@@ -173,8 +182,8 @@ impl ScheduleManager {
         // Daily full scan
         if !self.exists("daily-full")? {
             let daily = ScheduleConfig::daily(
-                "daily-full".to_string(), 
-                "Daily comprehensive security scan".to_string()
+                "daily-full".to_string(),
+                "Daily comprehensive security scan".to_string(),
             );
             self.save_schedule(&daily)?;
         }
@@ -183,7 +192,7 @@ impl ScheduleManager {
         if !self.exists("weekly-full")? {
             let weekly = ScheduleConfig::weekly(
                 "weekly-full".to_string(),
-                "Weekly comprehensive security scan".to_string()
+                "Weekly comprehensive security scan".to_string(),
             );
             self.save_schedule(&weekly)?;
         }
@@ -192,7 +201,7 @@ impl ScheduleManager {
         if !self.exists("quick-3x")? {
             let quick = ScheduleConfig::quick_daily(
                 "quick-3x".to_string(),
-                "Quick security check 3 times daily".to_string()
+                "Quick security check 3 times daily".to_string(),
             );
             self.save_schedule(&quick)?;
         }

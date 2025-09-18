@@ -1,11 +1,11 @@
-use chrono::{DateTime, Utc, Duration};
-use tracing::{info, debug, warn, error};
+use chrono::{DateTime, Duration, Utc};
 use tokio::time::sleep;
+use tracing::{debug, error, info, warn};
 
-use crate::cve::{CveApiError, CveApiResult, nvd_client::NvdClient};
+use crate::cve::{nvd_client::NvdClient, CveApiError, CveApiResult};
 use crate::database::{
-    DatabaseManager, 
-    cve_cache::{CveData, CveCache, CachedCve}
+    cve_cache::{CachedCve, CveCache, CveData},
+    DatabaseManager,
 };
 
 /// CVE manager - coordinates cache and NVD API
@@ -152,8 +152,11 @@ impl CveManager {
             }
         }
 
-        info!("Found {} CVEs in cache, {} will be fetched from NVD", 
-              results.len(), missing_cves.len());
+        info!(
+            "Found {} CVEs in cache, {} will be fetched from NVD",
+            results.len(),
+            missing_cves.len()
+        );
 
         // Fetch missing CVEs from NVD
         if !missing_cves.is_empty() {
@@ -197,7 +200,11 @@ impl CveManager {
         // First, search in cache
         let cached_cves = match self.cve_cache.find_cves_for_package(package_name) {
             Ok(cves) => {
-                info!("{} CVEs found in cache for package: {}", cves.len(), package_name);
+                info!(
+                    "{} CVEs found in cache for package: {}",
+                    cves.len(),
+                    package_name
+                );
                 cves.into_iter().map(|cached| cached.data).collect()
             }
             Err(e) => {
@@ -212,9 +219,17 @@ impl CveManager {
         }
 
         // Otherwise, fetch fresh data from NVD
-        match self.nvd_client.search_by_keyword(package_name, Some(100)).await {
+        match self
+            .nvd_client
+            .search_by_keyword(package_name, Some(100))
+            .await
+        {
             Ok(nvd_cves) => {
-                info!("{} CVEs found in NVD for package: {}", nvd_cves.len(), package_name);
+                info!(
+                    "{} CVEs found in NVD for package: {}",
+                    nvd_cves.len(),
+                    package_name
+                );
 
                 // Save to cache
                 for cve_data in &nvd_cves {
@@ -226,7 +241,10 @@ impl CveManager {
                 // Combine cache and NVD data (deduplicate)
                 let mut all_cves = cached_cves;
                 for nvd_cve in nvd_cves {
-                    if !all_cves.iter().any(|cached| cached.cve_id == nvd_cve.cve_id) {
+                    if !all_cves
+                        .iter()
+                        .any(|cached| cached.cve_id == nvd_cve.cve_id)
+                    {
                         all_cves.push(nvd_cve);
                     }
                 }
@@ -277,9 +295,10 @@ impl CveManager {
 
         // Fetch fresh data from NVD
         let nvd_cve = self.nvd_client.get_cve(cve_id).await?;
-        
+
         // Save to cache
-        self.cve_cache.cache_cve(&nvd_cve)
+        self.cve_cache
+            .cache_cve(&nvd_cve)
             .map_err(|e| CveApiError::CacheError(e.to_string()))?;
 
         info!("CVE enriched: {}", cve_id);
@@ -331,11 +350,14 @@ impl CveManager {
             Ok(stats) => {
                 result.total_entries = stats.total_entries;
                 result.cache_size_mb = stats.cache_size_mb();
-                
+
                 // Check cache size
                 if let Some(max_size) = self.max_cache_size {
                     if stats.total_entries > max_size as i32 {
-                        warn!("Cache size limit exceeded: {} > {}", stats.total_entries, max_size);
+                        warn!(
+                            "Cache size limit exceeded: {} > {}",
+                            stats.total_entries, max_size
+                        );
                         result.needs_size_reduction = true;
                     }
                 }
@@ -370,7 +392,9 @@ impl CveManager {
         let nvd_health = self.nvd_client.health_check().await?;
 
         // Cache health check
-        let cache_stats = self.cve_cache.get_cache_stats()
+        let cache_stats = self
+            .cve_cache
+            .get_cache_stats()
             .map_err(|e| CveApiError::CacheError(e.to_string()))?;
 
         let health = CveManagerHealth {
@@ -395,11 +419,14 @@ impl CveManager {
     }
 
     /// Attempt to fallback from expired cache
-    fn try_fallback_cache(&self, cve_id: &str) -> Result<Option<CachedCve>, crate::database::DatabaseError> {
+    fn try_fallback_cache(
+        &self,
+        cve_id: &str,
+    ) -> Result<Option<CachedCve>, crate::database::DatabaseError> {
         // This function attempts to fetch data from cache, bypassing the expire check
         // Normal get_cve performs expire check, this can be used for raw SQL query
         debug!("Attempting fallback cache: {}", cve_id);
-        
+
         // For now, use normal cache get, expire bypass can be added in the future
         self.cve_cache.get_cve(cve_id)
     }
@@ -451,7 +478,7 @@ mod tests {
     async fn test_cve_manager_creation() {
         let db = DatabaseManager::new_test().unwrap();
         let manager = CveManager::new(db).unwrap();
-        
+
         assert!(manager.auto_refresh);
         assert!(manager.fallback_enabled);
         assert_eq!(manager.cache_ttl, Duration::hours(24));
@@ -460,7 +487,8 @@ mod tests {
     #[test]
     fn test_cve_manager_builder() {
         let db = DatabaseManager::new_test().unwrap();
-        let manager = CveManager::new(db).unwrap()
+        let manager = CveManager::new(db)
+            .unwrap()
             .with_cache_ttl(Duration::hours(12))
             .with_auto_refresh(false)
             .with_fallback(false)

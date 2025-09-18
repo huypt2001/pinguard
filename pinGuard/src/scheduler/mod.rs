@@ -1,17 +1,17 @@
 pub mod schedule_manager;
-pub mod systemd_integration;
 pub mod scheduler_types;
+pub mod systemd_integration;
 
 pub use schedule_manager::ScheduleManager;
-pub use systemd_integration::SystemdIntegration;
 pub use scheduler_types::*;
+pub use systemd_integration::SystemdIntegration;
 
+use crate::core::config::Config;
 use crate::database::DatabaseManager;
 use crate::scanners::manager::ScannerManager;
-use crate::core::config::Config;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tracing::{info, warn, error, debug};
+use tracing::{debug, error, info, warn};
 
 /// Scheduler error types
 #[derive(Error, Debug)]
@@ -114,7 +114,7 @@ impl Scheduler {
     /// Check schedule status
     pub fn get_schedule_status(&self, schedule_name: &str) -> SchedulerResult<ScheduleStatus> {
         debug!("Checking schedule status: {}", schedule_name);
-        
+
         let config = self.schedule_manager.get_schedule(schedule_name)?;
         let systemd_status = self.systemd.get_timer_status(schedule_name)?;
         let last_run = self.get_last_run_info(schedule_name)?;
@@ -151,12 +151,14 @@ impl Scheduler {
         info!("Starting scheduled scan: {}", schedule_name);
 
         let config = self.schedule_manager.get_schedule(schedule_name)?;
-        
+
         // Execute scan and save results
         match self.execute_scan(&config).await {
             Ok(scan_result) => {
-                info!("Scheduled scan completed: {} - {} finding", 
-                    schedule_name, scan_result.total_findings);
+                info!(
+                    "Scheduled scan completed: {} - {} finding",
+                    schedule_name, scan_result.total_findings
+                );
             }
             Err(e) => {
                 error!("Scheduled scan failed: {} - {}", schedule_name, e);
@@ -169,12 +171,13 @@ impl Scheduler {
 
     /// Get config file path
     fn get_config_path() -> SchedulerResult<String> {
-        let home = std::env::var("HOME")
-            .map_err(|_| SchedulerError::InvalidConfig("HOME environment variable not set".to_string()))?;
-        
+        let home = std::env::var("HOME").map_err(|_| {
+            SchedulerError::InvalidConfig("HOME environment variable not set".to_string())
+        })?;
+
         let config_dir = format!("{}/.config/pinGuard/schedules", home);
         std::fs::create_dir_all(&config_dir)?;
-        
+
         Ok(config_dir)
     }
 
@@ -187,13 +190,13 @@ impl Scheduler {
 
     /// Execute scan
     async fn execute_scan(&self, config: &ScheduleConfig) -> SchedulerResult<ScheduledScanResult> {
+        use chrono::Utc;
         use std::time::Instant;
         use uuid::Uuid;
-        use chrono::Utc;
-        
+
         let start_time = Instant::now();
         let scan_id = Uuid::new_v4().to_string();
-        
+
         info!("Starting scheduled scan: {} (ID: {})", config.name, scan_id);
 
         // Start schedule log
@@ -201,10 +204,10 @@ impl Scheduler {
 
         // Create default config
         let default_config = Config::default();
-        
+
         // Create scanner manager
         let scanner_manager = ScannerManager::new();
-        
+
         // Perform scan based on scan type
         let scan_results = match &config.scan_type {
             ScanType::Full => {
@@ -217,7 +220,10 @@ impl Scheduler {
                     Ok(result) => vec![result],
                     Err(e) => {
                         error!("Quick scan failed: {}", e);
-                        return Err(SchedulerError::ScanError(format!("Quick scan failed: {}", e)));
+                        return Err(SchedulerError::ScanError(format!(
+                            "Quick scan failed: {}",
+                            e
+                        )));
                     }
                 }
             }
@@ -248,7 +254,8 @@ impl Scheduler {
         let duration = start_time.elapsed();
         let duration_ms = duration.as_millis() as u64;
 
-        let total_findings: u32 = scan_results.iter()
+        let total_findings: u32 = scan_results
+            .iter()
             .map(|result| result.findings.len() as u32)
             .sum();
 
@@ -260,10 +267,13 @@ impl Scheduler {
         };
 
         // Log successful scan
-        self.log_scan_complete(&config.name, &scan_id, &scheduled_result, None).await?;
+        self.log_scan_complete(&config.name, &scan_id, &scheduled_result, None)
+            .await?;
 
-        info!("Scheduled scan completed: {} findings, {}ms", 
-            total_findings, duration_ms);
+        info!(
+            "Scheduled scan completed: {} findings, {}ms",
+            total_findings, duration_ms
+        );
 
         Ok(scheduled_result)
     }
@@ -272,7 +282,7 @@ impl Scheduler {
     async fn log_scan_start(&self, schedule_name: &str, scan_id: &str) -> SchedulerResult<()> {
         // Add start record to schedule logs table
         let now = chrono::Utc::now();
-        
+
         let result = self.db.execute_prepared(
             "INSERT INTO schedule_logs (schedule_name, scan_id, started_at, success) VALUES (?1, ?2, ?3, FALSE)",
             &[schedule_name, scan_id, &now.format("%Y-%m-%d %H:%M:%S%.3f").to_string()]
@@ -292,14 +302,14 @@ impl Scheduler {
 
     /// Log scan completion
     async fn log_scan_complete(
-        &self, 
-        schedule_name: &str, 
-        scan_id: &str, 
+        &self,
+        schedule_name: &str,
+        scan_id: &str,
         result: &ScheduledScanResult,
-        error_message: Option<&str>
+        error_message: Option<&str>,
     ) -> SchedulerResult<()> {
         let now = chrono::Utc::now();
-        
+
         let db_result = self.db.execute_prepared(
             "UPDATE schedule_logs SET completed_at = ?1, success = ?2, total_findings = ?3, scan_duration_ms = ?4, error_message = ?5 WHERE scan_id = ?6",
             &[

@@ -1,14 +1,14 @@
-use reqwest::{Client, header::{HeaderMap, HeaderValue, USER_AGENT}};
-use serde_json;
-use tokio::time::{sleep, Duration};
-use tracing::{info, debug, warn, error};
 use chrono::Utc;
-use std::collections::HashMap;
-
-use crate::cve::{
-    CveApiError, CveApiResult, NvdApiResponse, CveSearchCriteria,
-    nvd_to_cve_data
+use reqwest::{
+    header::{HeaderMap, HeaderValue, USER_AGENT},
+    Client,
 };
+use serde_json;
+use std::collections::HashMap;
+use tokio::time::{sleep, Duration};
+use tracing::{debug, error, info, warn};
+
+use crate::cve::{nvd_to_cve_data, CveApiError, CveApiResult, CveSearchCriteria, NvdApiResponse};
 use crate::database::cve_cache::CveData;
 
 /// NVD API client
@@ -23,10 +23,10 @@ pub struct NvdClient {
 impl NvdClient {
     /// NVD API endpoint
     const NVD_API_BASE_URL: &'static str = "https://services.nvd.nist.gov/rest/json";
-    
+
     /// API rate limiting (1 request per 6 seconds for public API)
     const PUBLIC_RATE_LIMIT_DELAY: Duration = Duration::from_secs(6);
-    
+
     /// Faster for API key usage (0.6 seconds)
     const API_KEY_RATE_LIMIT_DELAY: Duration = Duration::from_millis(600);
 
@@ -138,7 +138,11 @@ impl NvdClient {
     }
 
     /// CVE search by keyword
-    pub async fn search_by_keyword(&self, keyword: &str, limit: Option<u32>) -> CveApiResult<Vec<CveData>> {
+    pub async fn search_by_keyword(
+        &self,
+        keyword: &str,
+        limit: Option<u32>,
+    ) -> CveApiResult<Vec<CveData>> {
         info!("Searching CVEs by keyword: {}", keyword);
 
         let criteria = CveSearchCriteria::new()
@@ -163,7 +167,11 @@ impl NvdClient {
     }
 
     /// CVE search by CPE
-    pub async fn search_by_cpe(&self, cpe_name: &str, limit: Option<u32>) -> CveApiResult<Vec<CveData>> {
+    pub async fn search_by_cpe(
+        &self,
+        cpe_name: &str,
+        limit: Option<u32>,
+    ) -> CveApiResult<Vec<CveData>> {
         info!("🔍 Searching CVEs by CPE: {}", cpe_name);
 
         let criteria = CveSearchCriteria::new()
@@ -188,7 +196,11 @@ impl NvdClient {
     }
 
     /// Get CVEs updated in the last N days
-    pub async fn get_recent_cves(&self, days: u32, limit: Option<u32>) -> CveApiResult<Vec<CveData>> {
+    pub async fn get_recent_cves(
+        &self,
+        days: u32,
+        limit: Option<u32>,
+    ) -> CveApiResult<Vec<CveData>> {
         info!("Fetching CVEs from the last {} days", days);
 
         let end_date = Utc::now();
@@ -216,7 +228,11 @@ impl NvdClient {
     }
 
     /// Make request to NVD API
-    async fn make_request(&self, url: &str, params: HashMap<String, String>) -> CveApiResult<NvdApiResponse> {
+    async fn make_request(
+        &self,
+        url: &str,
+        params: HashMap<String, String>,
+    ) -> CveApiResult<NvdApiResponse> {
         let mut attempt = 0;
 
         while attempt < self.max_retries {
@@ -252,14 +268,14 @@ impl NvdClient {
 
             if status.is_success() {
                 let response_text = response.text().await?;
-                
+
                 match serde_json::from_str::<NvdApiResponse>(&response_text) {
                     Ok(nvd_response) => {
                         debug!("NVD API response successfully parsed");
-                        
+
                         // Rate limiting
                         sleep(self.rate_limit_delay).await;
-                        
+
                         return Ok(nvd_response);
                     }
                     Err(e) => {
@@ -278,16 +294,22 @@ impl NvdClient {
             } else {
                 let error_text = response.text().await.unwrap_or_default();
                 if attempt == self.max_retries {
-                    return Err(CveApiError::ApiResponseError(
-                        format!("HTTP {}: {}", status, error_text)
-                    ));
+                    return Err(CveApiError::ApiResponseError(format!(
+                        "HTTP {}: {}",
+                        status, error_text
+                    )));
                 }
-                warn!("API error (attempt {}): HTTP {} - {}", attempt, status, error_text);
+                warn!(
+                    "API error (attempt {}): HTTP {} - {}",
+                    attempt, status, error_text
+                );
                 sleep(Duration::from_secs(attempt as u64 * 2)).await;
             }
         }
 
-        Err(CveApiError::ApiResponseError("Max retries exceeded".to_string()))
+        Err(CveApiError::ApiResponseError(
+            "Max retries exceeded".to_string(),
+        ))
     }
 
     /// Check API status
@@ -295,17 +317,16 @@ impl NvdClient {
         info!("Performing NVD API health check...");
 
         let start_time = std::time::Instant::now();
-        
+
         // Perform a simple CVE search
-        let test_criteria = CveSearchCriteria::new()
-            .with_pagination(1, 0);
+        let test_criteria = CveSearchCriteria::new().with_pagination(1, 0);
 
         match self.search_cves(test_criteria).await {
             Ok(response) => {
                 let response_time = start_time.elapsed();
-                
+
                 info!("NVD API healthy ({}ms)", response_time.as_millis());
-                
+
                 Ok(NvdHealthStatus {
                     is_healthy: true,
                     response_time_ms: response_time.as_millis() as u64,
@@ -317,9 +338,9 @@ impl NvdClient {
             }
             Err(e) => {
                 let response_time = start_time.elapsed();
-                
+
                 error!("NVD API unhealthy: {}", e);
-                
+
                 Ok(NvdHealthStatus {
                     is_healthy: false,
                     response_time_ms: response_time.as_millis() as u64,

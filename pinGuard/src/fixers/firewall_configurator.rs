@@ -1,7 +1,7 @@
-use super::{Fixer, FixResult, FixError, FixPlan, FixStatus, RiskLevel, execute_command};
+use super::{execute_command, FixError, FixPlan, FixResult, FixStatus, Fixer, RiskLevel};
 use crate::scanners::Finding;
-use std::time::{Duration, Instant};
 use std::fs;
+use std::time::{Duration, Instant};
 
 pub struct FirewallConfigurator;
 
@@ -12,16 +12,20 @@ impl Fixer for FirewallConfigurator {
 
     fn can_fix(&self, finding: &Finding) -> bool {
         // Can fix findings related to network and firewall
-        finding.id.starts_with("NET-") ||
-        finding.affected_item.contains("firewall") ||
-        finding.affected_item.contains("ufw") ||
-        finding.affected_item.contains("iptables") ||
-        finding.title.contains("firewall") ||
-        finding.title.contains("port") ||
-        finding.title.contains("UFW")
+        finding.id.starts_with("NET-")
+            || finding.affected_item.contains("firewall")
+            || finding.affected_item.contains("ufw")
+            || finding.affected_item.contains("iptables")
+            || finding.title.contains("firewall")
+            || finding.title.contains("port")
+            || finding.title.contains("UFW")
     }
 
-    fn fix(&self, finding: &Finding, _config: &crate::core::config::Config) -> Result<FixResult, FixError> {
+    fn fix(
+        &self,
+        finding: &Finding,
+        _config: &crate::core::config::Config,
+    ) -> Result<FixResult, FixError> {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
@@ -41,12 +45,15 @@ impl Fixer for FirewallConfigurator {
         } else if finding.id.starts_with("NET-HTTP-NO-HTTPS") {
             self.configure_web_security(&mut result)?;
         } else {
-            return Err(FixError::UnsupportedFix(format!("Unsupported firewall fix: {}", finding.id)));
+            return Err(FixError::UnsupportedFix(format!(
+                "Unsupported firewall fix: {}",
+                finding.id
+            )));
         }
 
         result = result.set_duration(start_time);
         tracing::info!("Firewall configuration completed: {}", result.message);
-        
+
         Ok(result)
     }
 
@@ -54,7 +61,7 @@ impl Fixer for FirewallConfigurator {
         let mut plan = FixPlan::new(
             finding.id.clone(),
             self.name().to_string(),
-            format!("Configure firewall for: {}", finding.title)
+            format!("Configure firewall for: {}", finding.title),
         );
 
         if finding.id.starts_with("NET-UFW-DISABLED") {
@@ -96,17 +103,23 @@ impl FirewallConfigurator {
 
         // Set default policies
         let _output = execute_command("ufw", &["--force", "default", "deny", "incoming"])?;
-        result.commands_executed.push("ufw default deny incoming".to_string());
+        result
+            .commands_executed
+            .push("ufw default deny incoming".to_string());
 
         let _output = execute_command("ufw", &["--force", "default", "allow", "outgoing"])?;
-        result.commands_executed.push("ufw default allow outgoing".to_string());
+        result
+            .commands_executed
+            .push("ufw default allow outgoing".to_string());
 
         // Allow essential services
         self.configure_essential_services(result)?;
 
         // Enable UFW
         let _output = execute_command("ufw", &["--force", "enable"])?;
-        result.commands_executed.push("ufw --force enable".to_string());
+        result
+            .commands_executed
+            .push("ufw --force enable".to_string());
 
         // Check UFW status
         let status_output = execute_command("ufw", &["status"])?;
@@ -129,10 +142,14 @@ impl FirewallConfigurator {
 
         // Allow HTTP and HTTPS (if web server exists)
         let _output = execute_command("ufw", &["allow", "80/tcp"])?;
-        result.commands_executed.push("ufw allow 80/tcp".to_string());
+        result
+            .commands_executed
+            .push("ufw allow 80/tcp".to_string());
 
         let _output = execute_command("ufw", &["allow", "443/tcp"])?;
-        result.commands_executed.push("ufw allow 443/tcp".to_string());
+        result
+            .commands_executed
+            .push("ufw allow 443/tcp".to_string());
 
         // Allow DNS
         let _output = execute_command("ufw", &["allow", "53"])?;
@@ -157,21 +174,43 @@ impl FirewallConfigurator {
             // Allow loopback traffic
             ("iptables", vec!["-A", "INPUT", "-i", "lo", "-j", "ACCEPT"]),
             ("iptables", vec!["-A", "OUTPUT", "-o", "lo", "-j", "ACCEPT"]),
-            
             // Allow existing connections
-            ("iptables", vec!["-A", "INPUT", "-m", "state", "--state", "ESTABLISHED,RELATED", "-j", "ACCEPT"]),
-            
+            (
+                "iptables",
+                vec![
+                    "-A",
+                    "INPUT",
+                    "-m",
+                    "state",
+                    "--state",
+                    "ESTABLISHED,RELATED",
+                    "-j",
+                    "ACCEPT",
+                ],
+            ),
             // Allow SSH
-            ("iptables", vec!["-A", "INPUT", "-p", "tcp", "--dport", "22", "-j", "ACCEPT"]),
-            
+            (
+                "iptables",
+                vec!["-A", "INPUT", "-p", "tcp", "--dport", "22", "-j", "ACCEPT"],
+            ),
             // Allow HTTP/HTTPS
-            ("iptables", vec!["-A", "INPUT", "-p", "tcp", "--dport", "80", "-j", "ACCEPT"]),
-            ("iptables", vec!["-A", "INPUT", "-p", "tcp", "--dport", "443", "-j", "ACCEPT"]),
-            
+            (
+                "iptables",
+                vec!["-A", "INPUT", "-p", "tcp", "--dport", "80", "-j", "ACCEPT"],
+            ),
+            (
+                "iptables",
+                vec!["-A", "INPUT", "-p", "tcp", "--dport", "443", "-j", "ACCEPT"],
+            ),
             // Allow DNS
-            ("iptables", vec!["-A", "INPUT", "-p", "udp", "--dport", "53", "-j", "ACCEPT"]),
-            ("iptables", vec!["-A", "INPUT", "-p", "tcp", "--dport", "53", "-j", "ACCEPT"]),
-            
+            (
+                "iptables",
+                vec!["-A", "INPUT", "-p", "udp", "--dport", "53", "-j", "ACCEPT"],
+            ),
+            (
+                "iptables",
+                vec!["-A", "INPUT", "-p", "tcp", "--dport", "53", "-j", "ACCEPT"],
+            ),
             // Reject remaining traffic
             ("iptables", vec!["-A", "INPUT", "-j", "DROP"]),
             ("iptables", vec!["-A", "FORWARD", "-j", "DROP"]),
@@ -179,7 +218,9 @@ impl FirewallConfigurator {
 
         for (command, args) in rules {
             let _output = execute_command(command, &args)?;
-            result.commands_executed.push(format!("{} {}", command, args.join(" ")));
+            result
+                .commands_executed
+                .push(format!("{} {}", command, args.join(" ")));
         }
 
         // Make rules persistent
@@ -197,15 +238,17 @@ impl FirewallConfigurator {
         let debian_save = execute_command("iptables-save", &["-t", "filter"]);
         if let Ok(rules) = debian_save {
             let rules_path = "/etc/iptables/rules.v4";
-            
+
             // Create directory
             let _mkdir = execute_command("mkdir", &["-p", "/etc/iptables"]);
-            
+
             fs::write(rules_path, rules)
                 .map_err(|e| FixError::FileError(format!("Cannot save iptables rules: {}", e)))?;
-            
+
             result.files_modified.push(rules_path.to_string());
-            result.commands_executed.push("iptables-save > /etc/iptables/rules.v4".to_string());
+            result
+                .commands_executed
+                .push("iptables-save > /etc/iptables/rules.v4".to_string());
         }
 
         // Enable iptables-persistent service
@@ -217,7 +260,7 @@ impl FirewallConfigurator {
     /// Block risky port
     fn block_risky_port(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let port = self.extract_port_from_finding(finding)?;
-        
+
         tracing::info!("Blocking risky port: {}", port);
 
         // Block port with UFW
@@ -226,8 +269,22 @@ impl FirewallConfigurator {
             result.commands_executed.push(format!("ufw deny {}", port));
         } else {
             // Block with iptables
-            let _output = execute_command("iptables", &["-A", "INPUT", "-p", "tcp", "--dport", &port.to_string(), "-j", "DROP"])?;
-            result.commands_executed.push(format!("iptables -A INPUT -p tcp --dport {} -j DROP", port));
+            let _output = execute_command(
+                "iptables",
+                &[
+                    "-A",
+                    "INPUT",
+                    "-p",
+                    "tcp",
+                    "--dport",
+                    &port.to_string(),
+                    "-j",
+                    "DROP",
+                ],
+            )?;
+            result
+                .commands_executed
+                .push(format!("iptables -A INPUT -p tcp --dport {} -j DROP", port));
         }
 
         result.status = FixStatus::Success;
@@ -237,9 +294,13 @@ impl FirewallConfigurator {
     }
 
     /// Review unusual port
-    fn review_unusual_port(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn review_unusual_port(
+        &self,
+        finding: &Finding,
+        result: &mut FixResult,
+    ) -> Result<(), FixError> {
         let port = self.extract_port_from_finding(finding)?;
-        
+
         tracing::info!("Reviewing unusual port: {}", port);
 
         // Get port information
@@ -255,20 +316,55 @@ impl FirewallConfigurator {
     }
 
     /// Configure SSH port security
-    fn configure_ssh_port_security(&self, _finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn configure_ssh_port_security(
+        &self,
+        _finding: &Finding,
+        result: &mut FixResult,
+    ) -> Result<(), FixError> {
         tracing::info!("Configuring SSH port security...");
 
         // SSH bruteforce protection
         let ssh_protection_rules = vec![
             // SSH connection rate limiting
-            ("iptables", vec!["-A", "INPUT", "-p", "tcp", "--dport", "22", "-m", "state", "--state", "NEW", "-m", "recent", "--set"]),
-            ("iptables", vec!["-A", "INPUT", "-p", "tcp", "--dport", "22", "-m", "state", "--state", "NEW", "-m", "recent", "--update", "--seconds", "60", "--hitcount", "4", "-j", "DROP"]),
+            (
+                "iptables",
+                vec![
+                    "-A", "INPUT", "-p", "tcp", "--dport", "22", "-m", "state", "--state", "NEW",
+                    "-m", "recent", "--set",
+                ],
+            ),
+            (
+                "iptables",
+                vec![
+                    "-A",
+                    "INPUT",
+                    "-p",
+                    "tcp",
+                    "--dport",
+                    "22",
+                    "-m",
+                    "state",
+                    "--state",
+                    "NEW",
+                    "-m",
+                    "recent",
+                    "--update",
+                    "--seconds",
+                    "60",
+                    "--hitcount",
+                    "4",
+                    "-j",
+                    "DROP",
+                ],
+            ),
         ];
 
         for (command, args) in ssh_protection_rules {
             let rule_result = execute_command(command, &args);
             if rule_result.is_ok() {
-                result.commands_executed.push(format!("{} {}", command, args.join(" ")));
+                result
+                    .commands_executed
+                    .push(format!("{} {}", command, args.join(" ")));
             }
         }
 
@@ -293,18 +389,29 @@ impl FirewallConfigurator {
     fn extract_port_from_finding(&self, finding: &Finding) -> Result<u16, FixError> {
         // Extract port number from "Port 22/tcp" format
         if finding.affected_item.starts_with("Port ") {
-            let port_part = finding.affected_item.replace("Port ", "").split('/').next().unwrap_or("").to_string();
-            return port_part.parse::<u16>()
+            let port_part = finding
+                .affected_item
+                .replace("Port ", "")
+                .split('/')
+                .next()
+                .unwrap_or("")
+                .to_string();
+            return port_part
+                .parse::<u16>()
                 .map_err(|_| FixError::ConfigError(format!("Invalid port number: {}", port_part)));
         }
 
         // Extract port number from title
         if let Some(port_str) = self.extract_number_from_text(&finding.title) {
-            return port_str.parse::<u16>()
+            return port_str
+                .parse::<u16>()
                 .map_err(|_| FixError::ConfigError(format!("Invalid port number: {}", port_str)));
         }
 
-        Err(FixError::ConfigError(format!("Cannot extract port from finding: {}", finding.id)))
+        Err(FixError::ConfigError(format!(
+            "Cannot extract port from finding: {}",
+            finding.id
+        )))
     }
 
     /// Extract number from text
@@ -323,7 +430,8 @@ impl FirewallConfigurator {
         let mut results = Vec::new();
 
         // Enable UFW
-        let mut ufw_result = FixResult::new("NET-UFW-COMPREHENSIVE".to_string(), self.name().to_string());
+        let mut ufw_result =
+            FixResult::new("NET-UFW-COMPREHENSIVE".to_string(), self.name().to_string());
         if let Err(e) = self.enable_ufw_firewall(&mut ufw_result) {
             tracing::error!("Failed to enable UFW: {}", e);
         }
@@ -334,9 +442,9 @@ impl FirewallConfigurator {
         for port in risky_ports {
             let mut port_result = FixResult::new(
                 format!("NET-RISKY-PORT-BLOCK-{}", port),
-                self.name().to_string()
+                self.name().to_string(),
             );
-            
+
             if let Err(e) = self.block_specific_port(port, &mut port_result) {
                 tracing::warn!("Failed to block risky port {}: {}", port, e);
             }
@@ -344,7 +452,8 @@ impl FirewallConfigurator {
         }
 
         // Add DDoS protection
-        let mut ddos_result = FixResult::new("NET-DDOS-PROTECTION".to_string(), self.name().to_string());
+        let mut ddos_result =
+            FixResult::new("NET-DDOS-PROTECTION".to_string(), self.name().to_string());
         if let Err(e) = self.configure_ddos_protection(&mut ddos_result) {
             tracing::error!("Failed to configure DDoS protection: {}", e);
         }
@@ -366,20 +475,73 @@ impl FirewallConfigurator {
     fn configure_ddos_protection(&self, result: &mut FixResult) -> Result<(), FixError> {
         let ddos_rules = vec![
             // SYN flood protection
-            ("iptables", vec!["-A", "INPUT", "-p", "tcp", "--syn", "-m", "limit", "--limit", "1/s", "--limit-burst", "3", "-j", "ACCEPT"]),
-            
+            (
+                "iptables",
+                vec![
+                    "-A",
+                    "INPUT",
+                    "-p",
+                    "tcp",
+                    "--syn",
+                    "-m",
+                    "limit",
+                    "--limit",
+                    "1/s",
+                    "--limit-burst",
+                    "3",
+                    "-j",
+                    "ACCEPT",
+                ],
+            ),
             // Ping flood protection
-            ("iptables", vec!["-A", "INPUT", "-p", "icmp", "--icmp-type", "echo-request", "-m", "limit", "--limit", "1/s", "-j", "ACCEPT"]),
-            
+            (
+                "iptables",
+                vec![
+                    "-A",
+                    "INPUT",
+                    "-p",
+                    "icmp",
+                    "--icmp-type",
+                    "echo-request",
+                    "-m",
+                    "limit",
+                    "--limit",
+                    "1/s",
+                    "-j",
+                    "ACCEPT",
+                ],
+            ),
             // Port scan protection
-            ("iptables", vec!["-A", "INPUT", "-m", "recent", "--name", "portscan", "--rcheck", "--seconds", "86400", "-j", "DROP"]),
-            ("iptables", vec!["-A", "INPUT", "-m", "recent", "--name", "portscan", "--remove"]),
+            (
+                "iptables",
+                vec![
+                    "-A",
+                    "INPUT",
+                    "-m",
+                    "recent",
+                    "--name",
+                    "portscan",
+                    "--rcheck",
+                    "--seconds",
+                    "86400",
+                    "-j",
+                    "DROP",
+                ],
+            ),
+            (
+                "iptables",
+                vec![
+                    "-A", "INPUT", "-m", "recent", "--name", "portscan", "--remove",
+                ],
+            ),
         ];
 
         for (command, args) in ddos_rules {
             let rule_result = execute_command(command, &args);
             if rule_result.is_ok() {
-                result.commands_executed.push(format!("{} {}", command, args.join(" ")));
+                result
+                    .commands_executed
+                    .push(format!("{} {}", command, args.join(" ")));
             }
         }
 

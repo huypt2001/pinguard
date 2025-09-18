@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use tracing::{info, warn, debug};
+use tracing::{debug, info, warn};
 
 /// Systemd entegrasyonu
 pub struct SystemdIntegration {
@@ -16,7 +16,7 @@ impl SystemdIntegration {
     /// Yeni systemd integration oluştur
     pub fn new() -> SchedulerResult<Self> {
         let systemd_dir = Self::get_systemd_user_dir()?;
-        
+
         let service_template = Self::get_service_template();
         let timer_template = Self::get_timer_template();
 
@@ -32,7 +32,9 @@ impl SystemdIntegration {
         info!("Creating timer: {}", config.name);
 
         let timer_content = self.generate_timer_content(config)?;
-        let timer_path = self.systemd_dir.join(format!("pinGuard-{}.timer", config.name));
+        let timer_path = self
+            .systemd_dir
+            .join(format!("pinGuard-{}.timer", config.name));
 
         fs::write(&timer_path, timer_content)?;
         info!("Timer dosyası oluşturuldu: {}", timer_path.display());
@@ -45,7 +47,9 @@ impl SystemdIntegration {
         info!("Service created: {}", config.name);
 
         let service_content = self.generate_service_content(config)?;
-        let service_path = self.systemd_dir.join(format!("pinGuard-{}.service", config.name));
+        let service_path = self
+            .systemd_dir
+            .join(format!("pinGuard-{}.service", config.name));
 
         fs::write(&service_path, service_content)?;
         info!("Service dosyası oluşturuldu: {}", service_path.display());
@@ -61,7 +65,7 @@ impl SystemdIntegration {
         info!("Enabling timer: {}", schedule_name);
 
         let timer_name = format!("pinGuard-{}.timer", schedule_name);
-        
+
         // Enable timer
         let output = Command::new("systemctl")
             .args(&["--user", "enable", &timer_name])
@@ -70,7 +74,10 @@ impl SystemdIntegration {
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
-            return Err(SchedulerError::SystemdError(format!("Enable timer failed: {}", error)));
+            return Err(SchedulerError::SystemdError(format!(
+                "Enable timer failed: {}",
+                error
+            )));
         }
 
         // Timer'ı başlat
@@ -81,7 +88,10 @@ impl SystemdIntegration {
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
-            return Err(SchedulerError::SystemdError(format!("Start timer failed: {}", error)));
+            return Err(SchedulerError::SystemdError(format!(
+                "Start timer failed: {}",
+                error
+            )));
         }
 
         info!("Timer enabled and started: {}", schedule_name);
@@ -93,7 +103,7 @@ impl SystemdIntegration {
         info!("Disabling timer: {}", schedule_name);
 
         let timer_name = format!("pinGuard-{}.timer", schedule_name);
-        
+
         // Timer'ı durdur
         let output = Command::new("systemctl")
             .args(&["--user", "stop", &timer_name])
@@ -102,7 +112,10 @@ impl SystemdIntegration {
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
-            warn!("Timer durdurulamadı (zaten durdurulmuş olabilir): {}", error);
+            warn!(
+                "Timer durdurulamadı (zaten durdurulmuş olabilir): {}",
+                error
+            );
         }
 
         // Disable timer
@@ -123,12 +136,14 @@ impl SystemdIntegration {
     /// Get timer status
     pub fn get_timer_status(&self, schedule_name: &str) -> SchedulerResult<SystemdTimerStatus> {
         let timer_name = format!("pinGuard-{}.timer", schedule_name);
-        
+
         // Timer durumunu kontrol et
         let output = Command::new("systemctl")
             .args(&["--user", "is-enabled", &timer_name])
             .output()
-            .map_err(|e| SchedulerError::SystemdError(format!("Failed to check timer status: {}", e)))?;
+            .map_err(|e| {
+                SchedulerError::SystemdError(format!("Failed to check timer status: {}", e))
+            })?;
 
         let enabled = output.status.success();
 
@@ -136,7 +151,9 @@ impl SystemdIntegration {
         let output = Command::new("systemctl")
             .args(&["--user", "is-active", &timer_name])
             .output()
-            .map_err(|e| SchedulerError::SystemdError(format!("Failed to check timer active: {}", e)))?;
+            .map_err(|e| {
+                SchedulerError::SystemdError(format!("Failed to check timer active: {}", e))
+            })?;
 
         let active = output.status.success();
 
@@ -149,7 +166,11 @@ impl SystemdIntegration {
             active,
             next_run,
             last_run,
-            unit_status: if active { "active".to_string() } else { "inactive".to_string() },
+            unit_status: if active {
+                "active".to_string()
+            } else {
+                "inactive".to_string()
+            },
         })
     }
 
@@ -157,7 +178,9 @@ impl SystemdIntegration {
     pub fn remove_timer(&self, schedule_name: &str) -> SchedulerResult<()> {
         info!("Timer dosyaları kaldırılıyor: {}", schedule_name);
 
-        let timer_path = self.systemd_dir.join(format!("pinGuard-{}.timer", schedule_name));
+        let timer_path = self
+            .systemd_dir
+            .join(format!("pinGuard-{}.timer", schedule_name));
         if timer_path.exists() {
             fs::remove_file(&timer_path)?;
             debug!("Timer dosyası silindi: {}", timer_path.display());
@@ -168,7 +191,9 @@ impl SystemdIntegration {
 
     /// Service dosyasını kaldır
     pub fn remove_service(&self, schedule_name: &str) -> SchedulerResult<()> {
-        let service_path = self.systemd_dir.join(format!("pinGuard-{}.service", schedule_name));
+        let service_path = self
+            .systemd_dir
+            .join(format!("pinGuard-{}.service", schedule_name));
         if service_path.exists() {
             fs::remove_file(&service_path)?;
             debug!("Service dosyası silindi: {}", service_path.display());
@@ -182,11 +207,12 @@ impl SystemdIntegration {
 
     /// Systemd user dizinini al
     fn get_systemd_user_dir() -> SchedulerResult<PathBuf> {
-        let home = std::env::var("HOME")
-            .map_err(|_| SchedulerError::InvalidConfig("HOME environment variable not set".to_string()))?;
-        
+        let home = std::env::var("HOME").map_err(|_| {
+            SchedulerError::InvalidConfig("HOME environment variable not set".to_string())
+        })?;
+
         let systemd_dir = PathBuf::from(format!("{}/.config/systemd/user", home));
-        
+
         if !systemd_dir.exists() {
             fs::create_dir_all(&systemd_dir)?;
             info!("Systemd user dizini oluşturuldu: {}", systemd_dir.display());
@@ -210,7 +236,8 @@ StandardError=journal
 
 [Install]
 WantedBy=default.target
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Timer template'i al
@@ -226,26 +253,33 @@ RandomizedDelaySec=300
 
 [Install]
 WantedBy=timers.target
-"#.to_string()
+"#
+        .to_string()
     }
 
     /// Timer içeriği oluştur
     fn generate_timer_content(&self, config: &ScheduleConfig) -> SchedulerResult<String> {
-        let content = self.timer_template
+        let content = self
+            .timer_template
             .replace("{schedule_name}", &config.name)
-            .replace("{schedule}", &self.convert_cron_to_systemd(&config.schedule)?);
+            .replace(
+                "{schedule}",
+                &self.convert_cron_to_systemd(&config.schedule)?,
+            );
 
         Ok(content)
     }
 
     /// Service içeriği oluştur
     fn generate_service_content(&self, config: &ScheduleConfig) -> SchedulerResult<String> {
-        let user = std::env::var("USER")
-            .map_err(|_| SchedulerError::InvalidConfig("USER environment variable not set".to_string()))?;
-        
+        let user = std::env::var("USER").map_err(|_| {
+            SchedulerError::InvalidConfig("USER environment variable not set".to_string())
+        })?;
+
         let pin_guard_path = self.get_pin_guard_executable_path()?;
 
-        let content = self.service_template
+        let content = self
+            .service_template
             .replace("{schedule_name}", &config.name)
             .replace("{user}", &user)
             .replace("{pinGuard_path}", &pin_guard_path);
@@ -262,7 +296,10 @@ WantedBy=timers.target
             "0 3 * * 0" => Ok("Sun *-*-* 03:00:00".to_string()),
             "0 6,12,18 * * *" => Ok("*-*-* 06,12,18:00:00".to_string()),
             _ => {
-                warn!("Desteklenmeyen cron formatı, varsayılan değer kullanılıyor: {}", cron);
+                warn!(
+                    "Desteklenmeyen cron formatı, varsayılan değer kullanılıyor: {}",
+                    cron
+                );
                 Ok("*-*-* 02:00:00".to_string())
             }
         }
@@ -298,11 +335,16 @@ WantedBy=timers.target
         let output = Command::new("systemctl")
             .args(&["--user", "daemon-reload"])
             .output()
-            .map_err(|e| SchedulerError::SystemdError(format!("Failed to reload systemd: {}", e)))?;
+            .map_err(|e| {
+                SchedulerError::SystemdError(format!("Failed to reload systemd: {}", e))
+            })?;
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
-            return Err(SchedulerError::SystemdError(format!("Daemon reload failed: {}", error)));
+            return Err(SchedulerError::SystemdError(format!(
+                "Daemon reload failed: {}",
+                error
+            )));
         }
 
         Ok(())

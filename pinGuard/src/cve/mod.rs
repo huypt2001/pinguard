@@ -1,12 +1,12 @@
+use crate::database::cve_cache::{CpeMatch, CveData, CveSeverity};
+use chrono::{DateTime, Utc};
 use reqwest;
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
-use tracing::{error};
 use std::collections::HashMap;
-use crate::database::cve_cache::{CveData, CveSeverity, CpeMatch};
+use tracing::error;
 
-pub mod nvd_client;
 pub mod cve_manager;
+pub mod nvd_client;
 
 // Re-export için
 pub use cve_manager::CveManager;
@@ -254,7 +254,11 @@ impl CveSearchCriteria {
     }
 
     /// Search by date range (published)
-    pub fn with_published_date_range(mut self, start: Option<DateTime<Utc>>, end: Option<DateTime<Utc>>) -> Self {
+    pub fn with_published_date_range(
+        mut self,
+        start: Option<DateTime<Utc>>,
+        end: Option<DateTime<Utc>>,
+    ) -> Self {
         self.published_start_date = start;
         self.published_end_date = end;
         self
@@ -296,19 +300,31 @@ impl CveSearchCriteria {
         }
 
         if let Some(date) = self.published_start_date {
-            params.insert("pubStartDate".to_string(), date.format("%Y-%m-%dT%H:%M:%S%.3f").to_string());
+            params.insert(
+                "pubStartDate".to_string(),
+                date.format("%Y-%m-%dT%H:%M:%S%.3f").to_string(),
+            );
         }
 
         if let Some(date) = self.published_end_date {
-            params.insert("pubEndDate".to_string(), date.format("%Y-%m-%dT%H:%M:%S%.3f").to_string());
+            params.insert(
+                "pubEndDate".to_string(),
+                date.format("%Y-%m-%dT%H:%M:%S%.3f").to_string(),
+            );
         }
 
         if let Some(date) = self.last_modified_start_date {
-            params.insert("lastModStartDate".to_string(), date.format("%Y-%m-%dT%H:%M:%S%.3f").to_string());
+            params.insert(
+                "lastModStartDate".to_string(),
+                date.format("%Y-%m-%dT%H:%M:%S%.3f").to_string(),
+            );
         }
 
         if let Some(date) = self.last_modified_end_date {
-            params.insert("lastModEndDate".to_string(), date.format("%Y-%m-%dT%H:%M:%S%.3f").to_string());
+            params.insert(
+                "lastModEndDate".to_string(),
+                date.format("%Y-%m-%dT%H:%M:%S%.3f").to_string(),
+            );
         }
 
         if let Some(results_per_page) = self.results_per_page {
@@ -348,7 +364,8 @@ pub fn nvd_to_cve_data(nvd_vuln: &NvdVulnerability) -> CveApiResult<CveData> {
     let cve = &nvd_vuln.cve;
 
     // Description'ı al (İngilizce tercih et)
-    let description = cve.descriptions
+    let description = cve
+        .descriptions
         .iter()
         .find(|d| d.lang == "en")
         .or_else(|| cve.descriptions.first())
@@ -366,16 +383,15 @@ pub fn nvd_to_cve_data(nvd_vuln: &NvdVulnerability) -> CveApiResult<CveData> {
     let (affected_packages, cpe_matches) = extract_affected_packages(&cve.configurations);
 
     // References'i çıkar
-    let references = cve.references
+    let references = cve
+        .references
         .as_ref()
-        .map(|refs| refs.iter()
-            .filter_map(|r| r.url.clone())
-            .collect())
+        .map(|refs| refs.iter().filter_map(|r| r.url.clone()).collect())
         .unwrap_or_default();
 
     // Raw NVD data'yı serialize et
-    let raw_nvd_data = serde_json::to_string(nvd_vuln)
-        .map_err(|e| CveApiError::ParseError(e.to_string()))?;
+    let raw_nvd_data =
+        serde_json::to_string(nvd_vuln).map_err(|e| CveApiError::ParseError(e.to_string()))?;
 
     Ok(CveData {
         cve_id: cve.id.clone(),
@@ -399,16 +415,16 @@ fn extract_cvss_info(metrics: &Option<NvdMetrics>) -> (CveSeverity, Option<f64>,
         // CVSS v3.1'i tercih et
         if let Some(ref cvss_v31) = metrics.cvss_metric_v31 {
             if let Some(metric) = cvss_v31.first() {
-                let severity = metric.base_severity
+                let severity = metric
+                    .base_severity
                     .as_ref()
                     .and_then(|s| s.parse::<CveSeverity>().ok())
                     .unwrap_or(CveSeverity::None);
-                
-                let score = metric.cvss_data
-                    .as_ref()
-                    .and_then(|data| data.base_score);
 
-                let vector = metric.cvss_data
+                let score = metric.cvss_data.as_ref().and_then(|data| data.base_score);
+
+                let vector = metric
+                    .cvss_data
                     .as_ref()
                     .and_then(|data| data.vector_string.clone());
 
@@ -419,16 +435,16 @@ fn extract_cvss_info(metrics: &Option<NvdMetrics>) -> (CveSeverity, Option<f64>,
         // CVSS v3.0'ı dene
         if let Some(ref cvss_v30) = metrics.cvss_metric_v30 {
             if let Some(metric) = cvss_v30.first() {
-                let severity = metric.base_severity
+                let severity = metric
+                    .base_severity
                     .as_ref()
                     .and_then(|s| s.parse::<CveSeverity>().ok())
                     .unwrap_or(CveSeverity::None);
-                
-                let score = metric.cvss_data
-                    .as_ref()
-                    .and_then(|data| data.base_score);
 
-                let vector = metric.cvss_data
+                let score = metric.cvss_data.as_ref().and_then(|data| data.base_score);
+
+                let vector = metric
+                    .cvss_data
                     .as_ref()
                     .and_then(|data| data.vector_string.clone());
 
@@ -439,21 +455,25 @@ fn extract_cvss_info(metrics: &Option<NvdMetrics>) -> (CveSeverity, Option<f64>,
         // CVSS v2'yi son çare olarak dene
         if let Some(ref cvss_v2) = metrics.cvss_metric_v2 {
             if let Some(metric) = cvss_v2.first() {
-                let score = metric.cvss_data
-                    .as_ref()
-                    .and_then(|data| data.base_score);
+                let score = metric.cvss_data.as_ref().and_then(|data| data.base_score);
 
                 // CVSS v2 için severity'yi score'dan hesapla
                 let severity = score
                     .map(|s| {
-                        if s >= 9.0 { CveSeverity::Critical }
-                        else if s >= 7.0 { CveSeverity::High }
-                        else if s >= 4.0 { CveSeverity::Medium }
-                        else { CveSeverity::Low }
+                        if s >= 9.0 {
+                            CveSeverity::Critical
+                        } else if s >= 7.0 {
+                            CveSeverity::High
+                        } else if s >= 4.0 {
+                            CveSeverity::Medium
+                        } else {
+                            CveSeverity::Low
+                        }
                     })
                     .unwrap_or(CveSeverity::None);
 
-                let vector = metric.cvss_data
+                let vector = metric
+                    .cvss_data
                     .as_ref()
                     .and_then(|data| data.vector_string.clone());
 
@@ -466,7 +486,9 @@ fn extract_cvss_info(metrics: &Option<NvdMetrics>) -> (CveSeverity, Option<f64>,
 }
 
 /// Extract affected packages from CPE configuration
-fn extract_affected_packages(configurations: &Option<Vec<NvdConfiguration>>) -> (Vec<String>, Vec<CpeMatch>) {
+fn extract_affected_packages(
+    configurations: &Option<Vec<NvdConfiguration>>,
+) -> (Vec<String>, Vec<CpeMatch>) {
     let mut packages = Vec::new();
     let mut cpe_matches = Vec::new();
 
@@ -478,7 +500,8 @@ fn extract_affected_packages(configurations: &Option<Vec<NvdConfiguration>>) -> 
                         for cpe_match in cpe_match_list {
                             if let Some(ref criteria) = cpe_match.criteria {
                                 // CPE'den package name'i çıkar
-                                if let Some(package_name) = extract_package_name_from_cpe(criteria) {
+                                if let Some(package_name) = extract_package_name_from_cpe(criteria)
+                                {
                                     if !packages.contains(&package_name) {
                                         packages.push(package_name);
                                     }
@@ -487,10 +510,12 @@ fn extract_affected_packages(configurations: &Option<Vec<NvdConfiguration>>) -> 
                                 // CpeMatch struct'ı oluştur
                                 cpe_matches.push(CpeMatch {
                                     cpe23_uri: criteria.clone(),
-                                    version_start: cpe_match.version_start_including
+                                    version_start: cpe_match
+                                        .version_start_including
                                         .clone()
                                         .or_else(|| cpe_match.version_start_excluding.clone()),
-                                    version_end: cpe_match.version_end_including
+                                    version_end: cpe_match
+                                        .version_end_including
                                         .clone()
                                         .or_else(|| cpe_match.version_end_excluding.clone()),
                                     vulnerable: cpe_match.vulnerable.unwrap_or(false),
@@ -536,7 +561,7 @@ pub fn validate_cve_id(cve_id: &str) -> CveApiResult<()> {
     // CVE ID format: CVE-YYYY-NNNNN
     let cve_regex = regex::Regex::new(r"^CVE-\d{4}-\d{4,}$")
         .map_err(|_| CveApiError::InvalidCveId("Regex compilation failed".to_string()))?;
-    
+
     if cve_regex.is_match(cve_id) {
         Ok(())
     } else {
@@ -569,7 +594,7 @@ mod tests {
         assert!(validate_cve_id("CVE-2023-1234").is_ok());
         assert!(validate_cve_id("CVE-2021-12345").is_ok());
         assert!(validate_cve_id("CVE-2020-123456").is_ok());
-        
+
         assert!(validate_cve_id("invalid-id").is_err());
         assert!(validate_cve_id("CVE-23-1234").is_err());
         assert!(validate_cve_id("CVE-2023-123").is_err());

@@ -1,5 +1,5 @@
-use rusqlite::Connection;
 use crate::database::DatabaseError;
+use rusqlite::Connection;
 
 type MigrationResult = Result<(), DatabaseError>;
 
@@ -48,33 +48,87 @@ pub fn create_schedule_logs_table(conn: &mut Connection) -> MigrationResult {
 /// Create indexes for performance
 pub fn create_indexes(conn: &mut Connection) -> MigrationResult {
     // CVE cache indexes
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_cve_cache_cve_id ON cve_cache(cve_id)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_cve_cache_severity ON cve_cache(severity)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_cve_cache_published_date ON cve_cache(published_date)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_cve_cache_expires_at ON cve_cache(expires_at)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_cve_cache_packages ON cve_cache(affected_packages)", [])?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_cve_cache_cve_id ON cve_cache(cve_id)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_cve_cache_severity ON cve_cache(severity)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_cve_cache_published_date ON cve_cache(published_date)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_cve_cache_expires_at ON cve_cache(expires_at)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_cve_cache_packages ON cve_cache(affected_packages)",
+        [],
+    )?;
 
     // Scan history indexes
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_history_scan_id ON scan_history(scan_id)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_history_hostname ON scan_history(hostname)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_history_scan_type ON scan_history(scan_type)", [])?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scan_history_scan_id ON scan_history(scan_id)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scan_history_hostname ON scan_history(hostname)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scan_history_scan_type ON scan_history(scan_type)",
+        [],
+    )?;
     conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_history_scan_started_at ON scan_history(scan_started_at)", [])?;
     conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_history_security_score ON scan_history(security_score)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_history_risk_level ON scan_history(risk_level)", [])?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scan_history_risk_level ON scan_history(risk_level)",
+        [],
+    )?;
 
     // Scan findings indexes
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_findings_scan_id ON scan_findings(scan_id)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_findings_finding_id ON scan_findings(finding_id)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_findings_scanner_name ON scan_findings(scanner_name)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_findings_severity ON scan_findings(severity)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_findings_category ON scan_findings(category)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_scan_findings_cve_ids ON scan_findings(cve_ids)", [])?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scan_findings_scan_id ON scan_findings(scan_id)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scan_findings_finding_id ON scan_findings(finding_id)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scan_findings_scanner_name ON scan_findings(scanner_name)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scan_findings_severity ON scan_findings(severity)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scan_findings_category ON scan_findings(category)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_scan_findings_cve_ids ON scan_findings(cve_ids)",
+        [],
+    )?;
 
     // Schedule logs indexes
     conn.execute("CREATE INDEX IF NOT EXISTS idx_schedule_logs_schedule_name ON schedule_logs(schedule_name)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_schedule_logs_scan_id ON schedule_logs(scan_id)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_schedule_logs_started_at ON schedule_logs(started_at)", [])?;
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_schedule_logs_success ON schedule_logs(success)", [])?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_schedule_logs_scan_id ON schedule_logs(scan_id)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_schedule_logs_started_at ON schedule_logs(started_at)",
+        [],
+    )?;
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_schedule_logs_success ON schedule_logs(success)",
+        [],
+    )?;
 
     // Composite indexes
     conn.execute("CREATE INDEX IF NOT EXISTS idx_cve_cache_severity_published ON cve_cache(severity, published_date)", [])?;
@@ -113,9 +167,10 @@ pub fn check_and_upgrade_schema(conn: &mut Connection) -> MigrationResult {
                     apply_version_1_upgrades(conn)?;
                 }
                 _ => {
-                    return Err(DatabaseError::MigrationError(
-                        format!("Unknown schema version: {}", version)
-                    ));
+                    return Err(DatabaseError::MigrationError(format!(
+                        "Unknown schema version: {}",
+                        version
+                    )));
                 }
             }
 
@@ -133,13 +188,13 @@ pub fn check_and_upgrade_schema(conn: &mut Connection) -> MigrationResult {
 /// Upgrades for version 1
 fn apply_version_1_upgrades(_conn: &mut Connection) -> MigrationResult {
     // Future schema changes will be made here
-    
+
     // Example: Add new column
     // conn.execute("ALTER TABLE cve_cache ADD COLUMN new_column TEXT", [])?;
-    
+
     // Example: Add new table
     // conn.execute("CREATE TABLE new_table (...)", [])?;
-    
+
     Ok(())
 }
 
@@ -152,7 +207,7 @@ mod tests {
     fn test_create_cve_cache_table() {
         let mut conn = Connection::open(":memory:").unwrap();
         create_cve_cache_table(&mut conn).unwrap();
-        
+
         // Check if table was created
         let table_exists: bool = conn
             .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cve_cache'")
@@ -166,7 +221,7 @@ mod tests {
     fn test_create_scan_history_table() {
         let mut conn = Connection::open(":memory:").unwrap();
         create_scan_history_table(&mut conn).unwrap();
-        
+
         // Check if tables were created
         let history_exists: bool = conn
             .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='scan_history'")
@@ -190,7 +245,7 @@ mod tests {
         create_scan_history_table(&mut conn).unwrap();
         create_schedule_logs_table(&mut conn).unwrap();
         create_indexes(&mut conn).unwrap();
-        
+
         // Check if at least one index was created
         let index_count: i32 = conn
             .prepare("SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")

@@ -1,7 +1,9 @@
-use super::{Fixer, FixResult, FixError, FixPlan, FixStatus, RiskLevel, execute_command, create_backup};
+use super::{
+    create_backup, execute_command, FixError, FixPlan, FixResult, FixStatus, Fixer, RiskLevel,
+};
 use crate::scanners::Finding;
-use std::time::{Duration, Instant};
 use std::fs;
+use std::time::{Duration, Instant};
 
 pub struct UserPolicyFixer;
 
@@ -12,15 +14,19 @@ impl Fixer for UserPolicyFixer {
 
     fn can_fix(&self, finding: &Finding) -> bool {
         // Can fix user policy-related findings
-        finding.id.starts_with("USR-") ||
-        finding.affected_item.contains("user") ||
-        finding.affected_item.contains("password") ||
-        finding.title.contains("password") ||
-        finding.title.contains("user") ||
-        finding.title.contains("sudo")
+        finding.id.starts_with("USR-")
+            || finding.affected_item.contains("user")
+            || finding.affected_item.contains("password")
+            || finding.title.contains("password")
+            || finding.title.contains("user")
+            || finding.title.contains("sudo")
     }
 
-    fn fix(&self, finding: &Finding, _config: &crate::core::config::Config) -> Result<FixResult, FixError> {
+    fn fix(
+        &self,
+        finding: &Finding,
+        _config: &crate::core::config::Config,
+    ) -> Result<FixResult, FixError> {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
@@ -40,12 +46,15 @@ impl Fixer for UserPolicyFixer {
         } else if finding.id.starts_with("USR-SHARED-ACCOUNT") {
             self.secure_shared_account(finding, &mut result)?;
         } else {
-            return Err(FixError::UnsupportedFix(format!("Unsupported user policy fix: {}", finding.id)));
+            return Err(FixError::UnsupportedFix(format!(
+                "Unsupported user policy fix: {}",
+                finding.id
+            )));
         }
 
         result = result.set_duration(start_time);
         tracing::info!("User policy hardening completed: {}", result.message);
-        
+
         Ok(result)
     }
 
@@ -53,7 +62,7 @@ impl Fixer for UserPolicyFixer {
         let mut plan = FixPlan::new(
             finding.id.clone(),
             self.name().to_string(),
-            format!("Fix user policy issue: {}", finding.title)
+            format!("Fix user policy issue: {}", finding.title),
         );
 
         if finding.id.starts_with("USR-WEAK-PASSWORD") {
@@ -107,10 +116,10 @@ impl UserPolicyFixer {
 
         // Update password settings
         let password_settings = vec![
-            ("PASS_MAX_DAYS", "90"),      // Maximum password age
-            ("PASS_MIN_DAYS", "1"),       // Minimum password age
-            ("PASS_WARN_AGE", "7"),       // Password expiry warning
-            ("PASS_MIN_LEN", "8"),        // Minimum password length
+            ("PASS_MAX_DAYS", "90"), // Maximum password age
+            ("PASS_MIN_DAYS", "1"),  // Minimum password age
+            ("PASS_WARN_AGE", "7"),  // Password expiry warning
+            ("PASS_MIN_LEN", "8"),   // Minimum password length
         ];
 
         for (setting, value) in password_settings {
@@ -157,7 +166,7 @@ impl UserPolicyFixer {
     /// Configure PAM password complexity
     fn configure_pam_password_complexity(&self, result: &mut FixResult) -> Result<(), FixError> {
         let pam_password_path = "/etc/pam.d/common-password";
-        
+
         // Create backup
         let backup_path = create_backup(pam_password_path)?;
         if result.backup_created.is_none() {
@@ -171,24 +180,25 @@ impl UserPolicyFixer {
 
         // Add pam_pwquality module
         let pwquality_line = "password requisite pam_pwquality.so retry=3 minlen=8 difok=3 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1";
-        
+
         if !new_content.contains("pam_pwquality.so") {
             // Add before pam_unix line
             let lines: Vec<&str> = new_content.lines().collect();
             let mut new_lines = Vec::new();
-            
+
             for line in lines {
                 if line.contains("pam_unix.so") && line.contains("password") {
                     new_lines.push(pwquality_line.to_string());
                 }
                 new_lines.push(line.to_string());
             }
-            
+
             new_content = new_lines.join("\n");
-            
-            fs::write(pam_password_path, new_content)
-                .map_err(|e| FixError::FileError(format!("Cannot write PAM password config: {}", e)))?;
-            
+
+            fs::write(pam_password_path, new_content).map_err(|e| {
+                FixError::FileError(format!("Cannot write PAM password config: {}", e))
+            })?;
+
             result.files_modified.push(pam_password_path.to_string());
         }
 
@@ -196,18 +206,26 @@ impl UserPolicyFixer {
     }
 
     /// Set password expiry
-    fn set_password_expiry(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn set_password_expiry(
+        &self,
+        finding: &Finding,
+        result: &mut FixResult,
+    ) -> Result<(), FixError> {
         let username = self.extract_username(&finding.affected_item)?;
-        
+
         tracing::info!("Setting password expiry: {}", username);
 
         // Maximum password age 90 days
         let _output = execute_command("chage", &["-M", "90", &username])?;
-        result.commands_executed.push(format!("chage -M 90 {}", username));
+        result
+            .commands_executed
+            .push(format!("chage -M 90 {}", username));
 
         // Password change warning 7 days before
         let _output = execute_command("chage", &["-W", "7", &username])?;
-        result.commands_executed.push(format!("chage -W 7 {}", username));
+        result
+            .commands_executed
+            .push(format!("chage -W 7 {}", username));
 
         result.status = FixStatus::Success;
         result.message = format!("Password expiry set for user: {}", username);
@@ -216,7 +234,11 @@ impl UserPolicyFixer {
     }
 
     /// Fix sudo NOPASSWD security vulnerability
-    fn fix_sudo_nopasswd(&self, _finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn fix_sudo_nopasswd(
+        &self,
+        _finding: &Finding,
+        result: &mut FixResult,
+    ) -> Result<(), FixError> {
         tracing::info!("Fixing sudo NOPASSWD security vulnerability...");
 
         let sudoers_path = "/etc/sudoers";
@@ -244,13 +266,15 @@ impl UserPolicyFixer {
             let new_content = new_lines.join("\n");
             fs::write(sudoers_path, new_content)
                 .map_err(|e| FixError::FileError(format!("Cannot write sudoers: {}", e)))?;
-            
+
             result.files_modified.push(sudoers_path.to_string());
 
             // Validate sudoers file
             let test_output = execute_command("visudo", &["-c"])?;
             if !test_output.contains("parsed OK") {
-                return Err(FixError::ConfigError("Sudoers file validation failed".to_string()));
+                return Err(FixError::ConfigError(
+                    "Sudoers file validation failed".to_string(),
+                ));
             }
 
             result.status = FixStatus::Success;
@@ -264,18 +288,26 @@ impl UserPolicyFixer {
     }
 
     /// Disable inactive user
-    fn disable_inactive_user(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn disable_inactive_user(
+        &self,
+        finding: &Finding,
+        result: &mut FixResult,
+    ) -> Result<(), FixError> {
         let username = self.extract_username(&finding.affected_item)?;
-        
+
         tracing::info!("Disabling inactive user: {}", username);
 
         // Lock user account
         let _output = execute_command("passwd", &["-l", &username])?;
-        result.commands_executed.push(format!("passwd -l {}", username));
+        result
+            .commands_executed
+            .push(format!("passwd -l {}", username));
 
         // Mark account as expired
         let _output = execute_command("chage", &["-E", "1", &username])?;
-        result.commands_executed.push(format!("chage -E 1 {}", username));
+        result
+            .commands_executed
+            .push(format!("chage -E 1 {}", username));
 
         result.status = FixStatus::Success;
         result.message = format!("Inactive user '{}' disabled", username);
@@ -321,7 +353,7 @@ impl UserPolicyFixer {
         let new_content = new_lines.join("\n");
         fs::write(passwd_path, new_content)
             .map_err(|e| FixError::FileError(format!("Cannot write passwd: {}", e)))?;
-        
+
         result.files_modified.push(passwd_path.to_string());
         result.status = FixStatus::Success;
         result.message = "Root login disabled".to_string();
@@ -330,18 +362,26 @@ impl UserPolicyFixer {
     }
 
     /// Secure shared account
-    fn secure_shared_account(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn secure_shared_account(
+        &self,
+        finding: &Finding,
+        result: &mut FixResult,
+    ) -> Result<(), FixError> {
         let username = self.extract_username(&finding.affected_item)?;
-        
+
         tracing::info!("Securing shared account: {}", username);
 
         // Force password change
         let _output = execute_command("chage", &["-d", "0", &username])?;
-        result.commands_executed.push(format!("chage -d 0 {}", username));
+        result
+            .commands_executed
+            .push(format!("chage -d 0 {}", username));
 
         // Keep password expiry short
         let _output = execute_command("chage", &["-M", "30", &username])?;
-        result.commands_executed.push(format!("chage -M 30 {}", username));
+        result
+            .commands_executed
+            .push(format!("chage -M 30 {}", username));
 
         result.status = FixStatus::RequiresUserAction;
         result.message = format!("Shared account '{}' configured for mandatory password change. Consider creating individual accounts.", username);
@@ -361,7 +401,10 @@ impl UserPolicyFixer {
             return Ok(affected_item.trim().to_string());
         }
 
-        Err(FixError::ConfigError(format!("Cannot extract username from: {}", affected_item)))
+        Err(FixError::ConfigError(format!(
+            "Cannot extract username from: {}",
+            affected_item
+        )))
     }
 
     /// Fix all weak password policies in the system
@@ -369,7 +412,10 @@ impl UserPolicyFixer {
         let mut results = Vec::new();
 
         // General password policy
-        let mut general_result = FixResult::new("USR-WEAK-PASSWORD-GENERAL".to_string(), self.name().to_string());
+        let mut general_result = FixResult::new(
+            "USR-WEAK-PASSWORD-GENERAL".to_string(),
+            self.name().to_string(),
+        );
         if let Err(e) = self.enforce_password_policy(&mut general_result) {
             tracing::error!("Failed to enforce password policy: {}", e);
         }
@@ -381,9 +427,9 @@ impl UserPolicyFixer {
             if !username.is_empty() && username != "root" {
                 let mut expiry_result = FixResult::new(
                     format!("USR-NO-PASSWORD-EXPIRY-{}", username.to_uppercase()),
-                    self.name().to_string()
+                    self.name().to_string(),
                 );
-                
+
                 if let Err(e) = self.set_password_expiry_for_user(username, &mut expiry_result) {
                     tracing::warn!("Failed to set password expiry for {}: {}", username, e);
                 }
@@ -395,12 +441,20 @@ impl UserPolicyFixer {
     }
 
     /// Set password expiry for specific user
-    fn set_password_expiry_for_user(&self, username: &str, result: &mut FixResult) -> Result<(), FixError> {
+    fn set_password_expiry_for_user(
+        &self,
+        username: &str,
+        result: &mut FixResult,
+    ) -> Result<(), FixError> {
         let _output = execute_command("chage", &["-M", "90", username])?;
-        result.commands_executed.push(format!("chage -M 90 {}", username));
+        result
+            .commands_executed
+            .push(format!("chage -M 90 {}", username));
 
         let _output = execute_command("chage", &["-W", "7", username])?;
-        result.commands_executed.push(format!("chage -W 7 {}", username));
+        result
+            .commands_executed
+            .push(format!("chage -W 7 {}", username));
 
         result.status = FixStatus::Success;
         result.message = format!("Password expiry set for user: {}", username);

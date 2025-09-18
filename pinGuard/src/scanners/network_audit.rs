@@ -1,6 +1,6 @@
-use super::{Scanner, ScanResult, ScanError, Finding, Severity, Category, ScanStatus};
-use std::process::Command;
+use super::{Category, Finding, ScanError, ScanResult, ScanStatus, Scanner, Severity};
 use serde::{Deserialize, Serialize};
+use std::process::Command;
 use std::time::Instant;
 
 pub struct NetworkAudit;
@@ -30,38 +30,44 @@ impl Scanner for NetworkAudit {
     }
 
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool {
-        config.scanner.enabled_modules.contains(&"network_audit".to_string())
+        config
+            .scanner
+            .enabled_modules
+            .contains(&"network_audit".to_string())
     }
 
     fn scan(&self) -> Result<ScanResult, ScanError> {
         let start_time = Instant::now();
         let mut result = ScanResult::new("Network Audit".to_string());
-        
+
         tracing::info!("Starting network audit scan...");
-        
+
         // Açık portları listele
         let open_ports = self.get_open_ports()?;
         result.set_items_scanned(open_ports.len() as u32);
-        
+
         tracing::info!("{} açık port tespit edildi", open_ports.len());
-        
+
         // Riskli portları kontrol et
         self.check_risky_ports(&open_ports, &mut result)?;
-        
+
         // Network bağlantılarını kontrol et
         self.check_network_connections(&mut result)?;
-        
+
         // Firewall durumunu kontrol et
         self.check_firewall_status(&mut result)?;
-        
+
         // Network servisleri güvenlik kontrolü
         self.check_network_service_security(&open_ports, &mut result)?;
-        
+
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
-        
-        tracing::info!("Network audit completed: {} findings", result.findings.len());
-        
+
+        tracing::info!(
+            "Network audit completed: {} findings",
+            result.findings.len()
+        );
+
         Ok(result)
     }
 }
@@ -81,7 +87,9 @@ impl NetworkAudit {
             .map_err(|e| ScanError::CommandError(format!("Network command failed: {}", e)))?;
 
         if !output.status.success() {
-            return Err(ScanError::CommandError("Network listing command failed".to_string()));
+            return Err(ScanError::CommandError(
+                "Network listing command failed".to_string(),
+            ));
         }
 
         let output_text = String::from_utf8_lossy(&output.stdout);
@@ -113,11 +121,15 @@ impl NetworkAudit {
         if let Some(colon_pos) = local_addr.rfind(':') {
             let address_part = &local_addr[..colon_pos];
             let port_part = &local_addr[colon_pos + 1..];
-            
+
             if let Ok(port) = port_part.parse::<u16>() {
                 return Some(OpenPort {
                     port,
-                    protocol: if protocol.starts_with("tcp") { "tcp".to_string() } else { "udp".to_string() },
+                    protocol: if protocol.starts_with("tcp") {
+                        "tcp".to_string()
+                    } else {
+                        "udp".to_string()
+                    },
                     service: self.identify_service(port),
                     binding: address_part.to_string(),
                 });
@@ -150,7 +162,11 @@ impl NetworkAudit {
     }
 
     /// Check risky ports
-    fn check_risky_ports(&self, ports: &[OpenPort], result: &mut ScanResult) -> Result<(), ScanError> {
+    fn check_risky_ports(
+        &self,
+        ports: &[OpenPort],
+        result: &mut ScanResult,
+    ) -> Result<(), ScanError> {
         tracing::info!("Checking risky ports...");
 
         let risky_ports = vec![
@@ -172,7 +188,9 @@ impl NetworkAudit {
             for (risky_port, service, severity, description) in &risky_ports {
                 if port.port == *risky_port {
                     let is_public = port.binding == "0.0.0.0" || port.binding == "::";
-                    let severity = if is_public { severity.clone() } else { 
+                    let severity = if is_public {
+                        severity.clone()
+                    } else {
                         match severity {
                             Severity::High => Severity::Medium,
                             Severity::Medium => Severity::Low,
@@ -237,8 +255,8 @@ impl NetworkAudit {
     /// Yaygın port kontrolü
     fn is_common_port(&self, port: u16) -> bool {
         let common_ports = vec![
-            22, 80, 443, 8080, 8443, 8000, 3000, 9000, 9090, 
-            3306, 5432, 6379, 27017, 5000, 5001, 8888, 9999
+            22, 80, 443, 8080, 8443, 8000, 3000, 9000, 9090, 3306, 5432, 6379, 27017, 5000, 5001,
+            8888, 9999,
         ];
         common_ports.contains(&port)
     }
@@ -250,17 +268,13 @@ impl NetworkAudit {
         let output = Command::new("ss")
             .args(&["-tuln", "--no-header"])
             .output()
-            .or_else(|_| {
-                Command::new("netstat")
-                    .args(&["-tuln"])
-                    .output()
-            });
+            .or_else(|_| Command::new("netstat").args(&["-tuln"]).output());
 
         if let Ok(output) = output {
             if output.status.success() {
                 let output_text = String::from_utf8_lossy(&output.stdout);
                 let mut public_services = 0;
-                
+
                 for line in output_text.lines() {
                     if line.contains("0.0.0.0:") || line.contains(":::") {
                         public_services += 1;
@@ -299,9 +313,7 @@ impl NetworkAudit {
         tracing::info!("Checking firewall status...");
 
         // UFW kontrolü
-        let ufw_output = Command::new("ufw")
-            .arg("status")
-            .output();
+        let ufw_output = Command::new("ufw").arg("status").output();
 
         if let Ok(output) = ufw_output {
             let output_text = String::from_utf8_lossy(&output.stdout);
@@ -326,14 +338,12 @@ impl NetworkAudit {
         }
 
         // iptables kontrolü
-        let iptables_output = Command::new("iptables")
-            .args(&["-L", "-n"])
-            .output();
+        let iptables_output = Command::new("iptables").args(&["-L", "-n"]).output();
 
         if let Ok(output) = iptables_output {
             let output_text = String::from_utf8_lossy(&output.stdout);
             let lines: Vec<&str> = output_text.lines().collect();
-            
+
             // Çok basit bir iptables kontrolü
             let mut has_rules = false;
             for line in &lines {
@@ -369,7 +379,11 @@ impl NetworkAudit {
     }
 
     /// Network servisleri güvenlik kontrolü
-    fn check_network_service_security(&self, ports: &[OpenPort], result: &mut ScanResult) -> Result<(), ScanError> {
+    fn check_network_service_security(
+        &self,
+        ports: &[OpenPort],
+        result: &mut ScanResult,
+    ) -> Result<(), ScanError> {
         tracing::info!("Network servisleri güvenlik kontrolü...");
 
         // HTTP vs HTTPS kontrolü

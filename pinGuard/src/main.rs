@@ -1,17 +1,17 @@
-use clap::{Command, Arg, ArgMatches};
-use tracing::{info, warn, error, Level};
+use clap::{Arg, ArgMatches, Command};
+use tracing::{error, info, warn, Level};
 use tracing_subscriber::FmtSubscriber;
 
 mod core;
-mod scanners;
+mod cve;
+mod database;
 mod fixers;
 mod report;
-mod database;
-mod cve;
+mod scanners;
 mod scheduler;
 
-use database::DatabaseManager;
 use cve::CveManager;
+use database::DatabaseManager;
 use scheduler::Scheduler;
 
 fn main() {
@@ -32,18 +32,24 @@ fn main() {
     // }
 
     let matches = build_cli().get_matches();
-    
+
     // Load config file
-    let config_path = matches.get_one::<String>("config").map(|s| s.as_str()).unwrap_or("config.yaml");
+    let config_path = matches
+        .get_one::<String>("config")
+        .map(|s| s.as_str())
+        .unwrap_or("config.yaml");
     let config = match core::config::Config::load_from_file(config_path) {
         Ok(config) => {
             info!("Configuration file successfully loaded: {}", config_path);
             config
-        },
+        }
         Err(e) => {
-            warn!("Config file could not be loaded ({}), using default settings", e);
+            warn!(
+                "Config file could not be loaded ({}), using default settings",
+                e
+            );
             core::config::Config::default()
-        },
+        }
     };
 
     // Process subcommands
@@ -55,7 +61,9 @@ fn main() {
         Some(("database", sub_matches)) => handle_database_command(sub_matches, &config),
         Some(("cve", sub_matches)) => handle_cve_command(sub_matches, &config),
         Some(("schedule", sub_matches)) => handle_schedule_command(sub_matches, &config),
-        Some(("run-scheduled-scan", sub_matches)) => handle_run_scheduled_scan(sub_matches, &config),
+        Some(("run-scheduled-scan", sub_matches)) => {
+            handle_run_scheduled_scan(sub_matches, &config)
+        }
         _ => {
             info!("Run 'pinGuard --help' for available commands");
         }
@@ -181,35 +189,21 @@ fn build_cli() -> Command {
         .subcommand(
             Command::new("database")
                 .about("Database management")
+                .subcommand(Command::new("init").about("Initialize database and create tables"))
+                .subcommand(Command::new("migrate").about("Run database migrations"))
+                .subcommand(Command::new("health").about("Perform database health check"))
+                .subcommand(Command::new("stats").about("Show database statistics"))
                 .subcommand(
-                    Command::new("init")
-                        .about("Initialize database and create tables")
-                )
-                .subcommand(
-                    Command::new("migrate")
-                        .about("Run database migrations")
-                )
-                .subcommand(
-                    Command::new("health")
-                        .about("Perform database health check")
-                )
-                .subcommand(
-                    Command::new("stats")
-                        .about("Show database statistics")
-                )
-                .subcommand(
-                    Command::new("cleanup")
-                        .about("Clean up old data")
-                        .arg(
-                            Arg::new("days")
-                                .short('d')
-                                .long("days")
-                                .value_name("DAYS")
-                                .help("Delete data older than how many days")
-                                .value_parser(clap::value_parser!(u32))
-                                .default_value("30"),
-                        )
-                )
+                    Command::new("cleanup").about("Clean up old data").arg(
+                        Arg::new("days")
+                            .short('d')
+                            .long("days")
+                            .value_name("DAYS")
+                            .help("Delete data older than how many days")
+                            .value_parser(clap::value_parser!(u32))
+                            .default_value("30"),
+                    ),
+                ),
         )
         .subcommand(
             Command::new("cve")
@@ -225,7 +219,7 @@ fn build_cli() -> Command {
                                 .help("Recent CVEs from how many days")
                                 .value_parser(clap::value_parser!(u32))
                                 .default_value("7"),
-                        )
+                        ),
                 )
                 .subcommand(
                     Command::new("search")
@@ -244,7 +238,7 @@ fn build_cli() -> Command {
                                 .help("Maximum number of results")
                                 .value_parser(clap::value_parser!(usize))
                                 .default_value("10"),
-                        )
+                        ),
                 )
                 .subcommand(
                     Command::new("get")
@@ -254,28 +248,16 @@ fn build_cli() -> Command {
                                 .help("CVE ID (e.g.: CVE-2023-1234)")
                                 .required(true)
                                 .value_parser(clap::value_parser!(String)),
-                        )
+                        ),
                 )
-                .subcommand(
-                    Command::new("health")
-                        .about("CVE manager health check")
-                )
+                .subcommand(Command::new("health").about("CVE manager health check"))
                 .subcommand(
                     Command::new("cache")
                         .about("CVE cache management")
-                        .subcommand(
-                            Command::new("stats")
-                                .about("Cache statistics")
-                        )
-                        .subcommand(
-                            Command::new("cleanup")
-                                .about("Clean expired cache")
-                        )
-                        .subcommand(
-                            Command::new("refresh")
-                                .about("Refresh cache")
-                        )
-                )
+                        .subcommand(Command::new("stats").about("Cache statistics"))
+                        .subcommand(Command::new("cleanup").about("Clean expired cache"))
+                        .subcommand(Command::new("refresh").about("Refresh cache")),
+                ),
         )
         .subcommand(
             Command::new("schedule")
@@ -311,35 +293,25 @@ fn build_cli() -> Command {
                                 .help("Scan type (full, quick, security)")
                                 .value_parser(clap::value_parser!(String))
                                 .default_value("full"),
-                        )
+                        ),
                 )
                 .subcommand(
-                    Command::new("disable")
-                        .about("Disable scheduled scan")
-                        .arg(
-                            Arg::new("name")
-                                .help("Schedule name")
-                                .required(true)
-                                .value_parser(clap::value_parser!(String)),
-                        )
+                    Command::new("disable").about("Disable scheduled scan").arg(
+                        Arg::new("name")
+                            .help("Schedule name")
+                            .required(true)
+                            .value_parser(clap::value_parser!(String)),
+                    ),
                 )
+                .subcommand(Command::new("list").about("List active scheduled scans"))
                 .subcommand(
-                    Command::new("list")
-                        .about("List active scheduled scans")
+                    Command::new("status").about("Show schedule status").arg(
+                        Arg::new("name")
+                            .help("Schedule name (leave blank for all)")
+                            .value_parser(clap::value_parser!(String)),
+                    ),
                 )
-                .subcommand(
-                    Command::new("status")
-                        .about("Show schedule status")
-                        .arg(
-                            Arg::new("name")
-                                .help("Schedule name (leave blank for all)")
-                                .value_parser(clap::value_parser!(String)),
-                        )
-                )
-                .subcommand(
-                    Command::new("presets")
-                        .about("Load preset schedule templates")
-                )
+                .subcommand(Command::new("presets").about("Load preset schedule templates")),
         )
         .subcommand(
             Command::new("run-scheduled-scan")
@@ -350,25 +322,28 @@ fn build_cli() -> Command {
                         .required(true)
                         .value_parser(clap::value_parser!(String)),
                 )
-                .hide(true) // This command is not shown to the user
+                .hide(true), // This command is not shown to the user
         )
 }
 
 fn handle_scan_command(matches: &ArgMatches, config: &core::config::Config) {
     info!("Starting scan...");
-    
+
     let scanner_manager = scanners::manager::ScannerManager::new();
-    
+
     if let Some(module) = matches.get_one::<String>("module") {
         info!("Specific scan module: {}", module);
-        
+
         match scanner_manager.run_specific_scan(module, config) {
             Ok(result) => {
                 info!("{} completed: {} findings", module, result.findings.len());
-                
+
                 // JSON çıktısı
                 if let Some(output_file) = matches.get_one::<String>("output") {
-                    match std::fs::write(output_file, serde_json::to_string_pretty(&result).unwrap()) {
+                    match std::fs::write(
+                        output_file,
+                        serde_json::to_string_pretty(&result).unwrap(),
+                    ) {
                         Ok(_) => info!("Results saved to: {}", output_file),
                         Err(e) => error!("File write error: {}", e),
                     }
@@ -382,11 +357,14 @@ fn handle_scan_command(matches: &ArgMatches, config: &core::config::Config) {
             }
         }
     } else {
-        info!("🔍 All active modules will be scanned: {:?}", config.scanner.enabled_modules);
-        
+        info!(
+            "🔍 All active modules will be scanned: {:?}",
+            config.scanner.enabled_modules
+        );
+
         let results = scanner_manager.run_all_scans(config);
         let summary = scanner_manager.generate_summary(&results);
-        
+
         info!("Scan summary:");
         info!("   Total scans: {}", summary.total_scans);
         info!("   Successful: {}", summary.successful_scans);
@@ -399,16 +377,14 @@ fn handle_scan_command(matches: &ArgMatches, config: &core::config::Config) {
         info!("   Low: {}", summary.low_issues);
         info!("   Security score: {}/100", summary.get_security_score());
         info!("   Risk level: {}", summary.get_risk_level());
-        
+
         // JSON output
         if let Some(output_file) = matches.get_one::<String>("output") {
             match scanner_manager.results_to_json(&results) {
-                Ok(json) => {
-                    match std::fs::write(output_file, json) {
-                        Ok(_) => info!("All results saved to: {}", output_file),
-                        Err(e) => error!("File write error: {}", e),
-                    }
-                }
+                Ok(json) => match std::fs::write(output_file, json) {
+                    Ok(_) => info!("All results saved to: {}", output_file),
+                    Err(e) => error!("File write error: {}", e),
+                },
                 Err(e) => error!("JSON generation error: {}", e),
             }
         }
@@ -422,7 +398,7 @@ fn print_scan_summary(result: &scanners::ScanResult) {
     println!("Duration: {} ms", result.metadata.duration_ms);
     println!("Items scanned: {}", result.metadata.items_scanned);
     println!("Total findings: {}", result.findings.len());
-    
+
     if !result.findings.is_empty() {
         println!("Bulgular:");
         for (i, finding) in result.findings.iter().enumerate() {
@@ -433,7 +409,13 @@ fn print_scan_summary(result: &scanners::ScanResult) {
                 scanners::Severity::Low => "",
                 scanners::Severity::Info => "",
             };
-            println!("{}. {} {} - {}", i + 1, severity_icon, finding.title, finding.description);
+            println!(
+                "{}. {} {} - {}",
+                i + 1,
+                severity_icon,
+                finding.title,
+                finding.description
+            );
         }
     } else {
         println!("No security vulnerabilities found!");
@@ -443,7 +425,7 @@ fn print_scan_summary(result: &scanners::ScanResult) {
 
 fn handle_fix_command(matches: &ArgMatches, config: &core::config::Config) {
     info!("Starting fix process...");
-    
+
     let auto_fix = matches.get_flag("auto");
     if auto_fix {
         warn!("⚡ Automatic fix mode enabled - no user confirmation will be requested");
@@ -455,7 +437,7 @@ fn handle_fix_command(matches: &ArgMatches, config: &core::config::Config) {
     info!("Getting current security findings...");
     let scanner_manager = scanners::manager::ScannerManager::new();
     let scan_results = scanner_manager.run_all_scans(config);
-    
+
     // Collect all findings
     let mut all_findings = Vec::new();
     for result in &scan_results {
@@ -475,12 +457,36 @@ fn handle_fix_command(matches: &ArgMatches, config: &core::config::Config) {
     // If specific module is specified, process only that module
     if let Some(module) = matches.get_one::<String>("module") {
         let filtered_findings: Vec<_> = match module.as_str() {
-            "package" => all_findings.iter().filter(|f| f.id.starts_with("PKG-")).cloned().collect(),
-            "kernel" => all_findings.iter().filter(|f| f.id.starts_with("KRN-")).cloned().collect(),
-            "permission" => all_findings.iter().filter(|f| f.id.starts_with("PERM-")).cloned().collect(),
-            "service" => all_findings.iter().filter(|f| f.id.starts_with("SVC-")).cloned().collect(),
-            "user" => all_findings.iter().filter(|f| f.id.starts_with("USR-")).cloned().collect(),
-            "network" => all_findings.iter().filter(|f| f.id.starts_with("NET-")).cloned().collect(),
+            "package" => all_findings
+                .iter()
+                .filter(|f| f.id.starts_with("PKG-"))
+                .cloned()
+                .collect(),
+            "kernel" => all_findings
+                .iter()
+                .filter(|f| f.id.starts_with("KRN-"))
+                .cloned()
+                .collect(),
+            "permission" => all_findings
+                .iter()
+                .filter(|f| f.id.starts_with("PERM-"))
+                .cloned()
+                .collect(),
+            "service" => all_findings
+                .iter()
+                .filter(|f| f.id.starts_with("SVC-"))
+                .cloned()
+                .collect(),
+            "user" => all_findings
+                .iter()
+                .filter(|f| f.id.starts_with("USR-"))
+                .cloned()
+                .collect(),
+            "network" => all_findings
+                .iter()
+                .filter(|f| f.id.starts_with("NET-"))
+                .cloned()
+                .collect(),
             _ => {
                 error!("Invalid module: {}. Valid modules: package, kernel, permission, service, user, network", module);
                 return;
@@ -492,7 +498,11 @@ fn handle_fix_command(matches: &ArgMatches, config: &core::config::Config) {
             return;
         }
 
-        info!("{} findings will be fixed for '{}' module", filtered_findings.len(), module);
+        info!(
+            "{} findings will be fixed for '{}' module",
+            filtered_findings.len(),
+            module
+        );
         let _results = fixer_manager.fix_findings(&filtered_findings, config, auto_fix);
     } else {
         // Fix all findings
@@ -500,12 +510,16 @@ fn handle_fix_command(matches: &ArgMatches, config: &core::config::Config) {
 
         // Sort by priority (critical -> high -> medium -> low)
         let prioritized_findings = fixer_manager.prioritize_fixes(&all_findings);
-        let prioritized_findings_owned: Vec<_> = prioritized_findings.into_iter().cloned().collect();
+        let prioritized_findings_owned: Vec<_> =
+            prioritized_findings.into_iter().cloned().collect();
 
         // Report unfixable findings
         let unfixable = fixer_manager.get_unfixable_findings(&all_findings);
         if !unfixable.is_empty() {
-            warn!(" {} findings cannot be fixed automatically:", unfixable.len());
+            warn!(
+                " {} findings cannot be fixed automatically:",
+                unfixable.len()
+            );
             for finding in unfixable {
                 warn!("   • {}: {}", finding.id, finding.title);
             }
@@ -520,10 +534,10 @@ fn handle_fix_command(matches: &ArgMatches, config: &core::config::Config) {
 
 fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
     info!("Generating report...");
-    
+
     // Create report manager
     let mut report_manager = report::manager::ReportManager::default();
-    
+
     // Set output directory
     if let Some(output) = matches.get_one::<String>("output") {
         if std::path::Path::new(output).is_dir() {
@@ -542,16 +556,19 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
         let scan_start = std::time::Instant::now();
         let scan_results = scanner_manager.run_all_scans(config);
         let scan_duration = scan_start.elapsed().as_millis() as u64;
-        
+
         info!("Scan completed ({} ms)", scan_duration);
-        
+
         // Create SecurityReport
-        Some(report::SecurityReport::new(scan_results, None, scan_duration))
-        
+        Some(report::SecurityReport::new(
+            scan_results,
+            None,
+            scan_duration,
+        ))
     } else if let Some(input_file) = matches.get_one::<String>("input") {
         // Load existing scan results
         info!("Loading scan results: {}", input_file);
-        
+
         match std::fs::read_to_string(input_file) {
             Ok(json_content) => {
                 // First try to read as SecurityReport
@@ -587,8 +604,12 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
         let scan_start = std::time::Instant::now();
         let scan_results = scanner_manager.run_all_scans(config);
         let scan_duration = scan_start.elapsed().as_millis() as u64;
-        
-        Some(report::SecurityReport::new(scan_results, None, scan_duration))
+
+        Some(report::SecurityReport::new(
+            scan_results,
+            None,
+            scan_duration,
+        ))
     };
 
     let Some(security_report) = security_report else {
@@ -609,14 +630,14 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
 
     // Get report format
     let format_str = matches.get_one::<String>("format").unwrap(); // guaranteed by default_value
-    
+
     match format_str.as_str() {
         "all" => {
             // Generate all formats
             info!("Generating all report formats...");
-            
+
             let base_filename = format!("pinGuard-report-{}", security_report.metadata.report_id);
-            
+
             match report_manager.generate_all_formats(&security_report, Some(base_filename)) {
                 Ok(files) => {
                     info!("All reports generated:");
@@ -629,7 +650,7 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
                 }
             }
         }
-        
+
         format_name => {
             // Generate single format
             let report_format = match format_name.parse::<report::ReportFormat>() {
@@ -641,7 +662,10 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
                 }
             };
 
-            info!("Generating report in {} format...", format_name.to_uppercase());
+            info!(
+                "Generating report in {} format...",
+                format_name.to_uppercase()
+            );
 
             // Determine output filename
             let output_filename = if let Some(output) = matches.get_one::<String>("output") {
@@ -654,19 +678,26 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
                 None
             };
 
-            match report_manager.generate_report(&security_report, &report_format, output_filename) {
+            match report_manager.generate_report(&security_report, &report_format, output_filename)
+            {
                 Ok(output_path) => {
                     info!("Report successfully generated: {}", output_path);
-                    
+
                     // Show report information
                     info!("Report information:");
                     info!("   Report ID: {}", security_report.metadata.report_id);
-                    info!("   Security score: {}/100", security_report.summary.security_score);
+                    info!(
+                        "   Security score: {}/100",
+                        security_report.summary.security_score
+                    );
                     info!("   Risk level: {}", security_report.summary.risk_level);
-                    info!("   Total findings: {}", security_report.summary.total_findings);
+                    info!(
+                        "   Total findings: {}",
+                        security_report.summary.total_findings
+                    );
                     info!("   Critical: {}", security_report.summary.critical_findings);
                     info!("   High: {}", security_report.summary.high_findings);
-                    
+
                     // Additional information for HTML/PDF reports
                     if matches!(&report_format, report::ReportFormat::Html) {
                         info!("Open the report with an appropriate program to view it");
@@ -691,10 +722,10 @@ fn handle_config_command(matches: &ArgMatches, config: &core::config::Config) {
         info!("Current configuration:");
         println!("{:#?}", config);
     }
-    
+
     if matches.get_flag("init") {
         info!("Creating default config file...");
-        
+
         let config_content = r#"# PinGuard Configuration File
 # Scan settings
 scanner:
@@ -740,7 +771,7 @@ fixer:
     - "user_policy_fixer"
     - "firewall_configurator"
 "#;
-        
+
         match std::fs::write("config.yaml", config_content) {
             Ok(_) => info!("Default config file created: config.yaml"),
             Err(e) => error!("Config file creation error: {}", e),
@@ -763,58 +794,62 @@ fn handle_database_command(matches: &ArgMatches, _config: &core::config::Config)
                 Err(e) => error!("Database initialization error: {}", e),
             }
         }
-        
+
         Some(("migrate", _)) => {
             info!("Running migrations...");
             match DatabaseManager::new_default() {
-                Ok(mut db) => {
-                    match db.run_migrations() {
-                        Ok(_) => info!("Migrations successfully applied"),
-                        Err(e) => error!("Migration error: {}", e),
-                    }
-                }
+                Ok(mut db) => match db.run_migrations() {
+                    Ok(_) => info!("Migrations successfully applied"),
+                    Err(e) => error!("Migration error: {}", e),
+                },
                 Err(e) => error!("Database connection error: {}", e),
             }
         }
-        
+
         Some(("health", _)) => {
             info!("Performing database health check...");
             match DatabaseManager::new_default() {
-                Ok(db) => {
-                    match db.health_check() {
-                        Ok(health) => {
-                            if health.is_healthy() {
-                                info!("Database is healthy");
-                            } else {
-                                warn!("Database health issues detected");
-                            }
+                Ok(db) => match db.health_check() {
+                    Ok(health) => {
+                        if health.is_healthy() {
+                            info!("Database is healthy");
+                        } else {
+                            warn!("Database health issues detected");
                         }
-                        Err(e) => error!("Health check error: {}", e),
                     }
-                }
+                    Err(e) => error!("Health check error: {}", e),
+                },
                 Err(e) => error!("Database connection error: {}", e),
             }
         }
-        
+
         Some(("stats", _)) => {
             info!("Getting database statistics...");
             match DatabaseManager::new_default() {
-                Ok(db) => {
-                    match db.health_check() {
-                        Ok(health) => {
-                            info!("Database Statistics:");
-                            info!("   File size: {:.2} MB", health.database_size_mb());
-                            info!("   Connection status: {}", if health.is_healthy() { "Healthy" } else { "Problematic" });
-                            info!("   Total table count: ~5 (CVE cache, scan history, schedule logs, etc.)");
-                            info!("   Last check: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"));
-                        }
-                        Err(e) => error!("Could not get database statistics: {}", e),
+                Ok(db) => match db.health_check() {
+                    Ok(health) => {
+                        info!("Database Statistics:");
+                        info!("   File size: {:.2} MB", health.database_size_mb());
+                        info!(
+                            "   Connection status: {}",
+                            if health.is_healthy() {
+                                "Healthy"
+                            } else {
+                                "Problematic"
+                            }
+                        );
+                        info!("   Total table count: ~5 (CVE cache, scan history, schedule logs, etc.)");
+                        info!(
+                            "   Last check: {}",
+                            chrono::Utc::now().format("%Y-%m-%d %H:%M:%S")
+                        );
                     }
-                }
+                    Err(e) => error!("Could not get database statistics: {}", e),
+                },
                 Err(e) => error!("Database connection error: {}", e),
             }
         }
-        
+
         Some(("cleanup", sub_matches)) => {
             let days = *sub_matches.get_one::<u32>("days").unwrap_or(&30);
             info!("Cleaning up data older than {} days...", days);
@@ -822,19 +857,22 @@ fn handle_database_command(matches: &ArgMatches, _config: &core::config::Config)
                 Ok(_db) => {
                     // Clean up CVE cache
                     let cleanup_date = chrono::Utc::now() - chrono::Duration::days(days as i64);
-                    info!("Cleaning up data older than {}", cleanup_date.format("%Y-%m-%d"));
-                    
+                    info!(
+                        "Cleaning up data older than {}",
+                        cleanup_date.format("%Y-%m-%d")
+                    );
+
                     // Cleanup implementation will go here
                     // For now we're simulating
                     let cleaned_count = 0; // This will be updated after real cleanup
-                    
+
                     info!("Cleanup completed: {} records deleted", cleaned_count);
                     info!("Note: Cleanup functionality is not yet fully implemented");
                 }
                 Err(e) => error!("Database connection error: {}", e),
             }
         }
-        
+
         _ => {
             error!("Invalid database command");
             info!("Available commands: init, migrate, health, stats, cleanup");
@@ -874,23 +912,23 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
             Some(("sync", sub_matches)) => {
                 let days = *sub_matches.get_one::<u32>("days").unwrap_or(&7);
                 info!("Synchronizing CVEs from the last {} days...", days);
-                
+
                 match cve_manager.sync_recent_cves(days).await {
                     Ok(count) => info!("{} CVEs synchronized", count),
                     Err(e) => error!("CVE synchronization error: {}", e),
                 }
             }
-            
+
             Some(("search", sub_matches)) => {
                 let query = sub_matches.get_one::<String>("query").unwrap();
                 let limit = *sub_matches.get_one::<usize>("limit").unwrap_or(&10);
-                
+
                 info!("Searching CVEs for '{}' (limit: {})...", query, limit);
-                
+
                 match cve_manager.find_cves_for_package(query).await {
                     Ok(cves) => {
                         let limited_cves: Vec<_> = cves.into_iter().take(limit).collect();
-                        
+
                         if limited_cves.is_empty() {
                             info!("No CVEs found for '{}'", query);
                         } else {
@@ -911,11 +949,11 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
                     Err(e) => error!("CVE search error: {}", e),
                 }
             }
-            
+
             Some(("get", sub_matches)) => {
                 let cve_id = sub_matches.get_one::<String>("cve_id").unwrap();
                 info!("🔍 Getting CVE details: {}", cve_id);
-                
+
                 match cve_manager.get_cve(cve_id).await {
                     Ok(cve) => {
                         println!("CVE Details: {}", cve.cve_id);
@@ -929,21 +967,21 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
                         }
                         println!("   Published: {}", cve.published_date.format("%Y-%m-%d"));
                         println!("   Last Modified: {}", cve.last_modified.format("%Y-%m-%d"));
-                        
+
                         if !cve.affected_packages.is_empty() {
                             println!("   Affected Products:");
                             for product in &cve.affected_packages {
                                 println!("      • {}", product);
                             }
                         }
-                        
+
                         if !cve.references.is_empty() {
                             println!("   References:");
                             for reference in &cve.references {
                                 println!("      • {}", reference);
                             }
                         }
-                        
+
                         if !cve.cpe_matches.is_empty() {
                             println!("   CPE Matches: {} configurations", cve.cpe_matches.len());
                         }
@@ -951,23 +989,54 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
                     Err(e) => error!("Error getting CVE: {}", e),
                 }
             }
-            
+
             Some(("health", _)) => {
                 info!("🔍 Performing CVE manager health check...");
-                
+
                 match cve_manager.health_check().await {
                     Ok(health) => {
                         println!("CVE Manager Health Status:");
-                        println!("   NVD API: {}", if health.nvd_api_healthy { "✅ Healthy" } else { "❌ Problematic" });
+                        println!(
+                            "   NVD API: {}",
+                            if health.nvd_api_healthy {
+                                "✅ Healthy"
+                            } else {
+                                "❌ Problematic"
+                            }
+                        );
                         println!("   Response Time: {} ms", health.nvd_response_time_ms);
-                        println!("   Cache: {}", if health.cache_healthy { "✅ Healthy" } else { "❌ Problematic" });
+                        println!(
+                            "   Cache: {}",
+                            if health.cache_healthy {
+                                "✅ Healthy"
+                            } else {
+                                "❌ Problematic"
+                            }
+                        );
                         println!("   Cache Entries: {}", health.cache_entries);
                         println!("   Hit Rate: {:.1}%", health.cache_hit_rate * 100.0);
                         println!("   Cache Size: {:.2} MB", health.cache_size_mb);
-                        println!("   Auto Refresh: {}", if health.auto_refresh_enabled { "✅ Enabled" } else { "❌ Disabled" });
-                        println!("   Fallback: {}", if health.fallback_enabled { "✅ Enabled" } else { "❌ Disabled" });
-                        println!("   Last Check: {}", health.last_check.format("%Y-%m-%d %H:%M:%S UTC"));
-                        
+                        println!(
+                            "   Auto Refresh: {}",
+                            if health.auto_refresh_enabled {
+                                "✅ Enabled"
+                            } else {
+                                "❌ Disabled"
+                            }
+                        );
+                        println!(
+                            "   Fallback: {}",
+                            if health.fallback_enabled {
+                                "✅ Enabled"
+                            } else {
+                                "❌ Disabled"
+                            }
+                        );
+                        println!(
+                            "   Last Check: {}",
+                            health.last_check.format("%Y-%m-%d %H:%M:%S UTC")
+                        );
+
                         if health.is_healthy() {
                             info!("CVE manager is completely healthy");
                         } else {
@@ -977,54 +1046,72 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
                     Err(e) => error!("Health check error: {}", e),
                 }
             }
-            
-            Some(("cache", cache_matches)) => {
-                match cache_matches.subcommand() {
-                    Some(("stats", _)) => {
-                        info!("Getting CVE cache statistics...");
-                        match cve_manager.health_check().await {
-                            Ok(health) => {
-                                info!("CVE Cache Statistics:");
-                                info!("   Total entries: {}", health.cache_entries);
-                                info!("   Hit rate: {:.1}%", health.cache_hit_rate * 100.0);
-                                info!("   Cache size: {:.2} MB", health.cache_size_mb);
-                                info!("   Auto refresh: {}", if health.auto_refresh_enabled { "Enabled" } else { "Disabled" });
-                                info!("   Fallback: {}", if health.fallback_enabled { "Enabled" } else { "Disabled" });
-                                info!("   Last check: {}", health.last_check.format("%Y-%m-%d %H:%M:%S"));
-                            }
-                            Err(e) => error!("Could not get cache statistics: {}", e),
+
+            Some(("cache", cache_matches)) => match cache_matches.subcommand() {
+                Some(("stats", _)) => {
+                    info!("Getting CVE cache statistics...");
+                    match cve_manager.health_check().await {
+                        Ok(health) => {
+                            info!("CVE Cache Statistics:");
+                            info!("   Total entries: {}", health.cache_entries);
+                            info!("   Hit rate: {:.1}%", health.cache_hit_rate * 100.0);
+                            info!("   Cache size: {:.2} MB", health.cache_size_mb);
+                            info!(
+                                "   Auto refresh: {}",
+                                if health.auto_refresh_enabled {
+                                    "Enabled"
+                                } else {
+                                    "Disabled"
+                                }
+                            );
+                            info!(
+                                "   Fallback: {}",
+                                if health.fallback_enabled {
+                                    "Enabled"
+                                } else {
+                                    "Disabled"
+                                }
+                            );
+                            info!(
+                                "   Last check: {}",
+                                health.last_check.format("%Y-%m-%d %H:%M:%S")
+                            );
                         }
-                    }
-                    
-                    Some(("cleanup", _)) => {
-                        info!("🧹 Cleaning expired cache...");
-                        match cve_manager.maintain_cache().await {
-                            Ok(result) => {
-                                info!("Cache maintenance completed:");
-                                info!("   Expired entries cleaned: {}", result.expired_entries_cleaned);
-                                info!("   Total entries: {}", result.total_entries);
-                                info!("   Cache size: {:.2} MB", result.cache_size_mb);
-                                info!("   Synced recent CVEs: {}", result.synced_recent_cves);
-                            }
-                            Err(e) => error!("Cache maintenance error: {}", e),
-                        }
-                    }
-                    
-                    Some(("refresh", _)) => {
-                        info!("Refreshing cache...");
-                        match cve_manager.sync_recent_cves(1).await {
-                            Ok(count) => info!("{} fresh CVEs added to cache", count),
-                            Err(e) => error!("Cache refresh error: {}", e),
-                        }
-                    }
-                    
-                    _ => {
-                        error!("Invalid cache command");
-                        info!("Available commands: stats, cleanup, refresh");
+                        Err(e) => error!("Could not get cache statistics: {}", e),
                     }
                 }
-            }
-            
+
+                Some(("cleanup", _)) => {
+                    info!("🧹 Cleaning expired cache...");
+                    match cve_manager.maintain_cache().await {
+                        Ok(result) => {
+                            info!("Cache maintenance completed:");
+                            info!(
+                                "   Expired entries cleaned: {}",
+                                result.expired_entries_cleaned
+                            );
+                            info!("   Total entries: {}", result.total_entries);
+                            info!("   Cache size: {:.2} MB", result.cache_size_mb);
+                            info!("   Synced recent CVEs: {}", result.synced_recent_cves);
+                        }
+                        Err(e) => error!("Cache maintenance error: {}", e),
+                    }
+                }
+
+                Some(("refresh", _)) => {
+                    info!("Refreshing cache...");
+                    match cve_manager.sync_recent_cves(1).await {
+                        Ok(count) => info!("{} fresh CVEs added to cache", count),
+                        Err(e) => error!("Cache refresh error: {}", e),
+                    }
+                }
+
+                _ => {
+                    error!("Invalid cache command");
+                    info!("Available commands: stats, cleanup, refresh");
+                }
+            },
+
             _ => {
                 error!("Invalid CVE command");
                 info!("Available commands: sync, search, get, health, cache");
@@ -1058,7 +1145,8 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
         Some(("enable", sub_matches)) => {
             let name = sub_matches.get_one::<String>("name").unwrap();
             let schedule = sub_matches.get_one::<String>("schedule").unwrap();
-            let description = sub_matches.get_one::<String>("description")
+            let description = sub_matches
+                .get_one::<String>("description")
                 .map(|s| s.as_str())
                 .unwrap_or("Scheduled security scan");
             let scan_type_str = sub_matches.get_one::<String>("type").unwrap();
@@ -1097,7 +1185,7 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
 
         Some(("disable", sub_matches)) => {
             let name = sub_matches.get_one::<String>("name").unwrap();
-            
+
             info!("Disabling schedule: {}", name);
             match scheduler.disable(name) {
                 Ok(_) => {
@@ -1125,7 +1213,14 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
                             println!("      Schedule: {}", schedule.schedule);
                             println!("      Description: {}", schedule.description);
                             println!("      Type: {}", schedule.scan_type);
-                            println!("      Status: {}", if schedule.enabled { "Enabled" } else { "Disabled" });
+                            println!(
+                                "      Status: {}",
+                                if schedule.enabled {
+                                    "Enabled"
+                                } else {
+                                    "Disabled"
+                                }
+                            );
                             println!("      Modules: {}", schedule.scan_modules.join(", "));
                         }
                     }
@@ -1148,17 +1243,23 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
                         println!("   Active: {}", if status.active { "Yes" } else { "No" });
                         println!("   Schedule: {}", status.config.schedule);
                         println!("   Description: {}", status.config.description);
-                        
+
                         if let Some(last_run) = status.last_run {
-                            println!("   Last run: {}", last_run.run_time.format("%Y-%m-%d %H:%M:%S UTC"));
-                            println!("   Successful: {}", if last_run.success { "Yes" } else { "No" });
+                            println!(
+                                "   Last run: {}",
+                                last_run.run_time.format("%Y-%m-%d %H:%M:%S UTC")
+                            );
+                            println!(
+                                "   Successful: {}",
+                                if last_run.success { "Yes" } else { "No" }
+                            );
                             println!("   Duration: {}ms", last_run.duration_ms);
                             println!("   Findings count: {}", last_run.findings_count);
                             if let Some(error) = last_run.error_message {
                                 println!("   Error: {}", error);
                             }
                         }
-                        
+
                         if let Some(next_run) = status.next_run {
                             println!("   Next run: {}", next_run.format("%Y-%m-%d %H:%M:%S UTC"));
                         }
@@ -1180,7 +1281,8 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
                             for status in statuses {
                                 println!();
                                 println!("   {}", status.name);
-                                println!("      Enabled: {} | Active: {}", 
+                                println!(
+                                    "      Enabled: {} | Active: {}",
                                     if status.enabled { "Yes" } else { "No" },
                                     if status.active { "Yes" } else { "No" }
                                 );
@@ -1222,7 +1324,7 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
 
 fn handle_run_scheduled_scan(matches: &ArgMatches, config: &core::config::Config) {
     let schedule_name = matches.get_one::<String>("schedule_name").unwrap();
-    
+
     info!("Running scheduled scan: {}", schedule_name);
 
     // Establish database connection

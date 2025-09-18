@@ -1,7 +1,9 @@
-use super::{Fixer, FixResult, FixError, FixPlan, FixStatus, RiskLevel, execute_command, create_backup};
+use super::{
+    create_backup, execute_command, FixError, FixPlan, FixResult, FixStatus, Fixer, RiskLevel,
+};
 use crate::scanners::Finding;
-use std::time::{Duration, Instant};
 use std::fs;
+use std::time::{Duration, Instant};
 
 pub struct ServiceHardener;
 
@@ -12,14 +14,18 @@ impl Fixer for ServiceHardener {
 
     fn can_fix(&self, finding: &Finding) -> bool {
         // Can fix service-related findings
-        finding.id.starts_with("SVC-") || 
-        finding.affected_item.contains("service") ||
-        finding.title.contains("service") ||
-        finding.title.contains("SSH") ||
-        finding.title.contains("risky")
+        finding.id.starts_with("SVC-")
+            || finding.affected_item.contains("service")
+            || finding.title.contains("service")
+            || finding.title.contains("SSH")
+            || finding.title.contains("risky")
     }
 
-    fn fix(&self, finding: &Finding, _config: &crate::core::config::Config) -> Result<FixResult, FixError> {
+    fn fix(
+        &self,
+        finding: &Finding,
+        _config: &crate::core::config::Config,
+    ) -> Result<FixResult, FixError> {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
@@ -35,12 +41,15 @@ impl Fixer for ServiceHardener {
         } else if finding.id.starts_with("SVC-INSECURE") {
             self.secure_service_config(finding, &mut result)?;
         } else {
-            return Err(FixError::UnsupportedFix(format!("Unsupported service fix: {}", finding.id)));
+            return Err(FixError::UnsupportedFix(format!(
+                "Unsupported service fix: {}",
+                finding.id
+            )));
         }
 
         result = result.set_duration(start_time);
         tracing::info!("Service hardening completed: {}", result.message);
-        
+
         Ok(result)
     }
 
@@ -48,7 +57,7 @@ impl Fixer for ServiceHardener {
         let mut plan = FixPlan::new(
             finding.id.clone(),
             self.name().to_string(),
-            format!("Harden service configuration: {}", finding.title)
+            format!("Harden service configuration: {}", finding.title),
         );
 
         if finding.id.starts_with("SVC-RISKY-SERVICE") {
@@ -79,14 +88,20 @@ impl Fixer for ServiceHardener {
 
 impl ServiceHardener {
     /// Stop and disable risky service
-    fn disable_risky_service(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn disable_risky_service(
+        &self,
+        finding: &Finding,
+        result: &mut FixResult,
+    ) -> Result<(), FixError> {
         let service_name = self.extract_service_name(&finding.affected_item)?;
-        
+
         tracing::info!("Disabling risky service: {}", service_name);
 
         // First stop the service
         let _output = execute_command("systemctl", &["stop", &service_name])?;
-        result.commands_executed.push(format!("systemctl stop {}", service_name));
+        result
+            .commands_executed
+            .push(format!("systemctl stop {}", service_name));
 
         // Check service status
         let status_output = execute_command("systemctl", &["is-active", &service_name])
@@ -95,7 +110,9 @@ impl ServiceHardener {
         if status_output.trim() == "inactive" {
             // Permanently disable the service
             let _output = execute_command("systemctl", &["disable", &service_name])?;
-            result.commands_executed.push(format!("systemctl disable {}", service_name));
+            result
+                .commands_executed
+                .push(format!("systemctl disable {}", service_name));
 
             result.status = FixStatus::Success;
             result.message = format!("Risky service '{}' stopped and disabled", service_name);
@@ -108,11 +125,15 @@ impl ServiceHardener {
     }
 
     /// Harden SSH configuration
-    fn harden_ssh_config(&self, _finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn harden_ssh_config(
+        &self,
+        _finding: &Finding,
+        result: &mut FixResult,
+    ) -> Result<(), FixError> {
         tracing::info!("Hardening SSH configuration...");
 
         let ssh_config_path = "/etc/ssh/sshd_config";
-        
+
         // Create backup
         let backup_path = create_backup(ssh_config_path)?;
         result.backup_created = Some(backup_path);
@@ -177,18 +198,23 @@ impl ServiceHardener {
             // Write new config
             fs::write(ssh_config_path, new_config)
                 .map_err(|e| FixError::FileError(format!("Cannot write SSH config: {}", e)))?;
-            
+
             result.files_modified.push(ssh_config_path.to_string());
 
             // Test SSH config
             let test_output = execute_command("sshd", &["-t"])?;
             if !test_output.is_empty() {
-                return Err(FixError::ConfigError(format!("SSH config test failed: {}", test_output)));
+                return Err(FixError::ConfigError(format!(
+                    "SSH config test failed: {}",
+                    test_output
+                )));
             }
 
             // Restart SSH service
             let _output = execute_command("systemctl", &["restart", "ssh"])?;
-            result.commands_executed.push("systemctl restart ssh".to_string());
+            result
+                .commands_executed
+                .push("systemctl restart ssh".to_string());
 
             result.status = FixStatus::Success;
             result.message = "SSH configuration hardened successfully".to_string();
@@ -201,14 +227,20 @@ impl ServiceHardener {
     }
 
     /// Disable unnecessary service
-    fn disable_unnecessary_service(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn disable_unnecessary_service(
+        &self,
+        finding: &Finding,
+        result: &mut FixResult,
+    ) -> Result<(), FixError> {
         let service_name = self.extract_service_name(&finding.affected_item)?;
-        
+
         tracing::info!("Disabling unnecessary service: {}", service_name);
 
         // Disable service (but don't stop)
         let _output = execute_command("systemctl", &["disable", &service_name])?;
-        result.commands_executed.push(format!("systemctl disable {}", service_name));
+        result
+            .commands_executed
+            .push(format!("systemctl disable {}", service_name));
 
         // Check service enable status
         let status_output = execute_command("systemctl", &["is-enabled", &service_name])
@@ -226,10 +258,17 @@ impl ServiceHardener {
     }
 
     /// Fix insecure service configuration
-    fn secure_service_config(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn secure_service_config(
+        &self,
+        finding: &Finding,
+        result: &mut FixResult,
+    ) -> Result<(), FixError> {
         let service_name = self.extract_service_name(&finding.affected_item)?;
-        
-        tracing::info!("Increasing service configuration security: {}", service_name);
+
+        tracing::info!(
+            "Increasing service configuration security: {}",
+            service_name
+        );
 
         // Special hardening for specific services
         match service_name.as_str() {
@@ -239,7 +278,10 @@ impl ServiceHardener {
             "postgresql" => self.harden_postgresql_config(result)?,
             _ => {
                 result.status = FixStatus::Skipped;
-                result.message = format!("No specific hardening available for service: {}", service_name);
+                result.message = format!(
+                    "No specific hardening available for service: {}",
+                    service_name
+                );
             }
         }
 
@@ -267,18 +309,23 @@ TraceEnable Off
 "#;
 
         let config_path = "/etc/apache2/conf-available/security-hardening.conf";
-        fs::write(config_path, security_config)
-            .map_err(|e| FixError::FileError(format!("Cannot write Apache security config: {}", e)))?;
+        fs::write(config_path, security_config).map_err(|e| {
+            FixError::FileError(format!("Cannot write Apache security config: {}", e))
+        })?;
 
         result.files_modified.push(config_path.to_string());
 
         // Enable security config
         let _output = execute_command("a2enconf", &["security-hardening"])?;
-        result.commands_executed.push("a2enconf security-hardening".to_string());
+        result
+            .commands_executed
+            .push("a2enconf security-hardening".to_string());
 
         // Restart Apache
         let _output = execute_command("systemctl", &["restart", "apache2"])?;
-        result.commands_executed.push("systemctl restart apache2".to_string());
+        result
+            .commands_executed
+            .push("systemctl restart apache2".to_string());
 
         result.status = FixStatus::Success;
         result.message = "Apache configuration hardened successfully".to_string();
@@ -305,8 +352,9 @@ more_clear_headers Server;
 "#;
 
         let config_path = "/etc/nginx/conf.d/security-hardening.conf";
-        fs::write(config_path, security_config)
-            .map_err(|e| FixError::FileError(format!("Cannot write Nginx security config: {}", e)))?;
+        fs::write(config_path, security_config).map_err(|e| {
+            FixError::FileError(format!("Cannot write Nginx security config: {}", e))
+        })?;
 
         result.files_modified.push(config_path.to_string());
 
@@ -315,7 +363,9 @@ more_clear_headers Server;
 
         // Restart Nginx
         let _output = execute_command("systemctl", &["restart", "nginx"])?;
-        result.commands_executed.push("systemctl restart nginx".to_string());
+        result
+            .commands_executed
+            .push("systemctl restart nginx".to_string());
 
         result.status = FixStatus::Success;
         result.message = "Nginx configuration hardened successfully".to_string();
@@ -329,7 +379,9 @@ more_clear_headers Server;
 
         // Operations similar to mysql_secure_installation
         result.status = FixStatus::RequiresUserAction;
-        result.message = "MySQL hardening requires manual intervention. Run: mysql_secure_installation".to_string();
+        result.message =
+            "MySQL hardening requires manual intervention. Run: mysql_secure_installation"
+                .to_string();
 
         Ok(())
     }
@@ -361,7 +413,10 @@ more_clear_headers Server;
             return Ok(affected_item.trim().to_string());
         }
 
-        Err(FixError::ConfigError(format!("Cannot extract service name from: {}", affected_item)))
+        Err(FixError::ConfigError(format!(
+            "Cannot extract service name from: {}",
+            affected_item
+        )))
     }
 
     /// Disable all risky services in batch
@@ -369,18 +424,8 @@ more_clear_headers Server;
         let mut results = Vec::new();
 
         let risky_services = vec![
-            "telnet",
-            "ftp", 
-            "tftp",
-            "rsh",
-            "rlogin",
-            "rexec",
-            "finger",
-            "echo",
-            "discard",
-            "chargen",
-            "daytime",
-            "time",
+            "telnet", "ftp", "tftp", "rsh", "rlogin", "rexec", "finger", "echo", "discard",
+            "chargen", "daytime", "time",
         ];
 
         for service in risky_services {
@@ -407,16 +452,20 @@ more_clear_headers Server;
         let start_time = Instant::now();
         let mut result = FixResult::new(
             format!("SVC-RISKY-{}", service_name.to_uppercase()),
-            self.name().to_string()
+            self.name().to_string(),
         );
 
         // Stop service
         let _stop_output = execute_command("systemctl", &["stop", service_name]);
-        result.commands_executed.push(format!("systemctl stop {}", service_name));
+        result
+            .commands_executed
+            .push(format!("systemctl stop {}", service_name));
 
         // Disable service
         let _disable_output = execute_command("systemctl", &["disable", service_name]);
-        result.commands_executed.push(format!("systemctl disable {}", service_name));
+        result
+            .commands_executed
+            .push(format!("systemctl disable {}", service_name));
 
         result.status = FixStatus::Success;
         result.message = format!("Risky service '{}' stopped and disabled", service_name);

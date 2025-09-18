@@ -1,6 +1,6 @@
-use super::{Scanner, ScanResult, ScanError, Finding, Severity, Category, ScanStatus};
-use std::process::Command;
+use super::{Category, Finding, ScanError, ScanResult, ScanStatus, Scanner, Severity};
 use serde::{Deserialize, Serialize};
+use std::process::Command;
 use std::time::Instant;
 
 pub struct KernelCheck;
@@ -19,35 +19,38 @@ impl Scanner for KernelCheck {
     }
 
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool {
-        config.scanner.enabled_modules.contains(&"kernel_check".to_string())
+        config
+            .scanner
+            .enabled_modules
+            .contains(&"kernel_check".to_string())
     }
 
     fn scan(&self) -> Result<ScanResult, ScanError> {
         let start_time = Instant::now();
         let mut result = ScanResult::new("Kernel Check".to_string());
-        
+
         tracing::info!("Starting kernel security scan...");
-        
+
         // Get kernel information
         let kernel_info = self.get_kernel_info()?;
         result.set_items_scanned(1);
-        
+
         tracing::info!("Kernel info: {} {}", kernel_info.os, kernel_info.release);
-        
+
         // Kernel versiyonu kontrolleri
         self.check_kernel_version(&kernel_info, &mut result)?;
-        
+
         // Güvenlik güncellemeleri kontrol et
         self.check_security_updates(&kernel_info, &mut result)?;
-        
+
         // /proc/version dosyasını kontrol et
         self.check_proc_version(&mut result)?;
-        
+
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
-        
+
         tracing::info!("Kernel check tamamlandı: {} bulgu", result.findings.len());
-        
+
         Ok(result)
     }
 }
@@ -67,30 +70,39 @@ impl KernelCheck {
 
         let uname_output = String::from_utf8_lossy(&output.stdout);
         let parts: Vec<&str> = uname_output.trim().split_whitespace().collect();
-        
+
         if parts.len() < 3 {
             return Err(ScanError::ParseError("Invalid uname output".to_string()));
         }
 
         Ok(KernelInfo {
-            os: parts[0].to_string(),           // Linux
-            version: parts[2].to_string(),      // Kernel version
-            release: parts[2].to_string(),      // Release info
+            os: parts[0].to_string(),                                // Linux
+            version: parts[2].to_string(),                           // Kernel version
+            release: parts[2].to_string(),                           // Release info
             machine: parts.get(4).unwrap_or(&"unknown").to_string(), // Architecture
         })
     }
 
     /// Kernel version security checks
-    fn check_kernel_version(&self, kernel_info: &KernelInfo, result: &mut ScanResult) -> Result<(), ScanError> {
+    fn check_kernel_version(
+        &self,
+        kernel_info: &KernelInfo,
+        result: &mut ScanResult,
+    ) -> Result<(), ScanError> {
         tracing::info!("Checking kernel version security...");
-        
+
         // Kernel version parsing
         let version_parts: Vec<&str> = kernel_info.version.split('.').collect();
         if version_parts.len() >= 3 {
             let major: u32 = version_parts[0].parse().unwrap_or(0);
             let minor: u32 = version_parts[1].parse().unwrap_or(0);
-            let _patch: u32 = version_parts[2].split('-').next().unwrap_or("0").parse().unwrap_or(0);
-            
+            let _patch: u32 = version_parts[2]
+                .split('-')
+                .next()
+                .unwrap_or("0")
+                .parse()
+                .unwrap_or(0);
+
             // Çok eski kernel versiyonları kontrol et
             if major < 4 || (major == 4 && minor < 19) {
                 let finding = Finding {
@@ -115,7 +127,7 @@ impl KernelCheck {
                 };
                 result.add_finding(finding);
             }
-            
+
             // Warning for non-LTS kernels
             if !self.is_lts_kernel(major, minor) {
                 let finding = Finding {
@@ -144,19 +156,21 @@ impl KernelCheck {
     }
 
     /// Check security updates
-    fn check_security_updates(&self, _kernel_info: &KernelInfo, result: &mut ScanResult) -> Result<(), ScanError> {
+    fn check_security_updates(
+        &self,
+        _kernel_info: &KernelInfo,
+        result: &mut ScanResult,
+    ) -> Result<(), ScanError> {
         tracing::info!("Checking kernel security updates...");
-        
+
         // apt list --upgradable ile kernel güncellemelerini kontrol et
-        let output = Command::new("apt")
-            .args(&["list", "--upgradable"])
-            .output();
+        let output = Command::new("apt").args(&["list", "--upgradable"]).output();
 
         if let Ok(output) = output {
             if output.status.success() {
                 let text = String::from_utf8_lossy(&output.stdout);
                 let kernel_updates = self.find_kernel_updates(&text);
-                
+
                 for (package, old_version, new_version) in kernel_updates {
                     let finding = Finding {
                         id: format!("KERNEL-UPD-{}", package),
@@ -187,18 +201,20 @@ impl KernelCheck {
 
     /// /proc/version dosyasını kontrol et
     fn check_proc_version(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        let proc_version = std::fs::read_to_string("/proc/version")
-            .map_err(|e| ScanError::IoError(e))?;
+        let proc_version =
+            std::fs::read_to_string("/proc/version").map_err(|e| ScanError::IoError(e))?;
 
         // Check compiler information
         if proc_version.contains("gcc version") {
             // GCC versiyonu çok eski mi?
             if let Some(gcc_part) = proc_version.split("gcc version ").nth(1) {
                 if let Some(gcc_version) = gcc_part.split_whitespace().next() {
-                    let version_num: f32 = gcc_version.split('.').next()
+                    let version_num: f32 = gcc_version
+                        .split('.')
+                        .next()
                         .and_then(|v| v.parse().ok())
                         .unwrap_or(0.0);
-                    
+
                     if version_num < 7.0 {
                         let finding = Finding {
                             id: "KERNEL-GCC-001".to_string(),
@@ -231,9 +247,9 @@ impl KernelCheck {
     fn is_lts_kernel(&self, major: u32, minor: u32) -> bool {
         // Bilinen LTS versiyonları
         match (major, minor) {
-            (4, 4) | (4, 9) | (4, 14) | (4, 19) | 
-            (5, 4) | (5, 10) | (5, 15) | 
-            (6, 1) | (6, 6) => true,
+            (4, 4) | (4, 9) | (4, 14) | (4, 19) | (5, 4) | (5, 10) | (5, 15) | (6, 1) | (6, 6) => {
+                true
+            }
             _ => false,
         }
     }
@@ -241,7 +257,7 @@ impl KernelCheck {
     /// Kernel güncellemelerini bul
     fn find_kernel_updates(&self, text: &str) -> Vec<(String, String, String)> {
         let mut updates = Vec::new();
-        
+
         for line in text.lines() {
             if line.contains("linux-") && line.contains("upgradable") {
                 if let Some(package_part) = line.split('/').next() {
@@ -258,7 +274,7 @@ impl KernelCheck {
                 }
             }
         }
-        
+
         updates
     }
 
@@ -266,15 +282,21 @@ impl KernelCheck {
     fn get_kernel_cves(&self, kernel_version: &str) -> Vec<String> {
         // Basit kernel versiyonu - CVE mapping
         // Gerçek implementasyonda CVE veritabanından çekilecek
-        let major_minor = kernel_version.split('.').take(2).collect::<Vec<_>>().join(".");
-        
+        let major_minor = kernel_version
+            .split('.')
+            .take(2)
+            .collect::<Vec<_>>()
+            .join(".");
+
         match major_minor.as_str() {
             "6.14" | "6.13" | "6.12" => vec![], // Nispeten yeni
             "6.11" | "6.10" => vec!["CVE-2024-example".to_string()],
             "6.9" | "6.8" => vec!["CVE-2024-26581".to_string(), "CVE-2024-26586".to_string()],
             "6.7" | "6.6" => vec!["CVE-2024-26581".to_string()],
             _ if major_minor.starts_with("5.") => vec!["CVE-2023-52340".to_string()],
-            _ if major_minor.starts_with("4.") => vec!["CVE-2023-52340".to_string(), "CVE-2022-0847".to_string()],
+            _ if major_minor.starts_with("4.") => {
+                vec!["CVE-2023-52340".to_string(), "CVE-2022-0847".to_string()]
+            }
             _ => vec!["CVE-legacy-kernel".to_string()],
         }
     }
