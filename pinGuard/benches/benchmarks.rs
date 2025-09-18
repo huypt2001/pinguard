@@ -1,5 +1,5 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use pin_guard::scanners::{PackageAudit, Scanner};
+use pin_guard::scanners::{package_audit::PackageAudit, Scanner};
 
 fn benchmark_package_scan(c: &mut Criterion) {
     c.bench_function("package_audit_scan", |b| {
