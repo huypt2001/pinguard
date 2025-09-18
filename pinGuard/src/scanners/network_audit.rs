@@ -6,6 +6,7 @@ use std::time::Instant;
 pub struct NetworkAudit;
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct NetworkConnection {
     protocol: String,
     local_address: String,
@@ -76,12 +77,12 @@ impl NetworkAudit {
     /// List open ports
     fn get_open_ports(&self) -> Result<Vec<OpenPort>, ScanError> {
         let output = Command::new("ss")
-            .args(&["-tuln", "--no-header"])
+            .args(["-tuln", "--no-header"])
             .output()
             .or_else(|_| {
                 // Fallback: netstat kullan
                 Command::new("netstat")
-                    .args(&["-tuln", "--numeric-ports"])
+                    .args(["-tuln", "--numeric-ports"])
                     .output()
             })
             .map_err(|e| ScanError::CommandError(format!("Network command failed: {}", e)))?;
@@ -224,9 +225,12 @@ impl NetworkAudit {
 
         // Yaygın olmayan yüksek portları kontrol et
         for port in ports {
-            if port.port > 1024 && port.port < 65535 && port.binding == "0.0.0.0" {
-                if !self.is_common_port(port.port) {
-                    let finding = Finding {
+            if port.port > 1024
+                && port.port < 65535
+                && port.binding == "0.0.0.0"
+                && !self.is_common_port(port.port)
+            {
+                let finding = Finding {
                         id: format!("NET-UNUSUAL-PORT-{}", port.port),
                         title: format!("Unusual service on public port: {}", port.port),
                         description: format!(
@@ -244,8 +248,7 @@ impl NetworkAudit {
                         cve_ids: vec![],
                         fix_available: false,
                     };
-                    result.add_finding(finding);
-                }
+                result.add_finding(finding);
             }
         }
 
@@ -254,7 +257,7 @@ impl NetworkAudit {
 
     /// Yaygın port kontrolü
     fn is_common_port(&self, port: u16) -> bool {
-        let common_ports = vec![
+        let common_ports = [
             22, 80, 443, 8080, 8443, 8000, 3000, 9000, 9090, 3306, 5432, 6379, 27017, 5000, 5001,
             8888, 9999,
         ];
@@ -266,9 +269,9 @@ impl NetworkAudit {
         tracing::info!("Checking network connections...");
 
         let output = Command::new("ss")
-            .args(&["-tuln", "--no-header"])
+            .args(["-tuln", "--no-header"])
             .output()
-            .or_else(|_| Command::new("netstat").args(&["-tuln"]).output());
+            .or_else(|_| Command::new("netstat").args(["-tuln"]).output());
 
         if let Ok(output) = output {
             if output.status.success() {
@@ -338,7 +341,7 @@ impl NetworkAudit {
         }
 
         // iptables kontrolü
-        let iptables_output = Command::new("iptables").args(&["-L", "-n"]).output();
+        let iptables_output = Command::new("iptables").args(["-L", "-n"]).output();
 
         if let Ok(output) = iptables_output {
             let output_text = String::from_utf8_lossy(&output.stdout);
@@ -347,11 +350,12 @@ impl NetworkAudit {
             // Çok basit bir iptables kontrolü
             let mut has_rules = false;
             for line in &lines {
-                if line.contains("ACCEPT") || line.contains("DROP") || line.contains("REJECT") {
-                    if !line.contains("Chain") && !line.trim().is_empty() {
-                        has_rules = true;
-                        break;
-                    }
+                if (line.contains("ACCEPT") || line.contains("DROP") || line.contains("REJECT"))
+                    && !line.contains("Chain")
+                    && !line.trim().is_empty()
+                {
+                    has_rules = true;
+                    break;
                 }
             }
 

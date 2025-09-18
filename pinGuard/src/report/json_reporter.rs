@@ -16,7 +16,7 @@ impl JsonReporter {
     }
 
     /// Default JSON reporter (with pretty print)
-    pub fn default() -> Self {
+    pub fn default_reporter() -> Self {
         Self::new(true)
     }
 

@@ -204,7 +204,7 @@ impl Scheduler {
         self.log_scan_start(&config.name, &scan_id).await?;
 
         // Create default config
-        let default_config = Config::default();
+        let default_config = Config::default_config();
 
         // Create scanner manager
         let scanner_manager = ScannerManager::new();
@@ -286,7 +286,7 @@ impl Scheduler {
 
         let result = self.db.execute_prepared(
             "INSERT INTO schedule_logs (schedule_name, scan_id, started_at, success) VALUES (?1, ?2, ?3, FALSE)",
-            &[schedule_name, scan_id, &now.format("%Y-%m-%d %H:%M:%S%.3f").to_string()]
+            [schedule_name, scan_id, &now.format("%Y-%m-%d %H:%M:%S%.3f").to_string()],
         );
 
         match result {
@@ -313,14 +313,14 @@ impl Scheduler {
 
         let db_result = self.db.execute_prepared(
             "UPDATE schedule_logs SET completed_at = ?1, success = ?2, total_findings = ?3, scan_duration_ms = ?4, error_message = ?5 WHERE scan_id = ?6",
-            &[
+            [
                 &now.format("%Y-%m-%d %H:%M:%S%.3f").to_string(),
                 &result.success.to_string(),
                 &result.total_findings.to_string(),
                 &result.duration_ms.to_string(),
                 &error_message.map(|s| s.to_string()).unwrap_or_default(),
                 scan_id,
-            ]
+            ],
         );
 
         match db_result {

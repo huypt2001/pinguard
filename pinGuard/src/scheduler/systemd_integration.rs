@@ -68,7 +68,7 @@ impl SystemdIntegration {
 
         // Enable timer
         let output = Command::new("systemctl")
-            .args(&["--user", "enable", &timer_name])
+            .args(["--user", "enable", &timer_name])
             .output()
             .map_err(|e| SchedulerError::SystemdError(format!("Failed to enable timer: {}", e)))?;
 
@@ -82,7 +82,7 @@ impl SystemdIntegration {
 
         // Timer'ı başlat
         let output = Command::new("systemctl")
-            .args(&["--user", "start", &timer_name])
+            .args(["--user", "start", &timer_name])
             .output()
             .map_err(|e| SchedulerError::SystemdError(format!("Failed to start timer: {}", e)))?;
 
@@ -106,7 +106,7 @@ impl SystemdIntegration {
 
         // Timer'ı durdur
         let output = Command::new("systemctl")
-            .args(&["--user", "stop", &timer_name])
+            .args(["--user", "stop", &timer_name])
             .output()
             .map_err(|e| SchedulerError::SystemdError(format!("Failed to stop timer: {}", e)))?;
 
@@ -120,7 +120,7 @@ impl SystemdIntegration {
 
         // Disable timer
         let output = Command::new("systemctl")
-            .args(&["--user", "disable", &timer_name])
+            .args(["--user", "disable", &timer_name])
             .output()
             .map_err(|e| SchedulerError::SystemdError(format!("Failed to disable timer: {}", e)))?;
 
@@ -139,7 +139,7 @@ impl SystemdIntegration {
 
         // Timer durumunu kontrol et
         let output = Command::new("systemctl")
-            .args(&["--user", "is-enabled", &timer_name])
+            .args(["--user", "is-enabled", &timer_name])
             .output()
             .map_err(|e| {
                 SchedulerError::SystemdError(format!("Failed to check timer status: {}", e))
@@ -149,7 +149,7 @@ impl SystemdIntegration {
 
         // Timer aktif mi kontrol et
         let output = Command::new("systemctl")
-            .args(&["--user", "is-active", &timer_name])
+            .args(["--user", "is-active", &timer_name])
             .output()
             .map_err(|e| {
                 SchedulerError::SystemdError(format!("Failed to check timer active: {}", e))
@@ -333,7 +333,7 @@ WantedBy=timers.target
         debug!("Systemd daemon reload ediliyor");
 
         let output = Command::new("systemctl")
-            .args(&["--user", "daemon-reload"])
+            .args(["--user", "daemon-reload"])
             .output()
             .map_err(|e| {
                 SchedulerError::SystemdError(format!("Failed to reload systemd: {}", e))

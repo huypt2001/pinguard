@@ -27,7 +27,7 @@ impl ReportManager {
     }
 
     /// Default report manager
-    pub fn default() -> Self {
+    pub fn default_manager() -> Self {
         Self::new(None, None)
     }
 
@@ -39,8 +39,8 @@ impl ReportManager {
         output_filename: Option<String>,
     ) -> Result<String, ReportError> {
         let reporter: Box<dyn Reporter> = match format {
-            ReportFormat::Json => Box::new(JsonReporter::default()),
-            ReportFormat::Html => Box::new(HtmlReporter::default()),
+            ReportFormat::Json => Box::new(JsonReporter::default_reporter()),
+            ReportFormat::Html => Box::new(HtmlReporter::default_reporter()),
             ReportFormat::Pdf => {
                 return Err(ReportError::UnsupportedFormat(
                     "PDF format not yet implemented".to_string(),
@@ -321,14 +321,14 @@ pub mod quick {
     /// Generate JSON report
     #[allow(dead_code)]
     pub fn json_report(report: &SecurityReport, output_path: &str) -> Result<String, ReportError> {
-        let reporter = JsonReporter::default();
+        let reporter = JsonReporter::default_reporter();
         reporter.generate_report(report, output_path)
     }
 
     /// Generate HTML report
     #[allow(dead_code)]
     pub fn html_report(report: &SecurityReport, output_path: &str) -> Result<String, ReportError> {
-        let reporter = HtmlReporter::default();
+        let reporter = HtmlReporter::default_reporter();
         reporter.generate_report(report, output_path)
     }
 
@@ -343,14 +343,14 @@ pub mod quick {
     /// Print summary to console
     #[allow(dead_code)]
     pub fn print_summary(report: &SecurityReport) -> Result<(), ReportError> {
-        let manager = ReportManager::default();
+        let manager = ReportManager::default_manager();
         manager.print_report_summary(report)
     }
 
     /// Print detailed statistics to console
     #[allow(dead_code)]
     pub fn print_statistics(report: &SecurityReport) -> Result<(), ReportError> {
-        let manager = ReportManager::default();
+        let manager = ReportManager::default_manager();
         manager.print_detailed_statistics(report)
     }
 }
@@ -405,7 +405,7 @@ mod tests {
 
     #[test]
     fn test_quick_report_generation() {
-        let manager = ReportManager::default();
+        let manager = ReportManager::default_manager();
         let report = create_test_report();
 
         // Create test directory
@@ -426,7 +426,7 @@ mod tests {
 
     #[test]
     fn test_multi_format_generation() {
-        let manager = ReportManager::default();
+        let manager = ReportManager::default_manager();
         let report = create_test_report();
 
         let test_dir = "test_multi_output";
@@ -454,7 +454,7 @@ mod tests {
 
     #[test]
     fn test_supported_formats() {
-        let manager = ReportManager::default();
+        let manager = ReportManager::default_manager();
         let formats = manager.list_supported_formats();
 
         assert!(formats.contains(&ReportFormat::Json));

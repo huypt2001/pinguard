@@ -48,7 +48,7 @@ fn main() {
                 "Config file could not be loaded ({}), using default settings",
                 e
             );
-            core::config::Config::default()
+            core::config::Config::default_config()
         }
     };
 
@@ -536,7 +536,7 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
     info!("Generating report...");
 
     // Create report manager
-    let mut report_manager = report::manager::ReportManager::default();
+    let mut report_manager = report::manager::ReportManager::default_manager();
 
     // Set output directory
     if let Some(output) = matches.get_one::<String>("output") {

@@ -8,6 +8,7 @@ use std::time::Instant;
 pub struct PermissionAudit;
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct FilePermission {
     path: String,
     mode: u32,
@@ -185,7 +186,7 @@ impl PermissionAudit {
             return Ok(());
         }
 
-        let metadata = fs::metadata(path).map_err(|e| ScanError::IoError(e))?;
+        let metadata = fs::metadata(path).map_err(ScanError::IoError)?;
 
         let permissions = metadata.permissions();
         let mode = permissions.mode() & 0o777; // Sadece permission bitlerini al

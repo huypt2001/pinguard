@@ -12,6 +12,12 @@ pub struct FixerManager {
     fixers: Vec<Box<dyn Fixer>>,
 }
 
+impl Default for FixerManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FixerManager {
     pub fn new() -> Self {
         let fixers: Vec<Box<dyn Fixer>> = vec![

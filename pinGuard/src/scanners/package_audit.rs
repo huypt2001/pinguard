@@ -22,6 +22,7 @@ struct Package {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct CveInfo {
     id: String,
     description: String,
@@ -107,7 +108,7 @@ impl PackageAudit {
     /// Kurulu paketleri listele
     fn get_installed_packages(&self) -> Result<Vec<Package>, ScanError> {
         let output = Command::new("dpkg-query")
-            .args(&[
+            .args([
                 "-W",
                 "--showformat=${Package}|${Version}|${Architecture}|${Status}\n",
             ])
@@ -146,7 +147,7 @@ impl PackageAudit {
     /// RPM-based sistemler için paket listesi
     fn get_rpm_packages(&self) -> Result<Vec<Package>, ScanError> {
         let output = Command::new("rpm")
-            .args(&[
+            .args([
                 "-qa",
                 "--queryformat",
                 "%{NAME}|%{VERSION}-%{RELEASE}|%{ARCH}|installed\n",
@@ -193,7 +194,7 @@ impl PackageAudit {
         info!("Checking outdated packages...");
 
         // apt list --upgradable komutu ile güncellenebilir paketleri bul
-        let output = Command::new("apt").args(&["list", "--upgradable"]).output();
+        let output = Command::new("apt").args(["list", "--upgradable"]).output();
 
         let upgradable_packages = match output {
             Ok(output) if output.status.success() => {
@@ -378,11 +379,11 @@ impl PackageAudit {
     /// RPM-based sistemlerde güncellemeleri kontrol et
     fn check_rpm_updates(&self) -> Result<Vec<(String, String, String)>, ScanError> {
         let output = Command::new("yum")
-            .args(&["check-update", "--quiet"])
+            .args(["check-update", "--quiet"])
             .output()
             .or_else(|_| {
                 Command::new("dnf")
-                    .args(&["check-update", "--quiet"])
+                    .args(["check-update", "--quiet"])
                     .output()
             })
             .map_err(|e| ScanError::CommandError(format!("Package update check failed: {}", e)))?;

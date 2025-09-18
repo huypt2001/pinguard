@@ -267,7 +267,7 @@ impl PermissionFixer {
 
     /// Check if file is a legitimate SUID file
     fn is_legitimate_suid_file(&self, file_path: &str) -> bool {
-        let legitimate_suid_files = vec![
+        let legitimate_suid_files = [
             "/usr/bin/sudo",
             "/usr/bin/su",
             "/usr/bin/passwd",
@@ -287,7 +287,7 @@ impl PermissionFixer {
 
     /// Check if file is a legitimate SGID file
     fn is_legitimate_sgid_file(&self, file_path: &str) -> bool {
-        let legitimate_sgid_files = vec![
+        let legitimate_sgid_files = [
             "/usr/bin/wall",
             "/usr/bin/write",
             "/usr/bin/locate",

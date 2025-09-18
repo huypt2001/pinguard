@@ -71,7 +71,7 @@ impl ServiceAudit {
     /// List active services
     fn get_active_services(&self) -> Result<Vec<SystemService>, ScanError> {
         let output = Command::new("systemctl")
-            .args(&[
+            .args([
                 "list-units",
                 "--type=service",
                 "--state=active",
@@ -266,28 +266,26 @@ impl ServiceAudit {
                 continue;
             }
 
-            if line.to_lowercase().starts_with("permitrootlogin") {
-                if line.to_lowercase().contains("yes") {
-                    root_login_enabled = true;
-                }
+            if line.to_lowercase().starts_with("permitrootlogin")
+                && line.to_lowercase().contains("yes")
+            {
+                root_login_enabled = true;
             }
 
-            if line.to_lowercase().starts_with("passwordauthentication") {
-                if line.to_lowercase().contains("yes") {
-                    password_auth_enabled = true;
-                }
+            if line.to_lowercase().starts_with("passwordauthentication")
+                && line.to_lowercase().contains("yes")
+            {
+                password_auth_enabled = true;
             }
 
-            if line.to_lowercase().starts_with("permitemptypasswords") {
-                if line.to_lowercase().contains("yes") {
-                    permit_empty_passwords = true;
-                }
+            if line.to_lowercase().starts_with("permitemptypasswords")
+                && line.to_lowercase().contains("yes")
+            {
+                permit_empty_passwords = true;
             }
 
-            if line.to_lowercase().starts_with("protocol") {
-                if line.contains("1") {
-                    protocol_version_1 = true;
-                }
+            if line.to_lowercase().starts_with("protocol") && line.contains("1") {
+                protocol_version_1 = true;
             }
         }
 

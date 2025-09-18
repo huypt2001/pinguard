@@ -164,7 +164,7 @@ impl KernelCheck {
         tracing::info!("Checking kernel security updates...");
 
         // apt list --upgradable ile kernel güncellemelerini kontrol et
-        let output = Command::new("apt").args(&["list", "--upgradable"]).output();
+        let output = Command::new("apt").args(["list", "--upgradable"]).output();
 
         if let Ok(output) = output {
             if output.status.success() {
@@ -201,8 +201,7 @@ impl KernelCheck {
 
     /// /proc/version dosyasını kontrol et
     fn check_proc_version(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        let proc_version =
-            std::fs::read_to_string("/proc/version").map_err(|e| ScanError::IoError(e))?;
+        let proc_version = std::fs::read_to_string("/proc/version").map_err(ScanError::IoError)?;
 
         // Check compiler information
         if proc_version.contains("gcc version") {
@@ -246,12 +245,10 @@ impl KernelCheck {
     /// LTS kernel kontrolü
     fn is_lts_kernel(&self, major: u32, minor: u32) -> bool {
         // Bilinen LTS versiyonları
-        match (major, minor) {
-            (4, 4) | (4, 9) | (4, 14) | (4, 19) | (5, 4) | (5, 10) | (5, 15) | (6, 1) | (6, 6) => {
-                true
-            }
-            _ => false,
-        }
+        matches!(
+            (major, minor),
+            (4, 4) | (4, 9) | (4, 14) | (4, 19) | (5, 4) | (5, 10) | (5, 15) | (6, 1) | (6, 6)
+        )
     }
 
     /// Kernel güncellemelerini bul

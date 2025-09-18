@@ -96,7 +96,7 @@ impl Config {
     }
 
     /// Default configuration
-    pub fn default() -> Self {
+    pub fn default_config() -> Self {
         Config {
             app: AppConfig {
                 name: "PinGuard".to_string(),

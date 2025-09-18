@@ -17,6 +17,10 @@ categories = ["command-line-utilities", "development-tools"]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
+[lib]
+name = "pin_guard"
+path = "src/lib.rs"
+
 [[bin]]
 name = "pinGuard"
 path = "src/main.rs"

@@ -17,6 +17,7 @@ struct UserAccount {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct GroupInfo {
     name: String,
     gid: u32,
@@ -82,8 +83,7 @@ impl Scanner for UserAudit {
 impl UserAudit {
     /// List user accounts
     fn get_user_accounts(&self) -> Result<Vec<UserAccount>, ScanError> {
-        let passwd_content =
-            fs::read_to_string("/etc/passwd").map_err(|e| ScanError::IoError(e))?;
+        let passwd_content = fs::read_to_string("/etc/passwd").map_err(ScanError::IoError)?;
 
         let shadow_content = fs::read_to_string("/etc/shadow").unwrap_or_default(); // Shadow dosyası okunamayabilir
 
@@ -188,12 +188,13 @@ impl UserAudit {
             }
 
             // Shell kontrolü - riskli shell'ler
-            if user.shell.contains("bash")
+            if (user.shell.contains("bash")
                 || user.shell.contains("sh")
-                || user.shell.contains("zsh")
+                || user.shell.contains("zsh"))
+                && user.uid < 1000
+                && user.username != "root"
             {
-                if user.uid < 1000 && user.username != "root" {
-                    let finding = Finding {
+                let finding = Finding {
                         id: format!("USER-SYSTEM-SHELL-{}", user.username.to_uppercase()),
                         title: format!("System user with interactive shell: {}", user.username),
                         description: format!(
@@ -211,8 +212,7 @@ impl UserAudit {
                         cve_ids: vec![],
                         fix_available: true,
                     };
-                    result.add_finding(finding);
-                }
+                result.add_finding(finding);
             }
 
             // Home directory kontrolü
@@ -298,7 +298,7 @@ impl UserAudit {
         tracing::info!("Checking group memberships...");
 
         if let Ok(group_content) = fs::read_to_string("/etc/group") {
-            let sensitive_groups = vec![
+            let sensitive_groups = [
                 "root", "shadow", "adm", "disk", "sys", "lp", "mail", "news", "uucp",
             ];
 

@@ -10,6 +10,12 @@ pub struct ScannerManager {
 }
 
 #[allow(dead_code)]
+impl Default for ScannerManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ScannerManager {
     pub fn new() -> Self {
         let scanners: Vec<Box<dyn Scanner>> = vec![
@@ -92,6 +98,7 @@ impl ScannerManager {
     }
 
     /// List available scanners
+    #[allow(dead_code)]
     pub fn list_scanners(&self) -> Vec<&str> {
         self.scanners.iter().map(|s| s.name()).collect()
     }

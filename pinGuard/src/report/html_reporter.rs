@@ -23,7 +23,7 @@ impl HtmlReporter {
     }
 
     /// Default HTML reporter
-    pub fn default() -> Self {
+    pub fn default_reporter() -> Self {
         Self::new(None, true, true)
     }
 
@@ -1109,7 +1109,7 @@ mod tests {
 
     #[test]
     fn test_executive_summary_generation() {
-        let reporter = HtmlReporter::default();
+        let reporter = HtmlReporter::default_reporter();
         let report = create_test_report();
 
         let summary = reporter.generate_executive_summary(&report);
