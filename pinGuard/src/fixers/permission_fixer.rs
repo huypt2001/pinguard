@@ -314,7 +314,7 @@ impl PermissionFixer {
     pub fn fix_system_file_permissions(&self) -> Result<Vec<FixResult>, FixError> {
         let mut results = Vec::new();
 
-        let critical_files = vec![
+        let critical_files = [
             ("/etc/passwd", 0o644),
             ("/etc/shadow", 0o600),
             ("/etc/group", 0o644),
@@ -470,7 +470,7 @@ impl PermissionFixer {
         let mut results = Vec::new();
 
         // Critical system directories
-        let critical_paths = vec!["/etc", "/boot", "/usr/bin", "/usr/sbin", "/bin", "/sbin"];
+        let critical_paths = ["/etc", "/boot", "/usr/bin", "/usr/sbin", "/bin", "/sbin"];
 
         // Fix world-writable files
         match self.fix_all_world_writable_files(&critical_paths) {
