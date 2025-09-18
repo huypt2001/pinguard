@@ -10,7 +10,7 @@ pub struct Config {
     pub database: DatabaseConfig,
     pub cve: CveConfig,
     pub fixer: FixerConfig,
-    // Backward compatibility için eski alanlar
+    // Old fields for backward compatibility
     pub key: String,
     pub value: String,
 }
@@ -79,16 +79,18 @@ pub struct FixerConfig {
 }
 
 impl Config {
+    /// Load configuration from a file
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let content = fs::read_to_string(&path)
-            .map_err(|e| format!("Config dosyası okunamadı: {} - Hata: {}", path.as_ref().display(), e))?;
+            .map_err(|e| format!("Config file could not be read: {} - Error: {}", path.as_ref().display(), e))?;
         
         let config: Config = serde_yaml::from_str(&content)
-            .map_err(|e| format!("Config dosyası parse edilemedi: {}", e))?;
+            .map_err(|e| format!("Config file could not be parsed: {}", e))?;
             
         Ok(config)
     }
     
+    /// Default configuration
     pub fn default() -> Self {
         Config {
             app: AppConfig {

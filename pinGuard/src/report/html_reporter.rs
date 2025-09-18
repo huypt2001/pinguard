@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 use crate::report::{Reporter, ReportError, SecurityReport};
 
-/// HTML formatında rapor üreten yapı
+/// Structure that generates reports in HTML format
 pub struct HtmlReporter {
     template_dir: String,
     include_css: bool,
@@ -10,7 +10,7 @@ pub struct HtmlReporter {
 }
 
 impl HtmlReporter {
-    /// Yeni HTML reporter oluştur
+    /// Create new HTML reporter
     pub fn new(template_dir: Option<String>, include_css: bool, interactive: bool) -> Self {
         Self {
             template_dir: template_dir.unwrap_or_else(|| "templates".to_string()),
@@ -19,12 +19,12 @@ impl HtmlReporter {
         }
     }
 
-    /// Varsayılan HTML reporter
+    /// Default HTML reporter
     pub fn default() -> Self {
         Self::new(None, true, true)
     }
 
-    /// HTML template'ini render et
+    /// Render HTML template
     fn render_html(&self, report: &SecurityReport) -> Result<String, ReportError> {
         let mut html = self.generate_html_header(report)?;
         html.push_str(&self.generate_html_body(report)?);
@@ -32,7 +32,7 @@ impl HtmlReporter {
         Ok(html)
     }
 
-    /// HTML header oluştur
+    /// Generate HTML header
     fn generate_html_header(&self, report: &SecurityReport) -> Result<String, ReportError> {
         let css = if self.include_css {
             self.get_embedded_css()
@@ -60,7 +60,7 @@ impl HtmlReporter {
     <div class="container">
         <header class="report-header">
             <div class="header-content">
-                <h1>🛡️ pinGuard Security Report</h1>
+                <h1>🛡 pinGuard Security Report</h1>
                 <div class="header-info">
                     <span class="report-id">Report ID: {}</span>
                     <span class="generated-date">Generated: {}</span>
@@ -78,7 +78,7 @@ impl HtmlReporter {
         ))
     }
 
-    /// HTML body oluştur
+    /// Generate HTML body
     fn generate_html_body(&self, report: &SecurityReport) -> Result<String, ReportError> {
         let mut body = String::new();
 
@@ -106,7 +106,7 @@ impl HtmlReporter {
         Ok(body)
     }
 
-    /// Executive summary oluştur
+    /// Generate executive summary
     fn generate_executive_summary(&self, report: &SecurityReport) -> String {
         let risk_class = match report.summary.risk_level.as_str() {
             "LOW" => "risk-low",
@@ -153,7 +153,7 @@ impl HtmlReporter {
         )
     }
 
-    /// Security dashboard oluştur
+    /// Generate security dashboard
     fn generate_security_dashboard(&self, report: &SecurityReport) -> String {
         format!(
             r#"
@@ -171,12 +171,12 @@ impl HtmlReporter {
                     <div class="severity-label">High</div>
                 </div>
                 <div class="severity-card medium">
-                    <div class="severity-icon">⚠️</div>
+                    <div class="severity-icon">⚠</div>
                     <div class="severity-count">{}</div>
                     <div class="severity-label">Medium</div>
                 </div>
                 <div class="severity-card low">
-                    <div class="severity-icon">ℹ️</div>
+                    <div class="severity-icon">ℹ</div>
                     <div class="severity-count">{}</div>
                     <div class="severity-label">Low</div>
                 </div>
@@ -189,7 +189,7 @@ impl HtmlReporter {
         )
     }
 
-    /// Findings overview oluştur
+    /// Generate findings overview
     fn generate_findings_overview(&self, report: &SecurityReport) -> String {
         let mut overview = String::from(
             r#"
@@ -249,7 +249,7 @@ impl HtmlReporter {
         overview
     }
 
-    /// Detaylı findings oluştur
+    /// Generate detailed findings
     fn generate_detailed_findings(&self, report: &SecurityReport) -> String {
         let mut findings_html = String::from(
             r#"
@@ -349,7 +349,7 @@ impl HtmlReporter {
         findings_html
     }
 
-    /// İstatistikler bölümü oluştur
+    /// Generate statistics section
     fn generate_statistics_section(&self, report: &SecurityReport) -> String {
         let mut stats_html = String::from(
             r#"
@@ -420,7 +420,7 @@ impl HtmlReporter {
         stats_html
     }
 
-    /// Öneriler bölümü oluştur
+    /// Generate recommendations section
     fn generate_recommendations_section(&self, report: &SecurityReport) -> String {
         let mut recommendations_html = String::from(
             r#"
@@ -450,7 +450,7 @@ impl HtmlReporter {
         recommendations_html
     }
 
-    /// Sistem bilgileri bölümü oluştur
+    /// Generate system information section
     fn generate_system_info_section(&self, report: &SecurityReport) -> String {
         format!(
             r#"
@@ -486,7 +486,7 @@ impl HtmlReporter {
         )
     }
 
-    /// HTML footer oluştur
+    /// Generate HTML footer
     fn generate_html_footer(&self) -> String {
         format!(
             r#"
@@ -503,7 +503,7 @@ impl HtmlReporter {
         )
     }
 
-    /// Gömülü CSS al
+    /// Get embedded CSS
     fn get_embedded_css(&self) -> String {
         r#"
     <style>
@@ -878,7 +878,7 @@ impl HtmlReporter {
     </style>"#.to_string()
     }
 
-    /// Gömülü JavaScript al
+    /// Get embedded JavaScript
     fn get_embedded_javascript(&self) -> String {
         r###"
     <script>
@@ -965,7 +965,7 @@ impl HtmlReporter {
     </script>"###.to_string()
     }
 
-    /// Timestamp'i formatla
+    /// Format timestamp
     fn format_timestamp(&self, timestamp: u64) -> String {
         use std::time::{SystemTime, UNIX_EPOCH, Duration};
         
@@ -978,15 +978,15 @@ impl HtmlReporter {
             .to_string()
     }
 
-    /// HTML dosyasını yaz
+    /// Write HTML file
     fn write_html_file(&self, html_content: &str, output_path: &str) -> Result<String, ReportError> {
-        // Çıkış dizinini oluştur
+        // Create output directory
         if let Some(parent) = Path::new(output_path).parent() {
             fs::create_dir_all(parent)
                 .map_err(|e| ReportError::IoError(format!("Failed to create output directory: {}", e)))?;
         }
 
-        // HTML dosyasını yaz
+        // Write HTML file
         fs::write(output_path, html_content)
             .map_err(|e| ReportError::IoError(format!("Failed to write HTML file: {}", e)))?;
 
@@ -1016,7 +1016,7 @@ impl Reporter for HtmlReporter {
     }
 }
 
-/// Hızlı HTML rapor oluşturma fonksiyonu
+/// Quick HTML report generation function
 pub fn generate_html_report(
     report: &SecurityReport,
     output_path: &str,

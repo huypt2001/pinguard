@@ -44,7 +44,7 @@ impl Scanner for UserAudit {
         let start_time = Instant::now();
         let mut result = ScanResult::new("User Audit".to_string());
         
-        tracing::info!("User audit taraması başlatılıyor...");
+        tracing::info!("Starting user audit scan...");
         
         // Kullanıcı hesaplarını al
         let users = self.get_user_accounts()?;
@@ -70,14 +70,14 @@ impl Scanner for UserAudit {
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
         
-        tracing::info!("User audit tamamlandı: {} bulgu", result.findings.len());
+        tracing::info!("User audit completed: {} findings", result.findings.len());
         
         Ok(result)
     }
 }
 
 impl UserAudit {
-    /// Kullanıcı hesaplarını listele
+    /// List user accounts
     fn get_user_accounts(&self) -> Result<Vec<UserAccount>, ScanError> {
         let passwd_content = fs::read_to_string("/etc/passwd")
             .map_err(|e| ScanError::IoError(e))?;
@@ -233,7 +233,7 @@ impl UserAudit {
 
     /// Root yetkili kullanıcıları kontrol et
     fn check_privileged_users(&self, _users: &[UserAccount], result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("Yetkili kullanıcılar kontrol ediliyor...");
+        tracing::info!("Checking privileged users...");
 
         // sudo grubu üyelerini kontrol et
         if let Ok(group_content) = fs::read_to_string("/etc/group") {
@@ -274,9 +274,9 @@ impl UserAudit {
         Ok(())
     }
 
-    /// Grup üyeliklerini kontrol et
+    /// Check group memberships
     fn check_group_memberships(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("Grup üyelikleri kontrol ediliyor...");
+        tracing::info!("Checking group memberships...");
 
         if let Ok(group_content) = fs::read_to_string("/etc/group") {
             let sensitive_groups = vec!["root", "shadow", "adm", "disk", "sys", "lp", "mail", "news", "uucp"];
@@ -315,9 +315,9 @@ impl UserAudit {
         Ok(())
     }
 
-    /// Shadow dosyası kontrolü
+    /// Check shadow file
     fn check_shadow_file(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("Shadow dosyası kontrol ediliyor...");
+        tracing::info!("Checking shadow file...");
 
         // Shadow dosyası izinleri
         if let Ok(metadata) = fs::metadata("/etc/shadow") {
@@ -352,7 +352,7 @@ impl UserAudit {
 
     /// Sudo konfigürasyonunu kontrol et
     fn check_sudo_configuration(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("Sudo konfigürasyonu kontrol ediliyor...");
+        tracing::info!("Checking sudo configuration...");
 
         if let Ok(sudoers_content) = fs::read_to_string("/etc/sudoers") {
             for line in sudoers_content.lines() {

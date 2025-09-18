@@ -13,7 +13,7 @@ impl Fixer for PermissionFixer {
     }
 
     fn can_fix(&self, finding: &Finding) -> bool {
-        // Permission ile ilgili bulguları düzeltebilir
+        // Can fix permission-related findings
         finding.id.starts_with("PERM-") || 
         finding.id.starts_with("SUID-") ||
         finding.id.starts_with("SGID-") ||
@@ -27,9 +27,9 @@ impl Fixer for PermissionFixer {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
-        tracing::info!("Permission fix başlatılıyor: {}", finding.title);
+        tracing::info!("Starting permission fix: {}", finding.title);
 
-        // Finding türüne göre uygun düzeltme yöntemini seç
+        // Select appropriate fix method based on finding type
         if finding.id.starts_with("PERM-WORLD-WRITABLE") {
             self.fix_world_writable_file(finding, &mut result)?;
         } else if finding.id.starts_with("PERM-SUID") {
@@ -43,7 +43,7 @@ impl Fixer for PermissionFixer {
         }
 
         result = result.set_duration(start_time);
-        tracing::info!("Permission fix tamamlandı: {}", result.message);
+        tracing::info!("Permission fix completed: {}", result.message);
         
         Ok(result)
     }
@@ -85,30 +85,30 @@ impl Fixer for PermissionFixer {
 }
 
 impl PermissionFixer {
-    /// World-writable dosyayı düzelt
+    /// Fix world-writable file
     fn fix_world_writable_file(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let file_path = self.extract_file_path(&finding.affected_item)?;
         
-        tracing::info!("World-writable dosya düzeltiliyor: {}", file_path);
+        tracing::info!("Fixing world-writable file: {}", file_path);
 
-        // Backup oluştur
+        // Create backup
         if Path::new(&file_path).is_file() {
             let backup_path = create_backup(&file_path)?;
             result.backup_created = Some(backup_path);
         }
 
-        // Mevcut izinleri al
+        // Get current permissions
         let metadata = fs::metadata(&file_path)
             .map_err(|e| FixError::FileError(format!("Cannot read file metadata: {}", e)))?;
         
         let current_mode = metadata.permissions().mode();
-        tracing::info!("Mevcut izinler: {:o}", current_mode);
+        tracing::info!("Current permissions: {:o}", current_mode);
 
-        // World write iznini kaldır (o-w)
+        // Remove world write permission (o-w)
         let new_mode = current_mode & !0o002;
-        tracing::info!("Yeni izinler: {:o}", new_mode);
+        tracing::info!("New permissions: {:o}", new_mode);
 
-        // İzinleri uygula
+        // Apply permissions
         let _output = execute_command("chmod", &[&format!("{:o}", new_mode), &file_path])?;
         result.commands_executed.push(format!("chmod {:o} '{}'", new_mode, file_path));
         result.files_modified.push(file_path.clone());
@@ -119,13 +119,13 @@ impl PermissionFixer {
         Ok(())
     }
 
-    /// Riskli SUID dosyasını düzelt
+    /// Fix risky SUID file
     fn fix_risky_suid_file(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let file_path = self.extract_file_path(&finding.affected_item)?;
         
-        tracing::info!("Riskli SUID dosyası düzeltiliyor: {}", file_path);
+        tracing::info!("Fixing risky SUID file: {}", file_path);
 
-        // Bu dosyanın gerçekten SUID'a ihtiyacı var mı kontrol et
+        // Check if this file really needs SUID
         if self.is_legitimate_suid_file(&file_path) {
             result.status = FixStatus::Skipped;
             result.message = format!("SUID file appears legitimate, skipping: {}", file_path);
@@ -136,7 +136,7 @@ impl PermissionFixer {
         let backup_path = create_backup(&file_path)?;
         result.backup_created = Some(backup_path);
 
-        // SUID bitini kaldır (u-s)
+        // Remove SUID bit (u-s)
         let _output = execute_command("chmod", &["u-s", &file_path])?;
         result.commands_executed.push(format!("chmod u-s '{}'", file_path));
         result.files_modified.push(file_path.clone());
@@ -147,13 +147,13 @@ impl PermissionFixer {
         Ok(())
     }
 
-    /// Riskli SGID dosyasını düzelt
+    /// Fix risky SGID file
     fn fix_risky_sgid_file(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let file_path = self.extract_file_path(&finding.affected_item)?;
         
-        tracing::info!("Riskli SGID dosyası düzeltiliyor: {}", file_path);
+        tracing::info!("Fixing risky SGID file: {}", file_path);
 
-        // Bu dosyanın gerçekten SGID'a ihtiyacı var mı kontrol et
+        // Check if this file really needs SGID
         if self.is_legitimate_sgid_file(&file_path) {
             result.status = FixStatus::Skipped;
             result.message = format!("SGID file appears legitimate, skipping: {}", file_path);
@@ -164,7 +164,7 @@ impl PermissionFixer {
         let backup_path = create_backup(&file_path)?;
         result.backup_created = Some(backup_path);
 
-        // SGID bitini kaldır (g-s)
+        // Remove SGID bit (g-s)
         let _output = execute_command("chmod", &["g-s", &file_path])?;
         result.commands_executed.push(format!("chmod g-s '{}'", file_path));
         result.files_modified.push(file_path.clone());
@@ -175,11 +175,11 @@ impl PermissionFixer {
         Ok(())
     }
 
-    /// Genel permission düzeltmesi
+    /// Generic permission fix
     fn fix_generic_permission(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let file_path = self.extract_file_path(&finding.affected_item)?;
         
-        tracing::info!("Genel permission düzeltmesi: {}", file_path);
+        tracing::info!("Generic permission fix: {}", file_path);
 
         // Backup oluştur
         if Path::new(&file_path).is_file() {
@@ -187,16 +187,16 @@ impl PermissionFixer {
             result.backup_created = Some(backup_path);
         }
 
-        // Dosya türüne göre uygun izinleri belirle
+        // Determine appropriate permissions based on file type
         let new_permissions = if Path::new(&file_path).is_dir() {
-            "755" // Klasörler için
+            "755" // For directories
         } else if self.is_executable_file(&file_path)? {
-            "755" // Executable dosyalar için
+            "755" // For executable files
         } else {
-            "644" // Normal dosyalar için
+            "644" // For normal files
         };
 
-        // İzinleri uygula
+        // Apply permissions
         let _output = execute_command("chmod", &[new_permissions, &file_path])?;
         result.commands_executed.push(format!("chmod {} '{}'", new_permissions, file_path));
         result.files_modified.push(file_path.clone());
@@ -207,19 +207,19 @@ impl PermissionFixer {
         Ok(())
     }
 
-    /// Dosya yolunu bulgudaki affected_item'dan çıkar
+    /// Extract file path from affected_item in finding
     fn extract_file_path(&self, affected_item: &str) -> Result<String, FixError> {
-        // "File: /path/to/file" formatından yolu çıkar
+        // Extract path from "File: /path/to/file" format
         if affected_item.starts_with("File: ") {
             return Ok(affected_item.replace("File: ", "").trim().to_string());
         }
 
-        // "Path: /path/to/file" formatından yolu çıkar
+        // Extract path from "Path: /path/to/file" format
         if affected_item.starts_with("Path: ") {
             return Ok(affected_item.replace("Path: ", "").trim().to_string());
         }
 
-        // Doğrudan dosya yolu ise
+        // If it's a direct file path
         if affected_item.starts_with("/") {
             return Ok(affected_item.trim().to_string());
         }
@@ -227,7 +227,7 @@ impl PermissionFixer {
         Err(FixError::ConfigError(format!("Cannot extract file path from: {}", affected_item)))
     }
 
-    /// Dosyanın legitimate SUID dosyası olup olmadığını kontrol et
+    /// Check if file is a legitimate SUID file
     fn is_legitimate_suid_file(&self, file_path: &str) -> bool {
         let legitimate_suid_files = vec![
             "/usr/bin/sudo",
@@ -247,7 +247,7 @@ impl PermissionFixer {
         legitimate_suid_files.iter().any(|&path| file_path == path)
     }
 
-    /// Dosyanın legitimate SGID dosyası olup olmadığını kontrol et
+    /// Check if file is a legitimate SGID file
     fn is_legitimate_sgid_file(&self, file_path: &str) -> bool {
         let legitimate_sgid_files = vec![
             "/usr/bin/wall",
@@ -261,7 +261,7 @@ impl PermissionFixer {
         legitimate_sgid_files.iter().any(|&path| file_path.starts_with(path))
     }
 
-    /// Dosyanın executable olup olmadığını kontrol et
+    /// Check if file is executable
     fn is_executable_file(&self, file_path: &str) -> Result<bool, FixError> {
         let metadata = fs::metadata(file_path)
             .map_err(|e| FixError::FileError(format!("Cannot read file metadata: {}", e)))?;
@@ -270,7 +270,7 @@ impl PermissionFixer {
         Ok((mode & 0o111) != 0)
     }
 
-    /// Kritik sistem dosyalarının izinlerini toplu olarak düzelt
+    /// Fix permissions of critical system files in batch
     pub fn fix_system_file_permissions(&self) -> Result<Vec<FixResult>, FixError> {
         let mut results = Vec::new();
 
@@ -294,10 +294,9 @@ impl PermissionFixer {
             }
         }
 
-        Ok(results)
-    }
+    Ok(results);
 
-    /// Belirli bir dosyanın izinlerini düzelt
+    /// Fix permissions of a specific file
     fn fix_file_permission(&self, file_path: &str, expected_mode: u32) -> Result<FixResult, FixError> {
         let start_time = Instant::now();
         let mut result = FixResult::new(
@@ -319,7 +318,7 @@ impl PermissionFixer {
                 result.backup_created = Some(backup_path);
             }
 
-            // İzinleri düzelt
+            // Fix permissions
             let _output = execute_command("chmod", &[&format!("{:o}", expected_mode), file_path])?;
             result.commands_executed.push(format!("chmod {:o} '{}'", expected_mode, file_path));
             result.files_modified.push(file_path.to_string());
@@ -335,7 +334,7 @@ impl PermissionFixer {
         Ok(result)
     }
 
-    /// Tüm world-writable dosyaları bul ve düzelt
+    /// Find and fix all world-writable files
     pub fn fix_all_world_writable_files(&self, base_paths: &[&str]) -> Result<Vec<FixResult>, FixError> {
         let mut results = Vec::new();
 
@@ -366,8 +365,10 @@ impl PermissionFixer {
 
         Ok(results)
     }
+    }
+    }
 
-    /// Tek bir world-writable dosyayı düzelt
+    /// Fix a single world-writable file
     fn fix_world_writable_single_file(&self, file_path: &str) -> Result<FixResult, FixError> {
         let start_time = Instant::now();
         let mut result = FixResult::new(
@@ -382,11 +383,11 @@ impl PermissionFixer {
         let new_mode = current_mode & !0o002; // Remove world write bit
 
         if current_mode != new_mode {
-            // Backup oluştur
+            // Create backup
             let backup_path = create_backup(file_path)?;
             result.backup_created = Some(backup_path);
 
-            // İzinleri düzelt
+            // Fix permissions
             let _output = execute_command("chmod", &[&format!("{:o}", new_mode), file_path])?;
             result.commands_executed.push(format!("chmod {:o} '{}'", new_mode, file_path));
             result.files_modified.push(file_path.to_string());
@@ -402,21 +403,20 @@ impl PermissionFixer {
         Ok(result)
     }
 
-    /// Tüm kritik izinleri düzelt
+    /// Fix all critical permissions
     pub fn fix_all_critical_permissions(&self) -> Result<Vec<FixResult>, FixError> {
         let mut results = Vec::new();
 
-        // Kritik system dizinleri
+        // Critical system directories
         let critical_paths = vec![
             "/etc", "/boot", "/usr/bin", "/usr/sbin", "/bin", "/sbin"
         ];
 
-        // World-writable dosyaları düzelt
+        // Fix world-writable files
         match self.fix_all_world_writable_files(&critical_paths) {
             Ok(mut world_writable_results) => results.append(&mut world_writable_results),
             Err(e) => tracing::error!("Failed to fix world-writable files: {}", e),
         }
 
-        Ok(results)
-    }
+    Ok(results)
 }

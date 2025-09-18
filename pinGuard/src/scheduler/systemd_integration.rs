@@ -29,7 +29,7 @@ impl SystemdIntegration {
 
     /// Timer dosyası oluştur
     pub fn create_timer(&self, config: &ScheduleConfig) -> SchedulerResult<()> {
-        info!("Timer oluşturuluyor: {}", config.name);
+        info!("Creating timer: {}", config.name);
 
         let timer_content = self.generate_timer_content(config)?;
         let timer_path = self.systemd_dir.join(format!("pinGuard-{}.timer", config.name));
@@ -42,7 +42,7 @@ impl SystemdIntegration {
 
     /// Service dosyası oluştur
     pub fn create_service(&self, config: &ScheduleConfig) -> SchedulerResult<()> {
-        info!("Service oluşturuluyor: {}", config.name);
+        info!("Service created: {}", config.name);
 
         let service_content = self.generate_service_content(config)?;
         let service_path = self.systemd_dir.join(format!("pinGuard-{}.service", config.name));
@@ -56,13 +56,13 @@ impl SystemdIntegration {
         Ok(())
     }
 
-    /// Timer'ı etkinleştir
+    /// Enable timer
     pub fn enable_timer(&self, schedule_name: &str) -> SchedulerResult<()> {
-        info!("Timer etkinleştiriliyor: {}", schedule_name);
+        info!("Enabling timer: {}", schedule_name);
 
         let timer_name = format!("pinGuard-{}.timer", schedule_name);
         
-        // Timer'ı etkinleştir
+        // Enable timer
         let output = Command::new("systemctl")
             .args(&["--user", "enable", &timer_name])
             .output()
@@ -84,13 +84,13 @@ impl SystemdIntegration {
             return Err(SchedulerError::SystemdError(format!("Start timer failed: {}", error)));
         }
 
-        info!("Timer etkinleştirildi ve başlatıldı: {}", schedule_name);
+        info!("Timer enabled and started: {}", schedule_name);
         Ok(())
     }
 
-    /// Timer'ı devre dışı bırak
+    /// Disable timer
     pub fn disable_timer(&self, schedule_name: &str) -> SchedulerResult<()> {
-        info!("Timer devre dışı bırakılıyor: {}", schedule_name);
+        info!("Disabling timer: {}", schedule_name);
 
         let timer_name = format!("pinGuard-{}.timer", schedule_name);
         
@@ -105,7 +105,7 @@ impl SystemdIntegration {
             warn!("Timer durdurulamadı (zaten durdurulmuş olabilir): {}", error);
         }
 
-        // Timer'ı devre dışı bırak
+        // Disable timer
         let output = Command::new("systemctl")
             .args(&["--user", "disable", &timer_name])
             .output()
@@ -113,14 +113,14 @@ impl SystemdIntegration {
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
-            warn!("Timer devre dışı bırakılamadı: {}", error);
+            warn!("Timer could not be disabled: {}", error);
         }
 
-        info!("Timer devre dışı bırakıldı: {}", schedule_name);
+        info!("Timer disabled: {}", schedule_name);
         Ok(())
     }
 
-    /// Timer durumunu al
+    /// Get timer status
     pub fn get_timer_status(&self, schedule_name: &str) -> SchedulerResult<SystemdTimerStatus> {
         let timer_name = format!("pinGuard-{}.timer", schedule_name);
         
@@ -140,7 +140,7 @@ impl SystemdIntegration {
 
         let active = output.status.success();
 
-        // Timer bilgilerini al
+        // Get timer information
         let next_run = self.get_next_run(&timer_name)?;
         let last_run = self.get_last_run(&timer_name)?;
 
@@ -308,16 +308,16 @@ WantedBy=timers.target
         Ok(())
     }
 
-    /// Bir sonraki çalışma zamanını al
+    /// Get next run time
     fn get_next_run(&self, _timer_name: &str) -> SchedulerResult<Option<DateTime<Utc>>> {
-        // systemctl list-timers kullanarak next run bilgisini al
+        // Get next run information using systemctl list-timers
         // Bu karmaşık parsing gerektirdiği için şimdilik None döndürüyoruz
         Ok(None)
     }
 
-    /// Son çalışma zamanını al
+    /// Get last run time
     fn get_last_run(&self, _timer_name: &str) -> SchedulerResult<Option<DateTime<Utc>>> {
-        // journalctl kullanarak son run bilgisini al
+        // Get last run information using journalctl
         // Bu karmaşık parsing gerektirdiği için şimdilik None döndürüyoruz
         Ok(None)
     }

@@ -11,7 +11,7 @@ impl Fixer for ServiceHardener {
     }
 
     fn can_fix(&self, finding: &Finding) -> bool {
-        // Service ile ilgili bulguları düzeltebilir
+        // Can fix service-related findings
         finding.id.starts_with("SVC-") || 
         finding.affected_item.contains("service") ||
         finding.title.contains("service") ||
@@ -23,9 +23,9 @@ impl Fixer for ServiceHardener {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
-        tracing::info!("Service hardening başlatılıyor: {}", finding.title);
+        tracing::info!("Starting service hardening: {}", finding.title);
 
-        // Finding türüne göre uygun düzeltme yöntemini seç
+        // Select appropriate fix method based on finding type
         if finding.id.starts_with("SVC-RISKY-SERVICE") {
             self.disable_risky_service(finding, &mut result)?;
         } else if finding.id.starts_with("SVC-SSH") {
@@ -39,7 +39,7 @@ impl Fixer for ServiceHardener {
         }
 
         result = result.set_duration(start_time);
-        tracing::info!("Service hardening tamamlandı: {}", result.message);
+        tracing::info!("Service hardening completed: {}", result.message);
         
         Ok(result)
     }
@@ -78,22 +78,22 @@ impl Fixer for ServiceHardener {
 }
 
 impl ServiceHardener {
-    /// Riskli servisi durdur ve devre dışı bırak
+    /// Stop and disable risky service
     fn disable_risky_service(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let service_name = self.extract_service_name(&finding.affected_item)?;
         
-        tracing::info!("Riskli servis devre dışı bırakılıyor: {}", service_name);
+        tracing::info!("Disabling risky service: {}", service_name);
 
-        // Önce servisi durdur
+        // First stop the service
         let _output = execute_command("systemctl", &["stop", &service_name])?;
         result.commands_executed.push(format!("systemctl stop {}", service_name));
 
-        // Servisin durumunu kontrol et
+        // Check service status
         let status_output = execute_command("systemctl", &["is-active", &service_name])
             .unwrap_or_else(|_| "inactive".to_string());
 
         if status_output.trim() == "inactive" {
-            // Servisi kalıcı olarak devre dışı bırak
+            // Permanently disable the service
             let _output = execute_command("systemctl", &["disable", &service_name])?;
             result.commands_executed.push(format!("systemctl disable {}", service_name));
 
@@ -107,24 +107,24 @@ impl ServiceHardener {
         Ok(())
     }
 
-    /// SSH konfigürasyonunu sertleştir
+    /// Harden SSH configuration
     fn harden_ssh_config(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("SSH konfigürasyonu sertleştiriliyor...");
+        tracing::info!("Hardening SSH configuration...");
 
         let ssh_config_path = "/etc/ssh/sshd_config";
         
-        // Backup oluştur
+        // Create backup
         let backup_path = create_backup(ssh_config_path)?;
         result.backup_created = Some(backup_path);
 
-        // SSH config'i oku
+        // Read SSH config
         let config_content = fs::read_to_string(ssh_config_path)
             .map_err(|e| FixError::FileError(format!("Cannot read SSH config: {}", e)))?;
 
         let mut new_config = config_content.clone();
         let mut changes_made = false;
 
-        // Güvenlik ayarlarını uygula
+        // Apply security settings
         let security_settings = vec![
             ("PermitRootLogin", "no"),
             ("PasswordAuthentication", "no"),
@@ -134,12 +134,12 @@ impl ServiceHardener {
             ("ClientAliveInterval", "300"),
             ("ClientAliveCountMax", "2"),
             ("MaxAuthTries", "3"),
-            ("AllowUsers", ""), // Bu boş bırakılır, yönetici kendisi ekler
+            ("AllowUsers", ""), // This is left empty, administrator adds it themselves
         ];
 
         for (setting, value) in security_settings {
             if setting == "AllowUsers" {
-                continue; // AllowUsers'ı manuel olarak yönetici eklemeli
+                continue; // Administrator should manually add AllowUsers
             }
 
             let pattern = format!("^{}\\s+", setting);
@@ -149,7 +149,7 @@ impl ServiceHardener {
                 format!("{} {}", setting, value)
             };
 
-            // Mevcut satırı bul ve değiştir
+            // Find existing line and replace
             let lines: Vec<&str> = new_config.lines().collect();
             let mut new_lines = Vec::new();
             let mut found = false;
@@ -164,7 +164,7 @@ impl ServiceHardener {
                 }
             }
 
-            // Ayar bulunamadıysa en sona ekle
+            // If setting not found, add to end
             if !found && !value.is_empty() {
                 new_lines.push(replacement);
                 changes_made = true;
@@ -174,19 +174,19 @@ impl ServiceHardener {
         }
 
         if changes_made {
-            // Yeni config'i yaz
+            // Write new config
             fs::write(ssh_config_path, new_config)
                 .map_err(|e| FixError::FileError(format!("Cannot write SSH config: {}", e)))?;
             
             result.files_modified.push(ssh_config_path.to_string());
 
-            // SSH config'i test et
+            // Test SSH config
             let test_output = execute_command("sshd", &["-t"])?;
             if !test_output.is_empty() {
                 return Err(FixError::ConfigError(format!("SSH config test failed: {}", test_output)));
             }
 
-            // SSH servisini yeniden başlat
+            // Restart SSH service
             let _output = execute_command("systemctl", &["restart", "ssh"])?;
             result.commands_executed.push("systemctl restart ssh".to_string());
 
@@ -200,17 +200,17 @@ impl ServiceHardener {
         Ok(())
     }
 
-    /// Gereksiz servisi devre dışı bırak
+    /// Disable unnecessary service
     fn disable_unnecessary_service(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let service_name = self.extract_service_name(&finding.affected_item)?;
         
-        tracing::info!("Gereksiz servis devre dışı bırakılıyor: {}", service_name);
+        tracing::info!("Disabling unnecessary service: {}", service_name);
 
-        // Servisi devre dışı bırak (ama durdurma)
+        // Disable service (but don't stop)
         let _output = execute_command("systemctl", &["disable", &service_name])?;
         result.commands_executed.push(format!("systemctl disable {}", service_name));
 
-        // Servisin enable durumunu kontrol et
+        // Check service enable status
         let status_output = execute_command("systemctl", &["is-enabled", &service_name])
             .unwrap_or_else(|_| "disabled".to_string());
 
@@ -225,13 +225,13 @@ impl ServiceHardener {
         Ok(())
     }
 
-    /// Güvensiz servis konfigürasyonunu düzelt
+    /// Fix insecure service configuration
     fn secure_service_config(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let service_name = self.extract_service_name(&finding.affected_item)?;
         
-        tracing::info!("Servis konfigürasyonu güvenliği artırılıyor: {}", service_name);
+        tracing::info!("Increasing service configuration security: {}", service_name);
 
-        // Belirli servisler için özel sertleştirme
+        // Special hardening for specific services
         match service_name.as_str() {
             "apache2" | "httpd" => self.harden_apache_config(result)?,
             "nginx" => self.harden_nginx_config(result)?,
@@ -246,11 +246,11 @@ impl ServiceHardener {
         Ok(())
     }
 
-    /// Apache konfigürasyonunu sertleştir
+    /// Harden Apache configuration
     fn harden_apache_config(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("Apache konfigürasyonu sertleştiriliyor...");
+        tracing::info!("Hardening Apache configuration...");
 
-        // Apache security config dosyası oluştur
+        // Create Apache security config file
         let security_config = r#"
 # Security headers
 Header always set X-Frame-Options DENY
@@ -272,11 +272,11 @@ TraceEnable Off
 
         result.files_modified.push(config_path.to_string());
 
-        // Security config'i etkinleştir
+        // Enable security config
         let _output = execute_command("a2enconf", &["security-hardening"])?;
         result.commands_executed.push("a2enconf security-hardening".to_string());
 
-        // Apache'yi yeniden başlat
+        // Restart Apache
         let _output = execute_command("systemctl", &["restart", "apache2"])?;
         result.commands_executed.push("systemctl restart apache2".to_string());
 
@@ -286,9 +286,9 @@ TraceEnable Off
         Ok(())
     }
 
-    /// Nginx konfigürasyonunu sertleştir
+    /// Harden Nginx configuration
     fn harden_nginx_config(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("Nginx konfigürasyonu sertleştiriliyor...");
+        tracing::info!("Hardening Nginx configuration...");
 
         let security_config = r#"
 # Security headers
@@ -310,10 +310,10 @@ more_clear_headers Server;
 
         result.files_modified.push(config_path.to_string());
 
-        // Nginx config'i test et
+        // Test Nginx config
         let _output = execute_command("nginx", &["-t"])?;
 
-        // Nginx'i yeniden başlat
+        // Restart Nginx
         let _output = execute_command("systemctl", &["restart", "nginx"])?;
         result.commands_executed.push("systemctl restart nginx".to_string());
 
@@ -323,20 +323,20 @@ more_clear_headers Server;
         Ok(())
     }
 
-    /// MySQL konfigürasyonunu sertleştir
+    /// Harden MySQL configuration
     fn harden_mysql_config(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("MySQL konfigürasyonu sertleştiriliyor...");
+        tracing::info!("Hardening MySQL configuration...");
 
-        // mysql_secure_installation benzeri işlemler
+        // Operations similar to mysql_secure_installation
         result.status = FixStatus::RequiresUserAction;
         result.message = "MySQL hardening requires manual intervention. Run: mysql_secure_installation".to_string();
 
         Ok(())
     }
 
-    /// PostgreSQL konfigürasyonunu sertleştir
+    /// Harden PostgreSQL configuration
     fn harden_postgresql_config(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("PostgreSQL konfigürasyonu sertleştiriliyor...");
+        tracing::info!("Hardening PostgreSQL configuration...");
 
         result.status = FixStatus::RequiresUserAction;
         result.message = "PostgreSQL hardening requires manual configuration review".to_string();
@@ -344,19 +344,19 @@ more_clear_headers Server;
         Ok(())
     }
 
-    /// Bulgudaki servis adını çıkar
+    /// Extract service name from finding
     fn extract_service_name(&self, affected_item: &str) -> Result<String, FixError> {
-        // "Service: servicename" formatından servis adını çıkar
+        // Extract service name from "Service: servicename" format
         if affected_item.starts_with("Service: ") {
             return Ok(affected_item.replace("Service: ", "").trim().to_string());
         }
 
-        // "servicename.service" formatından servis adını çıkar
+        // Extract service name from "servicename.service" format
         if affected_item.ends_with(".service") {
             return Ok(affected_item.replace(".service", "").trim().to_string());
         }
 
-        // Doğrudan servis adı ise
+        // If it's a direct service name
         if !affected_item.contains("/") && !affected_item.contains(" ") {
             return Ok(affected_item.trim().to_string());
         }
@@ -364,7 +364,7 @@ more_clear_headers Server;
         Err(FixError::ConfigError(format!("Cannot extract service name from: {}", affected_item)))
     }
 
-    /// Tüm riskli servisleri toplu olarak devre dışı bırak
+    /// Disable all risky services in batch
     pub fn disable_all_risky_services(&self) -> Result<Vec<FixResult>, FixError> {
         let mut results = Vec::new();
 
@@ -384,7 +384,7 @@ more_clear_headers Server;
         ];
 
         for service in risky_services {
-            // Servisin mevcut olup olmadığını kontrol et
+            // Check if service exists
             if self.service_exists(service)? {
                 match self.disable_single_risky_service(service) {
                     Ok(result) => results.push(result),
@@ -396,13 +396,13 @@ more_clear_headers Server;
         Ok(results)
     }
 
-    /// Servisin var olup olmadığını kontrol et
+    /// Check if service exists
     fn service_exists(&self, service_name: &str) -> Result<bool, FixError> {
         let output = execute_command("systemctl", &["list-unit-files", "--type=service"])?;
         Ok(output.contains(&format!("{}.service", service_name)))
     }
 
-    /// Tek bir riskli servisi devre dışı bırak
+    /// Disable a single risky service
     fn disable_single_risky_service(&self, service_name: &str) -> Result<FixResult, FixError> {
         let start_time = Instant::now();
         let mut result = FixResult::new(
@@ -410,11 +410,11 @@ more_clear_headers Server;
             self.name().to_string()
         );
 
-        // Servisi durdur
+        // Stop service
         let _stop_output = execute_command("systemctl", &["stop", service_name]);
         result.commands_executed.push(format!("systemctl stop {}", service_name));
 
-        // Servisi devre dışı bırak
+        // Disable service
         let _disable_output = execute_command("systemctl", &["disable", service_name]);
         result.commands_executed.push(format!("systemctl disable {}", service_name));
 

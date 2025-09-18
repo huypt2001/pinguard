@@ -24,13 +24,13 @@ impl NvdClient {
     /// NVD API endpoint
     const NVD_API_BASE_URL: &'static str = "https://services.nvd.nist.gov/rest/json";
     
-    /// API rate limiting (public API için 6 saniyede 1 request)
+    /// API rate limiting (1 request per 6 seconds for public API)
     const PUBLIC_RATE_LIMIT_DELAY: Duration = Duration::from_secs(6);
     
-    /// API key'li kullanım için daha hızlı (0.6 saniye)
+    /// Faster for API key usage (0.6 seconds)
     const API_KEY_RATE_LIMIT_DELAY: Duration = Duration::from_millis(600);
 
-    /// Yeni NVD client oluştur
+    /// Create a new NVD client
     pub fn new() -> CveApiResult<Self> {
         let mut headers = HeaderMap::new();
         headers.insert(USER_AGENT, HeaderValue::from_static("pinGuard/1.0"));
@@ -50,7 +50,7 @@ impl NvdClient {
         })
     }
 
-    /// API key ile NVD client oluştur
+    /// Create NVD client with API key
     pub fn with_api_key(api_key: String) -> CveApiResult<Self> {
         let mut client = Self::new()?;
         client.api_key = Some(api_key);
@@ -58,21 +58,21 @@ impl NvdClient {
         Ok(client)
     }
 
-    /// Rate limit delay'i özelleştir
+    /// Customize rate limit delay
     pub fn with_rate_limit(mut self, delay_ms: u64) -> Self {
         self.rate_limit_delay = Duration::from_millis(delay_ms);
         self
     }
 
-    /// Max retry sayısını ayarla
+    /// Set max retry count
     pub fn with_max_retries(mut self, retries: u32) -> Self {
         self.max_retries = retries;
         self
     }
 
-    /// Tekil CVE'yi al
+    /// Get a single CVE
     pub async fn get_cve(&self, cve_id: &str) -> CveApiResult<CveData> {
-        info!("🔍 NVD'den CVE alınıyor: {}", cve_id);
+        info!("🔍 Fetching CVE from NVD: {}", cve_id);
 
         crate::cve::validate_cve_id(cve_id)?;
 
@@ -89,13 +89,13 @@ impl NvdClient {
         let nvd_vuln = &response.vulnerabilities[0];
         let cve_data = nvd_to_cve_data(nvd_vuln)?;
 
-        info!("CVE başarıyla alındı: {}", cve_id);
+        info!("CVE successfully fetched: {}", cve_id);
         Ok(cve_data)
     }
 
-    /// Çoklu CVE'leri al
+    /// Get multiple CVEs
     pub async fn get_cves(&self, cve_ids: &[String]) -> CveApiResult<Vec<CveData>> {
-        info!("🔍 NVD'den {} CVE toplu alınıyor", cve_ids.len());
+        info!("🔍 Fetching {} CVEs in bulk from NVD", cve_ids.len());
 
         if cve_ids.is_empty() {
             return Ok(Vec::new());
@@ -103,18 +103,18 @@ impl NvdClient {
 
         let mut all_cves = Vec::new();
 
-        // Rate limiting için CVE'leri tek tek al
+        // Fetch CVEs one by one for rate limiting
         for cve_id in cve_ids {
             match self.get_cve(cve_id).await {
                 Ok(cve_data) => {
                     all_cves.push(cve_data);
                 }
                 Err(CveApiError::CveNotFound(_)) => {
-                    warn!("CVE bulunamadı: {}", cve_id);
+                    warn!("CVE not found: {}", cve_id);
                     // Continue with next CVE
                 }
                 Err(e) => {
-                    error!("CVE alınamadı {}: {}", cve_id, e);
+                    error!("Failed to fetch CVE {}: {}", cve_id, e);
                     return Err(e);
                 }
             }
@@ -123,13 +123,13 @@ impl NvdClient {
             sleep(self.rate_limit_delay).await;
         }
 
-        info!("{} CVE toplu olarak alındı", all_cves.len());
+        info!("{} CVEs fetched in bulk", all_cves.len());
         Ok(all_cves)
     }
 
-    /// CVE arama
+    /// CVE search
     pub async fn search_cves(&self, criteria: CveSearchCriteria) -> CveApiResult<NvdApiResponse> {
-        debug!("NVD'de CVE aranıyor: {:?}", criteria.cve_id);
+        debug!("Searching CVEs in NVD: {:?}", criteria.cve_id);
 
         let url = format!("{}/cves/2.0", self.base_url);
         let params = criteria.to_query_params();
@@ -137,9 +137,9 @@ impl NvdClient {
         self.make_request(&url, params).await
     }
 
-    /// Keyword ile CVE arama
+    /// CVE search by keyword
     pub async fn search_by_keyword(&self, keyword: &str, limit: Option<u32>) -> CveApiResult<Vec<CveData>> {
-        info!("Keyword ile CVE aranıyor: {}", keyword);
+        info!("Searching CVEs by keyword: {}", keyword);
 
         let criteria = CveSearchCriteria::new()
             .with_keyword(keyword.to_string())
@@ -152,19 +152,19 @@ impl NvdClient {
             match nvd_to_cve_data(&nvd_vuln) {
                 Ok(cve_data) => cves.push(cve_data),
                 Err(e) => {
-                    warn!("CVE dönüştürme hatası: {}", e);
+                    warn!("CVE conversion error: {}", e);
                     continue;
                 }
             }
         }
 
-        info!("{} CVE bulundu keyword için: {}", cves.len(), keyword);
+        info!("{} CVEs found for keyword: {}", cves.len(), keyword);
         Ok(cves)
     }
 
-    /// CPE ile CVE arama
+    /// CVE search by CPE
     pub async fn search_by_cpe(&self, cpe_name: &str, limit: Option<u32>) -> CveApiResult<Vec<CveData>> {
-        info!("🔍 CPE ile CVE aranıyor: {}", cpe_name);
+        info!("🔍 Searching CVEs by CPE: {}", cpe_name);
 
         let criteria = CveSearchCriteria::new()
             .with_cpe_name(cpe_name.to_string())
@@ -177,19 +177,19 @@ impl NvdClient {
             match nvd_to_cve_data(&nvd_vuln) {
                 Ok(cve_data) => cves.push(cve_data),
                 Err(e) => {
-                    warn!("CVE dönüştürme hatası: {}", e);
+                    warn!("CVE conversion error: {}", e);
                     continue;
                 }
             }
         }
 
-        info!("{} CVE bulundu CPE için: {}", cves.len(), cpe_name);
+        info!("{} CVEs found for CPE: {}", cves.len(), cpe_name);
         Ok(cves)
     }
 
-    /// Son N gün içinde güncellenen CVE'leri al
+    /// Get CVEs updated in the last N days
     pub async fn get_recent_cves(&self, days: u32, limit: Option<u32>) -> CveApiResult<Vec<CveData>> {
-        info!("Son {} gün içindeki CVE'ler alınıyor", days);
+        info!("Fetching CVEs from the last {} days", days);
 
         let end_date = Utc::now();
         let start_date = end_date - chrono::Duration::days(days as i64);
@@ -205,17 +205,17 @@ impl NvdClient {
             match nvd_to_cve_data(&nvd_vuln) {
                 Ok(cve_data) => cves.push(cve_data),
                 Err(e) => {
-                    warn!("CVE dönüştürme hatası: {}", e);
+                    warn!("CVE conversion error: {}", e);
                     continue;
                 }
             }
         }
 
-        info!("{} CVE bulundu son {} gün için", cves.len(), days);
+        info!("{} CVEs found for the last {} days", cves.len(), days);
         Ok(cves)
     }
 
-    /// NVD API'ye request yap
+    /// Make request to NVD API
     async fn make_request(&self, url: &str, params: HashMap<String, String>) -> CveApiResult<NvdApiResponse> {
         let mut attempt = 0;
 
@@ -225,12 +225,12 @@ impl NvdClient {
 
             let mut request = self.client.get(url);
 
-            // API key varsa header'a ekle
+            // Add API key to header if available
             if let Some(ref api_key) = self.api_key {
                 request = request.header("apiKey", api_key);
             }
 
-            // Query parametrelerini ekle
+            // Add query parameters
             if !params.is_empty() {
                 request = request.query(&params);
             }
@@ -241,7 +241,7 @@ impl NvdClient {
                     if attempt == self.max_retries {
                         return Err(CveApiError::RequestError(e));
                     }
-                    warn!("Request hatası (attempt {}): {}", attempt, e);
+                    warn!("Request error (attempt {}): {}", attempt, e);
                     sleep(Duration::from_secs(attempt as u64 * 2)).await; // Exponential backoff
                     continue;
                 }
@@ -255,7 +255,7 @@ impl NvdClient {
                 
                 match serde_json::from_str::<NvdApiResponse>(&response_text) {
                     Ok(nvd_response) => {
-                        debug!("NVD API response başarıyla parse edildi");
+                        debug!("NVD API response successfully parsed");
                         
                         // Rate limiting
                         sleep(self.rate_limit_delay).await;
@@ -263,7 +263,7 @@ impl NvdClient {
                         return Ok(nvd_response);
                     }
                     Err(e) => {
-                        error!("JSON parse hatası: {}", e);
+                        error!("JSON parse error: {}", e);
                         error!("Response text: {}", response_text);
                         return Err(CveApiError::ParseError(e.to_string()));
                     }
@@ -271,7 +271,7 @@ impl NvdClient {
             } else if status.as_u16() == 429 {
                 // Rate limit exceeded
                 warn!("Rate limit exceeded, waiting...");
-                sleep(Duration::from_secs(60)).await; // 1 dakika bekle
+                sleep(Duration::from_secs(60)).await; // Wait 1 minute
                 continue;
             } else if status.as_u16() == 404 {
                 return Err(CveApiError::CveNotFound("CVE not found in NVD".to_string()));
@@ -290,13 +290,13 @@ impl NvdClient {
         Err(CveApiError::ApiResponseError("Max retries exceeded".to_string()))
     }
 
-    /// API durumunu kontrol et
+    /// Check API status
     pub async fn health_check(&self) -> CveApiResult<NvdHealthStatus> {
-        info!("NVD API sağlık kontrolü yapılıyor...");
+        info!("Performing NVD API health check...");
 
         let start_time = std::time::Instant::now();
         
-        // Basit bir CVE arama yap
+        // Perform a simple CVE search
         let test_criteria = CveSearchCriteria::new()
             .with_pagination(1, 0);
 
@@ -304,7 +304,7 @@ impl NvdClient {
             Ok(response) => {
                 let response_time = start_time.elapsed();
                 
-                info!("NVD API sağlıklı ({}ms)", response_time.as_millis());
+                info!("NVD API healthy ({}ms)", response_time.as_millis());
                 
                 Ok(NvdHealthStatus {
                     is_healthy: true,
@@ -318,7 +318,7 @@ impl NvdClient {
             Err(e) => {
                 let response_time = start_time.elapsed();
                 
-                error!("NVD API sağlıksız: {}", e);
+                error!("NVD API unhealthy: {}", e);
                 
                 Ok(NvdHealthStatus {
                     is_healthy: false,
@@ -333,7 +333,7 @@ impl NvdClient {
     }
 }
 
-/// NVD API sağlık durumu
+/// NVD API health status
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct NvdHealthStatus {
     pub is_healthy: bool,
@@ -380,6 +380,6 @@ mod tests {
         assert_eq!(params.get("startIndex"), Some(&"0".to_string()));
     }
 
-    // Not: Gerçek API testleri için API key gerekli ve rate limiting nedeniyle yavaş
-    // Bu testler integration test olarak ayrı dosyada yapılmalı
+    // Note: Real API tests require an API key and are slow due to rate limiting
+    // These tests should be done as integration tests in a separate file
 }

@@ -11,7 +11,7 @@ impl Fixer for PackageUpdater {
     }
 
     fn can_fix(&self, finding: &Finding) -> bool {
-        // Package audit bulgularını düzeltebilir
+        // Can fix package audit findings
         finding.id.starts_with("PKG-") || 
         finding.affected_item.contains("package") ||
         finding.title.contains("outdated") ||
@@ -22,11 +22,11 @@ impl Fixer for PackageUpdater {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
-        tracing::info!("Package fix başlatılıyor: {}", finding.title);
+        tracing::info!("Starting package fix: {}", finding.title);
 
-        // Package manager'ı tespit et
+        // Detect package manager
         let package_manager = self.detect_package_manager()?;
-        tracing::info!("Package manager tespit edildi: {}", package_manager);
+        tracing::info!("Package manager detected: {}", package_manager);
 
         match package_manager.as_str() {
             "apt" => self.fix_with_apt(finding, &mut result)?,
@@ -37,7 +37,7 @@ impl Fixer for PackageUpdater {
         }
 
         result = result.set_duration(start_time);
-        tracing::info!("Package fix tamamlandı: {}", result.message);
+        tracing::info!("Package fix completed: {}", result.message);
         
         Ok(result)
     }
@@ -57,33 +57,33 @@ impl Fixer for PackageUpdater {
                     .add_command("apt update".to_string())
                     .add_command("apt upgrade -y".to_string())
                     .set_risk(RiskLevel::Medium)
-                    .set_duration(Duration::from_secs(300)); // 5 dakika
+                    .set_duration(Duration::from_secs(300)); // 5 minutes
             },
             "yum" => {
                 plan = plan
                     .add_command("yum check-update".to_string())
                     .add_command("yum update -y".to_string())
                     .set_risk(RiskLevel::Medium)
-                    .set_duration(Duration::from_secs(600)); // 10 dakika
+                    .set_duration(Duration::from_secs(600)); // 10 minutes
             },
             "dnf" => {
                 plan = plan
                     .add_command("dnf check-update".to_string())
                     .add_command("dnf update -y".to_string())
                     .set_risk(RiskLevel::Medium)
-                    .set_duration(Duration::from_secs(300)); // 5 dakika
+                    .set_duration(Duration::from_secs(300)); // 5 minutes
             },
             "zypper" => {
                 plan = plan
                     .add_command("zypper refresh".to_string())
                     .add_command("zypper update -y".to_string())
                     .set_risk(RiskLevel::Medium)
-                    .set_duration(Duration::from_secs(400)); // 6-7 dakika
+                    .set_duration(Duration::from_secs(400)); // 6-7 minutes
             },
             _ => return Err(FixError::UnsupportedFix(format!("Unsupported package manager: {}", package_manager))),
         }
 
-        // Eğer kernel güncellemesi varsa reboot gerekebilir
+        // If kernel update, reboot may be required
         if finding.affected_item.contains("kernel") || finding.title.contains("kernel") {
             plan = plan.requires_reboot().set_risk(RiskLevel::High);
         }
@@ -93,7 +93,7 @@ impl Fixer for PackageUpdater {
 }
 
 impl PackageUpdater {
-    /// Package manager'ı tespit et
+    /// Detect package manager
     fn detect_package_manager(&self) -> Result<String, FixError> {
         // APT (Debian/Ubuntu)
         if Command::new("which").arg("apt").output().unwrap().status.success() {
@@ -118,22 +118,22 @@ impl PackageUpdater {
         Err(FixError::DependencyError("No supported package manager found".to_string()))
     }
 
-    /// APT ile düzeltme
+    /// Fix with APT
     fn fix_with_apt(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("APT repository güncelleniyor...");
+        tracing::info!("Updating APT repository...");
         
-        // Repository güncellemesi
+        // Repository update
         let _output = execute_command("apt", &["update"])?;
         result.commands_executed.push("apt update".to_string());
 
-        // Eğer spesifik paket varsa onu güncelle, yoksa tümünü güncelle
+        // If specific package exists, update it, otherwise update all
         if let Some(package_name) = self.extract_package_name(&finding.affected_item) {
-            tracing::info!("Spesifik paket güncelleniyor: {}", package_name);
+            tracing::info!("Updating specific package: {}", package_name);
             let _output = execute_command("apt", &["install", "--only-upgrade", "-y", &package_name])?;
             result.commands_executed.push(format!("apt install --only-upgrade -y {}", package_name));
             result.message = format!("Package '{}' updated successfully", package_name);
         } else {
-            tracing::info!("Tüm paketler güncelleniyor...");
+            tracing::info!("Updating all packages...");
             let _output = execute_command("apt", &["upgrade", "-y"])?;
             result.commands_executed.push("apt upgrade -y".to_string());
             result.message = "All packages updated successfully".to_string();
@@ -143,20 +143,20 @@ impl PackageUpdater {
         Ok(())
     }
 
-    /// YUM ile düzeltme
+    /// Fix with YUM
     fn fix_with_yum(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("YUM cache güncelleniyor...");
+        tracing::info!("Updating YUM cache...");
         
         let _output = execute_command("yum", &["check-update"])?;
         result.commands_executed.push("yum check-update".to_string());
 
         if let Some(package_name) = self.extract_package_name(&finding.affected_item) {
-            tracing::info!("Spesifik paket güncelleniyor: {}", package_name);
+            tracing::info!("Updating specific package: {}", package_name);
             let _output = execute_command("yum", &["update", "-y", &package_name])?;
             result.commands_executed.push(format!("yum update -y {}", package_name));
             result.message = format!("Package '{}' updated successfully", package_name);
         } else {
-            tracing::info!("Tüm paketler güncelleniyor...");
+            tracing::info!("Updating all packages...");
             let _output = execute_command("yum", &["update", "-y"])?;
             result.commands_executed.push("yum update -y".to_string());
             result.message = "All packages updated successfully".to_string();
@@ -166,20 +166,20 @@ impl PackageUpdater {
         Ok(())
     }
 
-    /// DNF ile düzeltme
+    /// Fix with DNF
     fn fix_with_dnf(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("DNF metadata güncelleniyor...");
+        tracing::info!("Updating DNF metadata...");
         
         let _output = execute_command("dnf", &["check-update"])?;
         result.commands_executed.push("dnf check-update".to_string());
 
         if let Some(package_name) = self.extract_package_name(&finding.affected_item) {
-            tracing::info!("Spesifik paket güncelleniyor: {}", package_name);
+            tracing::info!("Updating specific package: {}", package_name);
             let _output = execute_command("dnf", &["update", "-y", &package_name])?;
             result.commands_executed.push(format!("dnf update -y {}", package_name));
             result.message = format!("Package '{}' updated successfully", package_name);
         } else {
-            tracing::info!("Tüm paketler güncelleniyor...");
+            tracing::info!("Updating all packages...");
             let _output = execute_command("dnf", &["update", "-y"])?;
             result.commands_executed.push("dnf update -y".to_string());
             result.message = "All packages updated successfully".to_string();
@@ -189,20 +189,20 @@ impl PackageUpdater {
         Ok(())
     }
 
-    /// Zypper ile düzeltme
+    /// Fix with Zypper
     fn fix_with_zypper(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("Zypper repositories güncelleniyor...");
+        tracing::info!("Updating Zypper repositories...");
         
         let _output = execute_command("zypper", &["refresh"])?;
         result.commands_executed.push("zypper refresh".to_string());
 
         if let Some(package_name) = self.extract_package_name(&finding.affected_item) {
-            tracing::info!("Spesifik paket güncelleniyor: {}", package_name);
+            tracing::info!("Updating specific package: {}", package_name);
             let _output = execute_command("zypper", &["update", "-y", &package_name])?;
             result.commands_executed.push(format!("zypper update -y {}", package_name));
             result.message = format!("Package '{}' updated successfully", package_name);
         } else {
-            tracing::info!("Tüm paketler güncelleniyor...");
+            tracing::info!("Updating all packages...");
             let _output = execute_command("zypper", &["update", "-y"])?;
             result.commands_executed.push("zypper update -y".to_string());
             result.message = "All packages updated successfully".to_string();
@@ -212,19 +212,19 @@ impl PackageUpdater {
         Ok(())
     }
 
-    /// Bulgudaki paket adını çıkar
+    /// Extract package name from finding
     fn extract_package_name(&self, affected_item: &str) -> Option<String> {
-        // "Package: packagename" formatından paket adını çıkar
+        // Extract package name from "Package: packagename" format
         if affected_item.starts_with("Package: ") {
             return Some(affected_item.replace("Package: ", "").trim().to_string());
         }
 
-        // "packagename (version)" formatından paket adını çıkar
+        // Extract package name from "packagename (version)" format
         if affected_item.contains(" (") {
             return Some(affected_item.split(" (").next()?.trim().to_string());
         }
 
-        // Sadece paket adı varsa
+        // If only package name exists
         if !affected_item.contains("/") && !affected_item.contains(" ") {
             return Some(affected_item.trim().to_string());
         }
@@ -232,7 +232,7 @@ impl PackageUpdater {
         None
     }
 
-    /// Güvenlik güncellemelerini kontrol et
+    /// Check security updates
     pub fn check_security_updates(&self) -> Result<Vec<String>, FixError> {
         let package_manager = self.detect_package_manager()?;
         
@@ -282,7 +282,7 @@ impl PackageUpdater {
         for line in output.lines() {
             if !line.trim().is_empty() && !line.starts_with("Last") && !line.contains("metadata") {
                 if let Some(package) = line.split_whitespace().next() {
-                    if package.contains(".") { // Paket formatı kontrolü
+                    if package.contains(".") { // Package format check
                         security_updates.push(package.to_string());
                     }
                 }

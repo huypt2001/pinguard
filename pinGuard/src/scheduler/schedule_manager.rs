@@ -33,9 +33,9 @@ impl ScheduleManager {
         Ok(manager)
     }
 
-    /// Schedule'ı kaydet
+    /// Save schedule
     pub fn save_schedule(&mut self, config: &ScheduleConfig) -> SchedulerResult<()> {
-        debug!("Schedule kaydediliyor: {}", config.name);
+        debug!("Saving schedule: {}", config.name);
 
         // Config dosyası yolu
         let config_path = self.config_dir.join(format!("{}.json", config.name));
@@ -68,7 +68,7 @@ impl ScheduleManager {
 
     /// Schedule'ı sil
     pub fn remove_schedule(&mut self, name: &str) -> SchedulerResult<()> {
-        debug!("Schedule siliniyor: {}", name);
+        debug!("Deleting schedule: {}", name);
 
         // Memory'den sil
         if self.schedules.remove(name).is_none() {
@@ -100,7 +100,7 @@ impl ScheduleManager {
         self.save_schedule(config)
     }
 
-    /// Schedule'ı etkinleştir/devre dışı bırak
+    /// Enable/disable schedule
     pub fn set_schedule_enabled(&mut self, name: &str, enabled: bool) -> SchedulerResult<()> {
         let mut config = self.get_schedule(name)?;
         config.enabled = enabled;
@@ -108,9 +108,9 @@ impl ScheduleManager {
         self.update_schedule(&config)
     }
 
-    /// Mevcut schedule'ları dosyalardan yükle
+    /// Load existing schedules from files
     fn load_schedules(&mut self) -> SchedulerResult<()> {
-        debug!("Schedule'lar yükleniyor: {}", self.config_dir.display());
+        debug!("Loading schedules: {}", self.config_dir.display());
 
         let entries = fs::read_dir(&self.config_dir)?;
         let mut loaded_count = 0;
@@ -168,7 +168,7 @@ impl ScheduleManager {
 
     /// Varsayılan schedule'ları oluştur
     pub fn create_default_schedules(&mut self) -> SchedulerResult<()> {
-        info!("Varsayılan schedule'lar oluşturuluyor");
+        info!("Creating default schedules");
 
         // Daily full scan
         if !self.exists("daily-full")? {

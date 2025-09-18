@@ -11,7 +11,7 @@ impl Fixer for UserPolicyFixer {
     }
 
     fn can_fix(&self, finding: &Finding) -> bool {
-        // Kullanıcı politikası ile ilgili bulguları düzeltebilir
+        // Can fix user policy-related findings
         finding.id.starts_with("USR-") ||
         finding.affected_item.contains("user") ||
         finding.affected_item.contains("password") ||
@@ -24,9 +24,9 @@ impl Fixer for UserPolicyFixer {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
-        tracing::info!("User policy hardening başlatılıyor: {}", finding.title);
+        tracing::info!("Starting user policy hardening: {}", finding.title);
 
-        // Finding türüne göre uygun düzeltme yöntemini seç
+        // Select appropriate fix method based on finding type
         if finding.id.starts_with("USR-WEAK-PASSWORD") {
             self.enforce_password_policy(&mut result)?;
         } else if finding.id.starts_with("USR-NO-PASSWORD-EXPIRY") {
@@ -44,7 +44,7 @@ impl Fixer for UserPolicyFixer {
         }
 
         result = result.set_duration(start_time);
-        tracing::info!("User policy hardening tamamlandı: {}", result.message);
+        tracing::info!("User policy hardening completed: {}", result.message);
         
         Ok(result)
     }
@@ -90,11 +90,11 @@ impl Fixer for UserPolicyFixer {
 }
 
 impl UserPolicyFixer {
-    /// Güçlü parola politikası uygula
+    /// Apply strong password policy
     fn enforce_password_policy(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("Güçlü parola politikası uygulanıyor...");
+        tracing::info!("Applying strong password policy...");
 
-        // /etc/login.defs backup ve düzenleme
+        // Backup and edit /etc/login.defs
         let login_defs_path = "/etc/login.defs";
         let backup_path = create_backup(login_defs_path)?;
         result.backup_created = Some(backup_path);
@@ -105,12 +105,12 @@ impl UserPolicyFixer {
         let mut new_content = content.clone();
         let mut changes_made = false;
 
-        // Parola ayarlarını güncelle
+        // Update password settings
         let password_settings = vec![
-            ("PASS_MAX_DAYS", "90"),      // Maksimum parola yaşı
-            ("PASS_MIN_DAYS", "1"),       // Minimum parola yaşı
-            ("PASS_WARN_AGE", "7"),       // Parola süresi uyarısı
-            ("PASS_MIN_LEN", "8"),        // Minimum parola uzunluğu
+            ("PASS_MAX_DAYS", "90"),      // Maximum password age
+            ("PASS_MIN_DAYS", "1"),       // Minimum password age
+            ("PASS_WARN_AGE", "7"),       // Password expiry warning
+            ("PASS_MIN_LEN", "8"),        // Minimum password length
         ];
 
         for (setting, value) in password_settings {
@@ -154,11 +154,11 @@ impl UserPolicyFixer {
         Ok(())
     }
 
-    /// PAM parola karmaşıklığını yapılandır
+    /// Configure PAM password complexity
     fn configure_pam_password_complexity(&self, result: &mut FixResult) -> Result<(), FixError> {
         let pam_password_path = "/etc/pam.d/common-password";
         
-        // Backup oluştur
+        // Create backup
         let backup_path = create_backup(pam_password_path)?;
         if result.backup_created.is_none() {
             result.backup_created = Some(backup_path);
@@ -169,11 +169,11 @@ impl UserPolicyFixer {
 
         let mut new_content = content;
 
-        // pam_pwquality modülünü ekle
+        // Add pam_pwquality module
         let pwquality_line = "password requisite pam_pwquality.so retry=3 minlen=8 difok=3 ucredit=-1 lcredit=-1 dcredit=-1 ocredit=-1";
         
         if !new_content.contains("pam_pwquality.so") {
-            // pam_unix satırından önce ekle
+            // Add before pam_unix line
             let lines: Vec<&str> = new_content.lines().collect();
             let mut new_lines = Vec::new();
             
@@ -195,17 +195,17 @@ impl UserPolicyFixer {
         Ok(())
     }
 
-    /// Parola süresi ayarla
+    /// Set password expiry
     fn set_password_expiry(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let username = self.extract_username(&finding.affected_item)?;
         
-        tracing::info!("Parola süresi ayarlanıyor: {}", username);
+        tracing::info!("Setting password expiry: {}", username);
 
-        // Maksimum parola yaşı 90 gün
+        // Maximum password age 90 days
         let _output = execute_command("chage", &["-M", "90", &username])?;
         result.commands_executed.push(format!("chage -M 90 {}", username));
 
-        // Parola değiştirme uyarısı 7 gün önce
+        // Password change warning 7 days before
         let _output = execute_command("chage", &["-W", "7", &username])?;
         result.commands_executed.push(format!("chage -W 7 {}", username));
 
@@ -215,9 +215,9 @@ impl UserPolicyFixer {
         Ok(())
     }
 
-    /// Sudo NOPASSWD güvenlik açığını düzelt
+    /// Fix sudo NOPASSWD security vulnerability
     fn fix_sudo_nopasswd(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("Sudo NOPASSWD güvenlik açığı düzeltiliyor...");
+        tracing::info!("Fixing sudo NOPASSWD security vulnerability...");
 
         let sudoers_path = "/etc/sudoers";
         let backup_path = create_backup(sudoers_path)?;
@@ -232,7 +232,7 @@ impl UserPolicyFixer {
 
         for line in lines {
             if line.contains("NOPASSWD") && !line.trim().starts_with("#") {
-                // NOPASSWD satırını yorum satırı yap
+                // Comment out NOPASSWD line
                 new_lines.push(format!("# {}", line));
                 changes_made = true;
             } else {
@@ -247,7 +247,7 @@ impl UserPolicyFixer {
             
             result.files_modified.push(sudoers_path.to_string());
 
-            // Sudoers dosyasını doğrula
+            // Validate sudoers file
             let test_output = execute_command("visudo", &["-c"])?;
             if !test_output.contains("parsed OK") {
                 return Err(FixError::ConfigError("Sudoers file validation failed".to_string()));
@@ -263,17 +263,17 @@ impl UserPolicyFixer {
         Ok(())
     }
 
-    /// İnaktif kullanıcıyı devre dışı bırak
+    /// Disable inactive user
     fn disable_inactive_user(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let username = self.extract_username(&finding.affected_item)?;
         
-        tracing::info!("İnaktif kullanıcı devre dışı bırakılıyor: {}", username);
+        tracing::info!("Disabling inactive user: {}", username);
 
-        // Kullanıcı hesabını kilitle
+        // Lock user account
         let _output = execute_command("passwd", &["-l", &username])?;
         result.commands_executed.push(format!("passwd -l {}", username));
 
-        // Hesap süresi geçmiş olarak işaretle
+        // Mark account as expired
         let _output = execute_command("chage", &["-E", "1", &username])?;
         result.commands_executed.push(format!("chage -E 1 {}", username));
 
@@ -283,15 +283,15 @@ impl UserPolicyFixer {
         Ok(())
     }
 
-    /// Root login'i devre dışı bırak
+    /// Disable root login
     fn disable_root_login(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("Root login devre dışı bırakılıyor...");
+        tracing::info!("Disabling root login...");
 
-        // Root hesabını kilitle
+        // Lock root account
         let _output = execute_command("passwd", &["-l", "root"])?;
         result.commands_executed.push("passwd -l root".to_string());
 
-        // /etc/passwd'da root shell'ini değiştir
+        // Change root shell in /etc/passwd
         let passwd_path = "/etc/passwd";
         let backup_path = create_backup(passwd_path)?;
         result.backup_created = Some(backup_path);
@@ -304,7 +304,7 @@ impl UserPolicyFixer {
 
         for line in lines {
             if line.starts_with("root:") {
-                // Root shell'ini /usr/sbin/nologin olarak değiştir
+                // Change root shell to /usr/sbin/nologin
                 let parts: Vec<&str> = line.split(':').collect();
                 if parts.len() >= 7 {
                     let mut new_parts = parts.clone();
@@ -329,17 +329,17 @@ impl UserPolicyFixer {
         Ok(())
     }
 
-    /// Paylaşımlı hesabı güvenli hale getir
+    /// Secure shared account
     fn secure_shared_account(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let username = self.extract_username(&finding.affected_item)?;
         
-        tracing::info!("Paylaşımlı hesap güvenliği artırılıyor: {}", username);
+        tracing::info!("Securing shared account: {}", username);
 
-        // Zorunlu parola değişikliği
+        // Force password change
         let _output = execute_command("chage", &["-d", "0", &username])?;
         result.commands_executed.push(format!("chage -d 0 {}", username));
 
-        // Parola süresi kısa tut
+        // Keep password expiry short
         let _output = execute_command("chage", &["-M", "30", &username])?;
         result.commands_executed.push(format!("chage -M 30 {}", username));
 
@@ -349,14 +349,14 @@ impl UserPolicyFixer {
         Ok(())
     }
 
-    /// Bulgudaki kullanıcı adını çıkar
+    /// Extract username from finding
     fn extract_username(&self, affected_item: &str) -> Result<String, FixError> {
-        // "User: username" formatından kullanıcı adını çıkar
+        // Extract username from "User: username" format
         if affected_item.starts_with("User: ") {
             return Ok(affected_item.replace("User: ", "").trim().to_string());
         }
 
-        // "username" doğrudan ise
+        // If username is direct
         if !affected_item.contains("/") && !affected_item.contains(" ") {
             return Ok(affected_item.trim().to_string());
         }
@@ -364,18 +364,18 @@ impl UserPolicyFixer {
         Err(FixError::ConfigError(format!("Cannot extract username from: {}", affected_item)))
     }
 
-    /// Tüm sistemdeki zayıf parola politikalarını düzelt
+    /// Fix all weak password policies in the system
     pub fn fix_all_password_policies(&self) -> Result<Vec<FixResult>, FixError> {
         let mut results = Vec::new();
 
-        // Genel parola politikası
+        // General password policy
         let mut general_result = FixResult::new("USR-WEAK-PASSWORD-GENERAL".to_string(), self.name().to_string());
         if let Err(e) = self.enforce_password_policy(&mut general_result) {
             tracing::error!("Failed to enforce password policy: {}", e);
         }
         results.push(general_result);
 
-        // Süresi dolmuş parolaları kontrol et
+        // Check expired passwords
         let output = execute_command("awk", &["-F:", "$5 == \"\" {print $1}", "/etc/shadow"])?;
         for username in output.lines() {
             if !username.is_empty() && username != "root" {
@@ -394,7 +394,7 @@ impl UserPolicyFixer {
         Ok(results)
     }
 
-    /// Belirli kullanıcı için parola süresi ayarla
+    /// Set password expiry for specific user
     fn set_password_expiry_for_user(&self, username: &str, result: &mut FixResult) -> Result<(), FixError> {
         let _output = execute_command("chage", &["-M", "90", username])?;
         result.commands_executed.push(format!("chage -M 90 {}", username));

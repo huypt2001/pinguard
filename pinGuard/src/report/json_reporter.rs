@@ -3,31 +3,31 @@ use std::path::Path;
 use serde_json;
 use crate::report::{Reporter, ReportError, SecurityReport};
 
-/// JSON formatında rapor üreten yapı
+/// Structure that generates reports in JSON format
 pub struct JsonReporter {
     pretty_print: bool,
 }
 
 impl JsonReporter {
-    /// Yeni JSON reporter oluştur
+    /// Create new JSON reporter
     pub fn new(pretty_print: bool) -> Self {
         Self { pretty_print }
     }
 
-    /// Varsayılan JSON reporter (pretty print ile)
+    /// Default JSON reporter (with pretty print)
     pub fn default() -> Self {
         Self::new(true)
     }
 
-    /// JSON'u dosyaya yaz
+    /// Write JSON to file
     fn write_json_file(&self, report: &SecurityReport, output_path: &str) -> Result<String, ReportError> {
-        // Çıkış dizinini oluştur
+        // Create output directory
         if let Some(parent) = Path::new(output_path).parent() {
             fs::create_dir_all(parent)
                 .map_err(|e| ReportError::IoError(format!("Failed to create output directory: {}", e)))?;
         }
 
-        // JSON'a çevir
+        // Convert to JSON
         let json_data = if self.pretty_print {
             serde_json::to_string_pretty(report)
                 .map_err(|e| ReportError::SerializationError(e.to_string()))?
@@ -36,14 +36,14 @@ impl JsonReporter {
                 .map_err(|e| ReportError::SerializationError(e.to_string()))?
         };
 
-        // Dosyaya yaz
+        // Write to file
         fs::write(output_path, json_data)
             .map_err(|e| ReportError::IoError(format!("Failed to write JSON file: {}", e)))?;
 
         Ok(output_path.to_string())
     }
 
-    /// Kompakt JSON çıktısı al (dosya yazmadan)
+    /// Get compact JSON output (without writing to file)
     pub fn to_json_string(&self, report: &SecurityReport) -> Result<String, ReportError> {
         if self.pretty_print {
             serde_json::to_string_pretty(report)
@@ -54,7 +54,7 @@ impl JsonReporter {
         }
     }
 
-    /// Belirli bir bölümü JSON olarak al (debug için)
+    /// Get specific section as JSON (for debugging)
     pub fn export_section<T: serde::Serialize>(&self, section: &T, section_name: &str) -> Result<String, ReportError> {
         let json_data = if self.pretty_print {
             serde_json::to_string_pretty(section)
@@ -70,7 +70,7 @@ impl JsonReporter {
 
 impl Reporter for JsonReporter {
     fn generate_report(&self, report: &SecurityReport, output_path: &str) -> Result<String, ReportError> {
-        // Dosya uzantısını kontrol et ve gerekirse ekle
+        // Check file extension and add if necessary
         let final_path = if output_path.ends_with(".json") {
             output_path.to_string()
         } else {
@@ -89,7 +89,7 @@ impl Reporter for JsonReporter {
     }
 }
 
-/// Hızlı JSON rapor oluşturma fonksiyonu
+/// Quick JSON report generation function
 pub fn generate_json_report(
     report: &SecurityReport, 
     output_path: &str, 
@@ -99,11 +99,11 @@ pub fn generate_json_report(
     reporter.generate_report(report, output_path)
 }
 
-/// Konsola JSON çıktı veren fonksiyon
+/// Function that outputs JSON to console
 pub fn print_json_summary(report: &SecurityReport) -> Result<(), ReportError> {
     let reporter = JsonReporter::new(true);
     
-    // Sadece özet bilgileri yazdır
+    // Print only summary information
     println!("REPORT SUMMARY (JSON)");
     println!("================================");
     

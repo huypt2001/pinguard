@@ -8,7 +8,7 @@ pub mod cve_cache;
 pub mod scan_history;
 pub mod migrations;
 
-/// Veritabanı hata türleri
+/// Database error types
 #[derive(Debug, thiserror::Error)]
 pub enum DatabaseError {
     #[error("SQLite error: {0}")]
@@ -25,19 +25,19 @@ pub enum DatabaseError {
 
 pub type DatabaseResult<T> = Result<T, DatabaseError>;
 
-/// Veritabanı yöneticisi
+/// Database manager
 pub struct DatabaseManager {
     connection: Connection,
     db_path: String,
 }
 
 impl DatabaseManager {
-    /// Yeni veritabanı manager oluştur
+    /// Create new database manager
     pub fn new(db_path: &str) -> DatabaseResult<Self> {
         let conn = Connection::open(db_path)?;
         
-        // WAL mode etkinleştir (performans için)
-        info!("🔧 PRAGMA ayarları yapılandırılıyor...");
+        // Enable WAL mode (for performance)
+        info!("🔧 Configuring PRAGMA settings...");
         
         // PRAGMA journal_mode=WAL returns results, so we use query instead of execute
         let _ = conn.prepare("PRAGMA journal_mode=WAL")?.query_row([], |row| {
@@ -46,7 +46,7 @@ impl DatabaseManager {
         });
         
         conn.execute("PRAGMA foreign_keys=ON", [])?;
-        info!("Foreign keys etkinleştirildi");
+        info!("Foreign keys enabled");
         
         let mut db = Self { 
             connection: conn,
@@ -57,22 +57,22 @@ impl DatabaseManager {
         Ok(db)
     }
 
-    /// Test için in-memory database
+    /// In-memory database for testing
     #[cfg(test)]
     pub fn new_test() -> DatabaseResult<Self> {
         Self::new(":memory:")
     }
 
-    /// Default path ile database oluştur
+    /// Create database with default path
     pub fn new_default() -> DatabaseResult<Self> {
         Self::new("pinGuard.db")
     }
 
-    /// Migration'ları çalıştır
+    /// Run migrations
     pub fn run_migrations(&mut self) -> DatabaseResult<()> {
-        info!("Database migration'ları çalıştırılıyor...");
+        info!("Running database migrations...");
 
-        // Migration tablosunu oluştur
+        // Create migration table
         self.connection.execute(
             "CREATE TABLE IF NOT EXISTS migrations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,7 +82,7 @@ impl DatabaseManager {
             [],
         )?;
 
-        // Tablo oluşturma migration'ları
+        // Table creation migrations
         let migrations: Vec<(&str, fn(&mut Connection) -> DatabaseResult<()>)> = vec![
             ("create_cve_cache_table", |conn| migrations::create_cve_cache_table(conn).map_err(|e| e)),
             ("create_scan_history_table", |conn| migrations::create_scan_history_table(conn).map_err(|e| e)),
@@ -91,62 +91,62 @@ impl DatabaseManager {
         ];
 
         for (name, migration_fn) in migrations {
-            // Migration daha önce uygulanmış mı kontrol et
+            // Check if migration has been applied before
             let applied = self.connection
                 .prepare("SELECT COUNT(*) FROM migrations WHERE name = ?1")?
                 .query_row([name], |row| row.get::<_, i32>(0))?;
 
             if applied == 0 {
-                info!("Migration uygulanıyor: {}", name);
+                info!("Applying migration: {}", name);
                 match migration_fn(&mut self.connection) {
                     Ok(_) => {
-                        // Migration'ı kaydet
+                        // Save the migration
                         self.connection.execute(
                             "INSERT INTO migrations (name) VALUES (?1)",
                             [name],
                         )?;
-                        info!("Migration tamamlandı: {}", name);
+                        info!("Migration completed: {}", name);
                     }
                     Err(e) => {
-                        error!("Migration '{}' hatası: {}", name, e);
+                        error!("Migration '{}' error: {}", name, e);
                         return Err(e);
                     }
                 }
             } else {
-                debug!("Migration zaten uygulanmış: {}", name);
+                debug!("Migration already applied: {}", name);
             }
         }
 
-        info!("Tüm migration'lar tamamlandı");
+        info!("All migrations completed");
         Ok(())
     }
 
-    /// Veritabanı bağlantısını al
+    /// Get database connection
     pub fn connection(&self) -> &Connection {
         &self.connection
     }
 
-    /// SQL komutunu çalıştır
+    /// Execute SQL command
     pub fn execute(&self, sql: &str, params: impl rusqlite::Params) -> DatabaseResult<usize> {
         self.connection.execute(sql, params).map_err(DatabaseError::from)
     }
 
-    /// Prepared statement ile SQL çalıştır
+    /// Execute SQL with prepared statement
     pub fn execute_prepared(&self, sql: &str, params: impl rusqlite::Params) -> DatabaseResult<usize> {
         let mut stmt = self.connection.prepare(sql)?;
         stmt.execute(params).map_err(DatabaseError::from)
     }
 
-    /// Veritabanı yolunu al
+    /// Get database path
     pub fn db_path(&self) -> &str {
         &self.db_path
     }
 
-    /// Veritabanı durumunu kontrol et
+    /// Check database status
     pub fn health_check(&self) -> DatabaseResult<DatabaseHealth> {
         let mut health = DatabaseHealth::default();
 
-        // Temel SQLite fonksiyonality testi
+        // Basic SQLite functionality test
         let test_query = self.connection.prepare("SELECT 1");
         health.connection_ok = test_query.is_ok();
 
@@ -154,27 +154,27 @@ impl DatabaseManager {
             return Ok(health);
         }
 
-        // Tablo sayısını al
+        // Get table count
         let mut stmt = self.connection.prepare(
             "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
         )?;
         health.table_count = stmt.query_row([], |row| row.get(0))?;
 
-        // CVE cache sayısını al
+        // Get CVE cache count
         if let Ok(mut stmt) = self.connection.prepare("SELECT COUNT(*) FROM cve_cache") {
             if let Ok(count) = stmt.query_row([], |row| row.get(0)) {
                 health.cve_cache_count = count;
             }
         }
 
-        // Scan history sayısını al
+        // Get scan history count
         if let Ok(mut stmt) = self.connection.prepare("SELECT COUNT(*) FROM scan_history") {
             if let Ok(count) = stmt.query_row([], |row| row.get(0)) {
                 health.scan_history_count = count;
             }
         }
 
-        // Database boyutunu hesapla
+        // Calculate database size
         if let Ok(metadata) = std::fs::metadata(&self.db_path) {
             health.database_size_bytes = metadata.len();
         }
@@ -183,44 +183,44 @@ impl DatabaseManager {
         Ok(health)
     }
 
-    /// Veritabanını optimize et
+    /// Optimize database
     pub fn optimize(&self) -> DatabaseResult<()> {
-        info!("Veritabanı optimizasyonu başlatılıyor...");
+        info!("Starting database optimization...");
 
-        // VACUUM - unused space'i temizle
+        // VACUUM - clean unused space
         self.connection.execute("VACUUM", [])?;
         
-        // ANALYZE - query planner istatistiklerini güncelle
+        // ANALYZE - update query planner statistics
         self.connection.execute("ANALYZE", [])?;
 
-        info!("Veritabanı optimizasyonu tamamlandı");
+        info!("Database optimization completed");
         Ok(())
     }
 
-    /// Veritabanı backup oluştur
+    /// Create database backup
     pub fn backup(&self, backup_path: &str) -> DatabaseResult<()> {
-        info!("Veritabanı backup'ı oluşturuluyor: {}", backup_path);
+        info!("Creating database backup: {}", backup_path);
         
         if self.db_path == ":memory:" {
             return Err(DatabaseError::ValidationError("Cannot backup in-memory database".to_string()));
         }
 
-        // Backup dizinini oluştur
+        // Create backup directory
         if let Some(parent) = Path::new(backup_path).parent() {
             std::fs::create_dir_all(parent)
                 .map_err(|e| DatabaseError::ConnectionError(format!("Backup directory creation failed: {}", e)))?;
         }
 
-        // Basit dosya kopyalama
+        // Simple file copy
         std::fs::copy(&self.db_path, backup_path)
             .map_err(|e| DatabaseError::ConnectionError(format!("Backup failed: {}", e)))?;
 
-        info!("Backup başarıyla oluşturuldu");
+        info!("Backup created successfully");
         Ok(())
     }
 }
 
-/// Veritabanı sağlık durumu
+/// Database health status
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct DatabaseHealth {
     pub connection_ok: bool,
@@ -241,7 +241,7 @@ impl DatabaseHealth {
     }
 }
 
-/// Database connection pool için trait
+/// Trait for database connection pool
 pub trait DatabaseConnection {
     fn execute_query(&self, query: &str, params: &[&dyn rusqlite::ToSql]) -> DatabaseResult<usize>;
     fn fetch_one<T>(&self, query: &str, params: &[&dyn rusqlite::ToSql], mapper: fn(&rusqlite::Row) -> rusqlite::Result<T>) -> DatabaseResult<Option<T>>;
@@ -291,7 +291,7 @@ mod tests {
     fn test_migrations() {
         let db = DatabaseManager::new_test().unwrap();
         
-        // Migrations tablosunun var olduğunu kontrol et
+        // Check if migrations table exists
         let mut stmt = db.connection.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='migrations'").unwrap();
         let table_exists: bool = stmt.exists([]).unwrap();
         assert!(table_exists);

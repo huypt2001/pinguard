@@ -11,27 +11,27 @@ pub mod user_policy_fixer;
 pub mod firewall_configurator;
 pub mod manager;
 
-/// Fixer trait - her düzeltici modül bu trait'i implement eder
+/// Fixer trait - every fixer module implements this trait
 pub trait Fixer {
-    /// Fixer'ın adı
+    /// Name of the fixer
     fn name(&self) -> &'static str;
     
-    /// Bu fixer'ın bu bulguyu düzeltip düzeltemeyeceğini kontrol et
+    /// Check if this fixer can fix this finding
     fn can_fix(&self, finding: &Finding) -> bool;
     
-    /// Bulguyu düzelt - kullanıcı onayı gerektirir
+    /// Fix the finding - requires user confirmation
     fn fix(&self, finding: &Finding, config: &crate::core::config::Config) -> Result<FixResult, FixError>;
     
-    /// Kuru çalıştırma - ne yapılacağını göster ama yapmayı bekleme
+    /// Dry run - show what would be done but don't execute
     fn dry_run(&self, finding: &Finding) -> Result<FixPlan, FixError>;
     
-    /// Bu fixer etkin mi?
+    /// Is this fixer enabled?
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool {
         config.fixer.enabled_modules.contains(&self.name().to_string())
     }
 }
 
-/// Fix işleminin sonucu
+/// Result of the fix operation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FixResult {
     pub finding_id: String,
@@ -46,7 +46,7 @@ pub struct FixResult {
     pub timestamp: String,
 }
 
-/// Fix durumu
+/// Fix status
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum FixStatus {
     Success,
@@ -57,7 +57,7 @@ pub enum FixStatus {
     Cancelled,
 }
 
-/// Fix planı - kuru çalıştırma sonucu
+/// Fix plan - result of dry run
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FixPlan {
     pub finding_id: String,
@@ -71,16 +71,16 @@ pub struct FixPlan {
     pub estimated_duration: Duration,
 }
 
-/// Risk seviyesi
+/// Risk level
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RiskLevel {
-    Low,    // Güvenli değişiklikler
-    Medium, // Dikkatli yaklaşım gereken değişiklikler
-    High,   // Sistem kararlılığını etkileyebilecek değişiklikler
-    Critical, // Sistem çökertebilecek değişiklikler
+    Low,    // Safe changes
+    Medium, // Changes requiring careful approach
+    High,   // Changes that might affect system stability
+    Critical, // Changes that might crash the system
 }
 
-/// Fix hataları
+/// Fix errors
 #[derive(Debug, Serialize, Deserialize, Clone, Error)]
 pub enum FixError {
     #[error("Command error: {0}")]
@@ -212,7 +212,7 @@ impl FixPlan {
     }
 }
 
-/// Kullanıcı onayı için yardımcı fonksiyon
+/// Helper function for user confirmation
 pub fn ask_user_confirmation(plan: &FixPlan) -> Result<bool, FixError> {
     use std::io::{self, Write};
     
@@ -254,7 +254,7 @@ pub fn ask_user_confirmation(plan: &FixPlan) -> Result<bool, FixError> {
     Ok(response == "y" || response == "yes")
 }
 
-/// Backup oluşturma yardımcı fonksiyonu
+/// Helper function to create backup
 pub fn create_backup(file_path: &str) -> Result<String, FixError> {
     use std::fs;
     use std::path::Path;
@@ -273,7 +273,7 @@ pub fn create_backup(file_path: &str) -> Result<String, FixError> {
     }
 }
 
-/// Komut çalıştırma yardımcı fonksiyonu
+/// Helper function to execute command
 pub fn execute_command(command: &str, args: &[&str]) -> Result<String, FixError> {
     use std::process::Command;
     

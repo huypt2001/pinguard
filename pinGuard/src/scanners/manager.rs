@@ -17,7 +17,7 @@ impl ScannerManager {
     pub fn new() -> Self {
         let mut scanners: Vec<Box<dyn Scanner>> = Vec::new();
         
-        // Mevcut scanner'ları ekle
+        // Add existing scanners
         scanners.push(Box::new(PackageAudit::new()));
         scanners.push(Box::new(KernelCheck));
         scanners.push(Box::new(PermissionAudit));
@@ -28,42 +28,42 @@ impl ScannerManager {
         Self { scanners }
     }
 
-    /// Tüm etkin scanner'ları çalıştır
+    /// Run all enabled scanners
     pub fn run_all_scans(&self, config: &Config) -> Vec<ScanResult> {
         let mut results = Vec::new();
         
-        tracing::info!("Tüm taramalar başlatılıyor...");
+        tracing::info!("Starting all scans...");
         
         for scanner in &self.scanners {
             if scanner.is_enabled(config) {
-                tracing::info!("{} taraması başlatılıyor...", scanner.name());
+                tracing::info!("Starting {} scan...", scanner.name());
                 
                 match scanner.scan() {
                     Ok(result) => {
-                        tracing::info!("{} tamamlandı: {} bulgu", 
+                        tracing::info!("{} completed: {} findings", 
                             scanner.name(), result.findings.len());
                         results.push(result);
                     }
                     Err(e) => {
-                        tracing::error!("{} taraması başarısız: {}", scanner.name(), e);
-                        // Hata durumunda bile boş bir result ekle
+                        tracing::error!("{} scan failed: {}", scanner.name(), e);
+                        // Add empty result even in case of error
                         let mut error_result = ScanResult::new(scanner.name().to_string());
                         error_result.status = super::ScanStatus::Error(e.to_string());
                         results.push(error_result);
                     }
                 }
             } else {
-                tracing::info!("{} taraması devre dışı", scanner.name());
+                tracing::info!("{} scan is disabled", scanner.name());
             }
         }
         
-        tracing::info!("Tüm taramalar tamamlandı: {} scanner çalıştı", results.len());
+        tracing::info!("All scans completed: {} scanners ran", results.len());
         results
     }
 
-    /// Belirli bir scanner'ı çalıştır
+    /// Run specific scanner
     pub fn run_specific_scan(&self, scanner_name: &str, config: &Config) -> Result<ScanResult, ScanError> {
-        tracing::info!("Belirli tarama başlatılıyor: {}", scanner_name);
+        tracing::info!("Starting specific scan: {}", scanner_name);
         
         for scanner in &self.scanners {
             if scanner.name().to_lowercase().contains(&scanner_name.to_lowercase()) {
@@ -82,18 +82,18 @@ impl ScannerManager {
         ))
     }
 
-    /// Mevcut scanner'ları listele
+    /// List available scanners
     pub fn list_scanners(&self) -> Vec<&str> {
         self.scanners.iter().map(|s| s.name()).collect()
     }
 
-    /// Tarama sonuçlarını JSON formatında topla
+    /// Collect scan results in JSON format
     pub fn results_to_json(&self, results: &[ScanResult]) -> Result<String, ScanError> {
         serde_json::to_string_pretty(results)
             .map_err(|e| ScanError::ParseError(format!("JSON serialization failed: {}", e)))
     }
 
-    /// Özet rapor oluştur
+    /// Generate summary report
     pub fn generate_summary(&self, results: &[ScanResult]) -> ScanSummary {
         let mut summary = ScanSummary::new();
         
@@ -108,7 +108,7 @@ impl ScannerManager {
                 super::ScanStatus::Skipped(_) => summary.skipped_scans += 1,
             }
             
-            // Severity bazında sayım
+            // Count by severity
             for finding in &result.findings {
                 match finding.severity {
                     super::Severity::Critical => summary.critical_issues += 1,
@@ -156,7 +156,7 @@ impl ScanSummary {
         }
     }
 
-    /// Risk seviyesini hesapla
+    /// Calculate risk level
     pub fn get_risk_level(&self) -> &'static str {
         if self.critical_issues > 0 {
             "CRITICAL"
@@ -171,7 +171,7 @@ impl ScanSummary {
         }
     }
 
-    /// Güvenlik puanı hesapla (0-100)
+    /// Calculate security score (0-100)
     pub fn get_security_score(&self) -> u8 {
         if self.total_findings == 0 {
             return 100;

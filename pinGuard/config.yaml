@@ -1,5 +1,5 @@
 # PinGuard Configuration File
-# Tarama ayarları
+# Scan settings
 scanner:
   modules:
     package_audit: true
@@ -11,25 +11,25 @@ scanner:
   concurrent_scans: true
   max_scan_time: 300  # seconds
   
-# Rapor ayarları
+# Report settings
 report:
   format: "json"
   output_dir: "./reports"
   template: "default"
 
-# Database ayarları
+# Database settings
 database:
   path: "./pinGuard.db"
   auto_migrate: true
   connection_pool_size: 10
   
-# CVE veri tabanı ayarları  
+# CVE database settings  
 cve:
   api_url: "https://services.nvd.nist.gov/rest/json/cves/2.0"
-  cache_duration: 86400  # 24 saat (saniye)
+  cache_duration: 86400  # 24 hours (seconds)
   auto_update: true
 
-# Düzeltme ayarları
+# Fixer settings
 fixer:
   auto_fix: false
   require_confirmation: true

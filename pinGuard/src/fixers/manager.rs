@@ -19,7 +19,7 @@ impl FixerManager {
     pub fn new() -> Self {
         let mut fixers: Vec<Box<dyn Fixer>> = Vec::new();
         
-        // Mevcut fixer'ları ekle
+        // Add existing fixers
         fixers.push(Box::new(PackageUpdater));
         fixers.push(Box::new(KernelUpdater));
         fixers.push(Box::new(PermissionFixer));
@@ -30,16 +30,16 @@ impl FixerManager {
         Self { fixers }
     }
 
-    /// Belirli bir bulgu için uygun fixer'ı bul ve çalıştır
+    /// Find and run appropriate fixer for a specific finding
     pub fn fix_finding(&self, finding: &Finding, config: &Config, auto_approve: bool) -> Result<FixResult, FixError> {
-        // Bulguyu düzeltebilecek fixer'ı bul
+        // Find fixer that can fix the finding
         let fixer = self.fixers.iter()
             .find(|f| f.can_fix(finding))
             .ok_or_else(|| FixError::UnsupportedFix(format!("No fixer available for: {}", finding.id)))?;
 
         tracing::info!("Fixer bulundu: {} -> {}", finding.id, fixer.name());
 
-        // Kullanıcı onayı iste (eğer auto_approve false ise)
+        // Request user approval (if auto_approve is false)
         if !auto_approve {
             let plan = fixer.dry_run(finding)?;
             if !self.get_user_approval(&plan)? {
@@ -49,24 +49,24 @@ impl FixerManager {
             }
         }
 
-        // Düzeltmeyi uygula
+        // Apply the fix
         fixer.fix(finding, config)
     }
 
-    /// Birden fazla bulguyu toplu olarak düzelt
+    /// Fix multiple findings in batch
     pub fn fix_findings(&self, findings: &[Finding], config: &Config, auto_approve: bool) -> Vec<FixResult> {
         let mut results = Vec::new();
 
-        tracing::info!("{} bulgu için düzeltme işlemi başlatılıyor...", findings.len());
+        tracing::info!("{} findings fix process starting...", findings.len());
 
         for finding in findings {
             match self.fix_finding(finding, config, auto_approve) {
                 Ok(result) => {
-                    tracing::info!("{} düzeltildi: {}", finding.id, result.message);
+                    tracing::info!("{} fixed: {}", finding.id, result.message);
                     results.push(result);
                 }
                 Err(e) => {
-                    tracing::error!("{} düzeltilemedi: {}", finding.id, e);
+                    tracing::error!("{} could not be fixed: {}", finding.id, e);
                     let error_result = FixResult::new(finding.id.clone(), "Unknown".to_string())
                         .with_status(FixStatus::Failed)
                         .with_message(format!("Fix failed: {}", e));
@@ -79,38 +79,38 @@ impl FixerManager {
         results
     }
 
-    /// Kullanıcıdan onay iste
+    /// Request approval from user
     fn get_user_approval(&self, plan: &FixPlan) -> Result<bool, FixError> {
-        println!("Düzeltme Planı:");
+        println!("Fix Plan:");
         println!("ID: {}", plan.finding_id);
         println!("Fixer: {}", plan.fixer_name);
-        println!("Açıklama: {}", plan.description);
-        println!("Risk Seviyesi: {:?}", plan.risk_level);
-        println!("Tahmini Süre: {:?}", plan.estimated_duration);
+        println!("Description: {}", plan.description);
+        println!("Risk Level: {:?}", plan.risk_level);
+        println!("Estimated Duration: {:?}", plan.estimated_duration);
 
         if !plan.commands_to_execute.is_empty() {
-            println!("Çalıştırılacak Komutlar:");
+            println!("Commands to Execute:");
             for cmd in &plan.commands_to_execute {
                 println!("    • {}", cmd);
             }
         }
 
         if !plan.files_to_modify.is_empty() {
-            println!("Değiştirilecek Dosyalar:");
+            println!("Files to Modify:");
             for file in &plan.files_to_modify {
                 println!("    • {}", file);
             }
         }
 
         if plan.backup_required {
-            println!("Backup oluşturulacak: Evet");
+            println!("Backup will be created: Yes");
         }
 
         if plan.reboot_required {
-            println!("Yeniden başlatma gerekli: Evet");
+            println!("Reboot required: Yes");
         }
 
-        print!("Bu düzeltmeyi uygulamak istiyorsunız? [y/N]: ");
+        print!("Do you want to apply this fix? [y/N]: ");
         io::stdout().flush().map_err(|e| FixError::IoError(format!("Stdout flush error: {}", e)))?;
 
         let mut input = String::new();
@@ -118,12 +118,12 @@ impl FixerManager {
             .map_err(|e| FixError::IoError(format!("Input read error: {}", e)))?;
 
         let response = input.trim().to_lowercase();
-        Ok(response == "y" || response == "yes" || response == "evet")
+        Ok(response == "y" || response == "yes")
     }
 
-    /// Düzeltme özeti yazdır
+    /// Print fix summary
     fn print_fix_summary(&self, results: &[FixResult]) {
-        println!("Düzeltme Özeti:");
+        println!("Fix Summary:");
         
         let successful = results.iter().filter(|r| r.status == FixStatus::Success).count();
         let failed = results.iter().filter(|r| r.status == FixStatus::Failed).count();
@@ -131,14 +131,14 @@ impl FixerManager {
         let requires_action = results.iter().filter(|r| r.status == FixStatus::RequiresUserAction).count();
         let requires_reboot = results.iter().filter(|r| r.status == FixStatus::RequiresReboot).count();
 
-        println!("Toplam: {}", results.len());
-        println!("Başarılı: {}", successful);
-        println!("Başarısız: {}", failed);
-        println!("İptal Edildi: {}", cancelled);
-        println!("Kullanıcı Eylemi Gerekli: {}", requires_action);
-        println!("Yeniden Başlatma Gerekli: {}", requires_reboot);
+        println!("Total: {}", results.len());
+        println!("Successful: {}", successful);
+        println!("Failed: {}", failed);
+        println!("Cancelled: {}", cancelled);
+        println!("User Action Required: {}", requires_action);
+        println!("Reboot Required: {}", requires_reboot);
 
-        // Detayları göster
+        // Show details
         for result in results {
             match result.status {
                 FixStatus::Success => println!("{}: {}", result.finding_id, result.message),
@@ -150,16 +150,16 @@ impl FixerManager {
             }
         }
 
-        // Yeniden başlatma uyarısı
+        // Reboot warning
         if requires_reboot > 0 {
-            println!("UYARI: {} düzeltme yeniden başlatma gerektiriyor!", requires_reboot);
-            println!("   Sistemin tam güvenli hale gelmesi için yeniden başlatın: sudo reboot");
+            println!("WARNING: {} fixes require reboot!", requires_reboot);
+            println!("   Reboot to make system fully secure: sudo reboot");
         }
 
-        // Backup bilgisi
+        // Backup information
         let backup_count = results.iter().filter(|r| r.backup_created.is_some()).count();
         if backup_count > 0 {
-            println!("\n{} dosya için backup oluşturuldu:", backup_count);
+            println!("\n{} files backed up:", backup_count);
             for result in results {
                 if let Some(backup_path) = &result.backup_created {
                     println!("   • {}", backup_path);
@@ -168,12 +168,12 @@ impl FixerManager {
         }
     }
 
-    /// Bulguları düzeltme önceliğine göre sırala
+    /// Sort findings by fix priority
     pub fn prioritize_fixes<'a>(&self, findings: &'a [Finding]) -> Vec<&'a Finding> {
         let mut prioritized = findings.iter().collect::<Vec<_>>();
         
         prioritized.sort_by(|a, b| {
-            // Öncelik sırası: Kritik > Yüksek > Orta > Düşük
+            // Priority order: Critical > High > Medium > Low
             let a_priority = match a.severity {
                 crate::scanners::Severity::Critical => 4,
                 crate::scanners::Severity::High => 3,
@@ -196,22 +196,22 @@ impl FixerManager {
         prioritized
     }
 
-    /// Sadece belirli kategorilerdeki bulguları düzelt
+    /// Fix only findings in specific categories
     pub fn fix_by_category(&self, findings: &[Finding], category: &crate::scanners::Category, config: &Config, auto_approve: bool) -> Vec<FixResult> {
         let filtered_findings: Vec<&Finding> = findings.iter()
             .filter(|f| f.category == *category)
             .collect();
 
-        tracing::info!("{:?} kategorisinde {} bulgu düzeltilecek", category, filtered_findings.len());
+        tracing::info!("{:?} category has {} findings to fix", category, filtered_findings.len());
 
         self.fix_findings(&filtered_findings.into_iter().cloned().collect::<Vec<_>>(), config, auto_approve)
     }
 
-    /// Kapsamlı sistem sertleştirmesi
+    /// Comprehensive system hardening
     pub fn comprehensive_hardening(&self, config: &Config) -> Result<Vec<FixResult>, FixError> {
         let mut results = Vec::new();
 
-        tracing::info!("Kapsamlı sistem sertleştirmesi başlatılıyor...");
+        tracing::info!("Starting comprehensive system hardening...");
 
         // Service hardening
         let service_hardener = ServiceHardener;
@@ -241,17 +241,17 @@ impl FixerManager {
             Err(e) => tracing::error!("Permission fixing failed: {}", e),
         }
 
-        tracing::info!("Kapsamlı sistem sertleştirmesi tamamlandı: {} işlem", results.len());
+        tracing::info!("Comprehensive system hardening completed: {} operations", results.len());
 
         Ok(results)
     }
 
-    /// Mevcut fixer'ları listele
+    /// List available fixers
     pub fn list_fixers(&self) -> Vec<&str> {
         self.fixers.iter().map(|f| f.name()).collect()
     }
 
-    /// Belirli bir fixer'ın düzeltebileceği bulguları filtrele
+    /// Filter findings that a specific fixer can fix
     pub fn get_fixable_findings<'a>(&self, findings: &'a [Finding], fixer_name: &str) -> Vec<&'a Finding> {
         let fixer = self.fixers.iter()
             .find(|f| f.name() == fixer_name);
@@ -265,7 +265,7 @@ impl FixerManager {
         }
     }
 
-    /// Tüm düzeltilemeyen bulguları listele
+    /// List all unfixable findings
     pub fn get_unfixable_findings<'a>(&self, findings: &'a [Finding]) -> Vec<&'a Finding> {
         findings.iter()
             .filter(|finding| {

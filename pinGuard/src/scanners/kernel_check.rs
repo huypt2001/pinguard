@@ -26,13 +26,13 @@ impl Scanner for KernelCheck {
         let start_time = Instant::now();
         let mut result = ScanResult::new("Kernel Check".to_string());
         
-        tracing::info!("Kernel güvenlik taraması başlatılıyor...");
+        tracing::info!("Starting kernel security scan...");
         
-        // Kernel bilgilerini al
+        // Get kernel information
         let kernel_info = self.get_kernel_info()?;
         result.set_items_scanned(1);
         
-        tracing::info!("Kernel bilgisi: {} {}", kernel_info.os, kernel_info.release);
+        tracing::info!("Kernel info: {} {}", kernel_info.os, kernel_info.release);
         
         // Kernel versiyonu kontrolleri
         self.check_kernel_version(&kernel_info, &mut result)?;
@@ -53,9 +53,9 @@ impl Scanner for KernelCheck {
 }
 
 impl KernelCheck {
-    /// Kernel bilgilerini topla
+    /// Collect kernel information
     fn get_kernel_info(&self) -> Result<KernelInfo, ScanError> {
-        // uname -a komutu ile kernel bilgilerini al
+        // Get kernel information using uname -a command
         let output = Command::new("uname")
             .args(&["-a"])
             .output()
@@ -80,9 +80,9 @@ impl KernelCheck {
         })
     }
 
-    /// Kernel versiyonu güvenlik kontrolleri
+    /// Kernel version security checks
     fn check_kernel_version(&self, kernel_info: &KernelInfo, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("Kernel versiyon güvenliği kontrol ediliyor...");
+        tracing::info!("Checking kernel version security...");
         
         // Kernel version parsing
         let version_parts: Vec<&str> = kernel_info.version.split('.').collect();
@@ -116,7 +116,7 @@ impl KernelCheck {
                 result.add_finding(finding);
             }
             
-            // LTS olmayan kerneller için uyarı
+            // Warning for non-LTS kernels
             if !self.is_lts_kernel(major, minor) {
                 let finding = Finding {
                     id: "KERNEL-LTS-001".to_string(),
@@ -143,9 +143,9 @@ impl KernelCheck {
         Ok(())
     }
 
-    /// Güvenlik güncellemelerini kontrol et
+    /// Check security updates
     fn check_security_updates(&self, _kernel_info: &KernelInfo, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("Kernel güvenlik güncellemeleri kontrol ediliyor...");
+        tracing::info!("Checking kernel security updates...");
         
         // apt list --upgradable ile kernel güncellemelerini kontrol et
         let output = Command::new("apt")
@@ -190,7 +190,7 @@ impl KernelCheck {
         let proc_version = std::fs::read_to_string("/proc/version")
             .map_err(|e| ScanError::IoError(e))?;
 
-        // Compiler bilgilerini kontrol et
+        // Check compiler information
         if proc_version.contains("gcc version") {
             // GCC versiyonu çok eski mi?
             if let Some(gcc_part) = proc_version.split("gcc version ").nth(1) {

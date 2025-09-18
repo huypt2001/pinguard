@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-/// PinGuard için ana hata tipi
+/// Main error type for PinGuard
 #[derive(Debug)]
 pub enum PinGuardError {
     ConfigError(String),
@@ -16,12 +16,12 @@ pub enum PinGuardError {
 impl fmt::Display for PinGuardError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            PinGuardError::ConfigError(msg) => write!(f, "Konfigürasyon hatası: {}", msg),
-            PinGuardError::ScanError(msg) => write!(f, "Tarama hatası: {}", msg),
-            PinGuardError::FixError(msg) => write!(f, "Düzeltme hatası: {}", msg),
-            PinGuardError::ReportError(msg) => write!(f, "Rapor hatası: {}", msg),
-            PinGuardError::PermissionError(msg) => write!(f, "Yetki hatası: {}", msg),
-            PinGuardError::IoError(err) => write!(f, "IO hatası: {}", err),
+            PinGuardError::ConfigError(msg) => write!(f, "Configuration error: {}", msg),
+            PinGuardError::ScanError(msg) => write!(f, "Scan error: {}", msg),
+            PinGuardError::FixError(msg) => write!(f, "Fix error: {}", msg),
+            PinGuardError::ReportError(msg) => write!(f, "Report error: {}", msg),
+            PinGuardError::PermissionError(msg) => write!(f, "Permission error: {}", msg),
+            PinGuardError::IoError(err) => write!(f, "IO error: {}", err),
         }
     }
 }
@@ -37,12 +37,12 @@ impl From<std::io::Error> for PinGuardError {
 /// Result type for PinGuard operations
 pub type PinGuardResult<T> = Result<T, PinGuardError>;
 
-/// System bilgilerini toplayan yardımcı fonksiyonlar
+/// Helper functions for collecting system information
 pub mod system {
     use super::PinGuardResult;
     use std::process::Command;
     
-    /// OS bilgisini al
+    /// Get OS information
     pub fn get_os_info() -> PinGuardResult<String> {
         let output = Command::new("lsb_release")
             .arg("-d")
@@ -52,7 +52,7 @@ pub mod system {
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
         } else {
-            // Fallback: /etc/os-release dosyasını oku
+            // Fallback: Read the /etc/os-release file
             match std::fs::read_to_string("/etc/os-release") {
                 Ok(content) => {
                     for line in content.lines() {
@@ -67,7 +67,7 @@ pub mod system {
         }
     }
     
-    /// Kernel versiyonunu al
+    /// Get kernel version
     pub fn get_kernel_version() -> PinGuardResult<String> {
         let output = Command::new("uname")
             .arg("-r")
@@ -76,16 +76,16 @@ pub mod system {
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
         } else {
-            Err(super::PinGuardError::ScanError("Kernel version alınamadı".to_string()))
+            Err(super::PinGuardError::ScanError("Failed to retrieve kernel version".to_string()))
         }
     }
     
-    /// Root yetki kontrolü
+    /// Check for root privileges
     pub fn check_root_privileges() -> bool {
         unsafe { libc::geteuid() == 0 }
     }
     
-    /// Sistem uptime bilgisi
+    /// Get system uptime information
     pub fn get_uptime() -> PinGuardResult<String> {
         let output = Command::new("uptime")
             .arg("-p")
@@ -94,17 +94,17 @@ pub mod system {
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
         } else {
-            Err(super::PinGuardError::ScanError("Uptime bilgisi alınamadı".to_string()))
+            Err(super::PinGuardError::ScanError("Failed to retrieve uptime information".to_string()))
         }
     }
 }
 
-/// Dosya ve dizin utilities
+/// File and directory utilities
 pub mod file_utils {
     use super::PinGuardResult;
     use std::path::Path;
     
-    /// Dizin varlığını kontrol et, yoksa oluştur
+    /// Check if a directory exists, create it if it doesn't
     pub fn ensure_directory_exists<P: AsRef<Path>>(path: P) -> PinGuardResult<()> {
         if !path.as_ref().exists() {
             std::fs::create_dir_all(&path)?;
@@ -112,7 +112,7 @@ pub mod file_utils {
         Ok(())
     }
     
-    /// Dosya izinlerini kontrol et
+    /// Check file permissions
     pub fn check_file_permissions<P: AsRef<Path>>(path: P) -> PinGuardResult<u32> {
         use std::os::unix::fs::PermissionsExt;
         
@@ -121,7 +121,7 @@ pub mod file_utils {
         Ok(permissions.mode())
     }
     
-    /// Güvenli dosya yazma (atomic write)
+    /// Safe file writing (atomic write)
     pub fn write_file_atomic<P: AsRef<Path>>(path: P, content: &str) -> PinGuardResult<()> {
         let temp_path = format!("{}.tmp", path.as_ref().display());
         std::fs::write(&temp_path, content)?;

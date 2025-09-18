@@ -9,7 +9,7 @@ pub mod html_reporter;
 // pub mod pdf_reporter; // TODO: PDF support will be added later
 pub mod manager;
 
-/// Report formatları
+/// Report formats
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ReportFormat {
     Json,
@@ -32,7 +32,7 @@ impl std::str::FromStr for ReportFormat {
     }
 }
 
-/// Report hataları
+/// Report errors
 #[derive(Debug, Serialize, Deserialize, Clone, Error)]
 pub enum ReportError {
     #[error("IO error: {0}")]
@@ -47,7 +47,7 @@ pub enum ReportError {
     RenderingError(String),
 }
 
-/// Ana rapor veri yapısı
+/// Main report data structure
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SecurityReport {
     pub metadata: ReportMetadata,
@@ -58,7 +58,7 @@ pub struct SecurityReport {
     pub recommendations: Vec<String>,
 }
 
-/// Rapor metadata'sı
+/// Report metadata
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ReportMetadata {
     pub report_id: String,
@@ -69,7 +69,7 @@ pub struct ReportMetadata {
     pub report_format: String,
 }
 
-/// Sistem bilgileri
+/// System information
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SystemInfo {
     pub hostname: String,
@@ -80,7 +80,7 @@ pub struct SystemInfo {
     pub uptime_seconds: Option<u64>,
 }
 
-/// Rapor özeti
+/// Report summary
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ReportSummary {
     pub total_scans: u32,
@@ -95,7 +95,7 @@ pub struct ReportSummary {
     pub risk_level: String,
 }
 
-/// Rapor istatistikleri
+/// Report statistics
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ReportStatistics {
     pub findings_by_category: std::collections::HashMap<String, u32>,
@@ -104,7 +104,7 @@ pub struct ReportStatistics {
     pub top_vulnerabilities: Vec<TopVulnerability>,
 }
 
-/// Tarama performansı
+/// Scan performance
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ScanPerformance {
     pub items_per_second: f64,
@@ -113,7 +113,7 @@ pub struct ScanPerformance {
     pub total_items_scanned: u32,
 }
 
-/// En önemli zafiyetler
+/// Top vulnerabilities
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TopVulnerability {
     pub title: String,
@@ -123,7 +123,7 @@ pub struct TopVulnerability {
     pub cve_ids: Vec<String>,
 }
 
-/// Reporter trait - her rapor formatı bu trait'i implement eder
+/// Reporter trait - each report format implements this trait
 pub trait Reporter {
     fn generate_report(&self, report: &SecurityReport, output_path: &str) -> Result<String, ReportError>;
     fn format_name(&self) -> &'static str;
@@ -131,7 +131,7 @@ pub trait Reporter {
 }
 
 impl SecurityReport {
-    /// Yeni rapor oluştur
+    /// Create new report
     pub fn new(
         scan_results: Vec<ScanResult>, 
         fix_results: Option<Vec<FixResult>>,
@@ -165,7 +165,7 @@ impl SecurityReport {
         }
     }
 
-    /// Rapor özeti oluştur
+    /// Generate report summary
     fn generate_summary(scan_results: &[ScanResult]) -> ReportSummary {
         let total_scans = scan_results.len() as u32;
         let successful_scans = scan_results.iter()
@@ -208,7 +208,7 @@ impl SecurityReport {
         }
     }
 
-    /// İstatistikleri oluştur
+    /// Generate statistics
     fn generate_statistics(scan_results: &[ScanResult]) -> ReportStatistics {
         let all_findings: Vec<&Finding> = scan_results.iter()
             .flat_map(|r| &r.findings)
@@ -236,7 +236,7 @@ impl SecurityReport {
         }
     }
 
-    /// Güvenlik puanını hesapla (0-100)
+    /// Calculate security score (0-100)
     fn calculate_security_score(findings: &[&Finding]) -> u32 {
         if findings.is_empty() {
             return 100;
@@ -264,7 +264,7 @@ impl SecurityReport {
         score_percentage.max(0.0).min(100.0) as u32
     }
 
-    /// Risk seviyesini hesapla
+    /// Calculate risk level
     fn calculate_risk_level(security_score: u32) -> String {
         match security_score {
             90..=100 => "LOW",
@@ -274,7 +274,7 @@ impl SecurityReport {
         }.to_string()
     }
 
-    /// Tarama performansını hesapla
+    /// Calculate scan performance
     fn calculate_scan_performance(scan_results: &[ScanResult]) -> ScanPerformance {
         let total_items: u32 = scan_results.iter().map(|r| r.metadata.items_scanned).sum();
         let total_duration_ms: u64 = scan_results.iter().map(|r| r.metadata.duration_ms).sum();
@@ -304,7 +304,7 @@ impl SecurityReport {
         }
     }
 
-    /// En önemli zafiyetleri al
+    /// Get top vulnerabilities
     fn get_top_vulnerabilities(findings: &[&Finding]) -> Vec<TopVulnerability> {
         let mut vulnerability_map: std::collections::HashMap<String, TopVulnerability> = std::collections::HashMap::new();
 
@@ -324,7 +324,7 @@ impl SecurityReport {
 
         let mut vulnerabilities: Vec<TopVulnerability> = vulnerability_map.into_values().collect();
         vulnerabilities.sort_by(|a, b| {
-            // Önce severity'ye göre sırala, sonra count'a göre
+            // Sort by severity first, then by count
             let severity_order = |s: &str| match s {
                 "Critical" => 4,
                 "High" => 3,
@@ -342,7 +342,7 @@ impl SecurityReport {
         vulnerabilities.into_iter().take(10).collect()
     }
 
-    /// Öneriler oluştur
+    /// Generate recommendations
     fn generate_recommendations(scan_results: &[ScanResult]) -> Vec<String> {
         let mut recommendations = Vec::new();
 
@@ -354,36 +354,36 @@ impl SecurityReport {
         let high_count = all_findings.iter().filter(|f| f.severity == Severity::High).count();
 
         if critical_count > 0 {
-            recommendations.push(format!("ACIL: {} kritik güvenlik açığı bulundu. Derhal düzeltilmesi gerekir.", critical_count));
+            recommendations.push(format!("URGENT: {} critical security vulnerabilities found. Immediate action required.", critical_count));
         }
 
         if high_count > 10 {
-            recommendations.push("Çok sayıda yüksek riskli güvenlik açığı tespit edildi. Sistem güvenliği tehlikede.".to_string());
+            recommendations.push("Large number of high-risk security vulnerabilities detected. System security is at risk.".to_string());
         }
 
-        // Kategori bazlı öneriler
+        // Category-based recommendations
         let categories: std::collections::HashSet<&Category> = all_findings.iter().map(|f| &f.category).collect();
         
         for category in categories {
             match category {
-                Category::Package => recommendations.push("Paket güvenlik açıkları için düzenli güncelleme yapın.".to_string()),
-                Category::Kernel => recommendations.push("Kernel güncellemelerini takip edin ve güvenlik yamalarını uygulayın.".to_string()),
-                Category::Permission => recommendations.push("Dosya izinlerini gözden geçirin ve en az yetki prensibini uygulayın.".to_string()),
-                Category::Service => recommendations.push("Gereksiz servisleri devre dışı bırakın ve mevcut servisleri sertleştirin.".to_string()),
-                Category::User => recommendations.push("Kullanıcı hesap politikalarını güçlendirin ve parola kurallarını uygulayın.".to_string()),
-                Category::Network => recommendations.push("Firewall kurallarını yapılandırın ve network trafiğini izleyin.".to_string()),
+                Category::Package => recommendations.push("Perform regular updates for package security vulnerabilities.".to_string()),
+                Category::Kernel => recommendations.push("Monitor kernel updates and apply security patches.".to_string()),
+                Category::Permission => recommendations.push("Review file permissions and apply least privilege principle.".to_string()),
+                Category::Service => recommendations.push("Disable unnecessary services and harden existing services.".to_string()),
+                Category::User => recommendations.push("Strengthen user account policies and enforce password rules.".to_string()),
+                Category::Network => recommendations.push("Configure firewall rules and monitor network traffic.".to_string()),
                 _ => {}
             }
         }
 
         if recommendations.is_empty() {
-            recommendations.push("Sistem güvenliği iyi durumda. Düzenli tarama yapmaya devam edin.".to_string());
+            recommendations.push("System security is in good condition. Continue regular scanning.".to_string());
         }
 
         recommendations
     }
 
-    /// Sistem bilgilerini al
+    /// Get system information
     fn get_system_info() -> SystemInfo {
         let hostname = std::process::Command::new("hostname")
             .output()
@@ -408,7 +408,7 @@ impl SecurityReport {
             .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
             .unwrap_or_else(|_| "Unknown".to_string());
 
-        // Uptime hesaplama - /proc/uptime dosyasından oku
+        // Calculate uptime - read from /proc/uptime file
         let uptime_seconds = match std::fs::read_to_string("/proc/uptime") {
             Ok(content) => {
                 content.split_whitespace()
@@ -429,7 +429,7 @@ impl SecurityReport {
         }
     }
 
-    /// Benzersiz rapor ID'si oluştur
+    /// Generate unique report ID
     fn generate_report_id() -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};

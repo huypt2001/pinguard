@@ -118,7 +118,7 @@ impl PdfReporter {
         layer.use_text(format!("pinGuard Security Report"), self.font_size_title, Mm(x), Mm(*y), font_bold);
         *y -= 10.0;
 
-        // Alt başlık bilgileri
+        // Subtitle information
         layer.use_text(
             format!("Report ID: {}", report.metadata.report_id),
             self.font_size_body,
@@ -494,7 +494,7 @@ impl PdfReporter {
         Ok(())
     }
 
-    /// Sistem bilgileri ekle
+    /// Add system information
     fn add_system_info(
         &self,
         layer: &PdfLayerReference,

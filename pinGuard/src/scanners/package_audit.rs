@@ -63,7 +63,7 @@ impl Scanner for PackageAudit {
         let start_time = Instant::now();
         let mut result = ScanResult::new("Package Audit".to_string());
         
-        info!("Package audit taraması başlatılıyor...");
+        info!("Starting package audit scan...");
         
         // Paket listesini al
         let packages = self.get_installed_packages()?;
@@ -78,21 +78,21 @@ impl Scanner for PackageAudit {
         if self.cve_manager.is_some() {
             match self.check_cve_vulnerabilities(&packages, &mut result) {
                 Ok(_) => {
-                    info!("CVE kontrolü tamamlandı");
+                    info!("CVE check completed");
                 }
                 Err(e) => {
-                    warn!("CVE kontrolü hatası: {}", e);
+                    warn!("CVE check error: {}", e);
                     // Continue with scan, don't fail
                 }
             }
         } else {
-            info!("CVE manager mevcut değil, CVE kontrolü atlanıyor");
+            info!("CVE manager not available, skipping CVE check");
         }
         
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
         
-        info!("Package audit tamamlandı: {} bulgu", result.findings.len());
+        info!("Package audit completed: {} findings", result.findings.len());
         
         Ok(result)
     }
@@ -170,9 +170,9 @@ impl PackageAudit {
         Ok(packages)
     }
 
-    /// Güncel olmayan paketleri kontrol et
+    /// Check outdated packages
     fn check_outdated_packages(&self, _packages: &[Package], result: &mut ScanResult) -> Result<(), ScanError> {
-        info!("Güncel olmayan paketler kontrol ediliyor...");
+        info!("Checking outdated packages...");
         
         // apt list --upgradable komutu ile güncellenebilir paketleri bul
         let output = Command::new("apt")
@@ -218,9 +218,9 @@ impl PackageAudit {
         Ok(())
     }
 
-    /// CVE güvenlik açıklarını kontrol et
+    /// Check CVE vulnerabilities
     fn check_cve_vulnerabilities(&self, packages: &[Package], result: &mut ScanResult) -> Result<(), ScanError> {
-        info!("CVE güvenlik açıkları kontrol ediliyor...");
+        info!("Checking CVE vulnerabilities...");
 
         let cve_manager = match &self.cve_manager {
             Some(manager) => manager,
@@ -246,7 +246,7 @@ impl PackageAudit {
                 }
             }
             Err(e) => {
-                error!("CVE manager health check hatası: {}", e);
+                error!("CVE manager health check error: {}", e);
                 return Err(ScanError::ExternalServiceError(format!("CVE service unavailable: {}", e)));
             }
         }
@@ -308,7 +308,7 @@ impl PackageAudit {
                     }
                 }
                 Err(e) => {
-                    warn!("CVE arama hatası {}: {}", package_name, e);
+                    warn!("CVE search error {}: {}", package_name, e);
                     // Continue with other packages
                 }
             }
@@ -317,7 +317,7 @@ impl PackageAudit {
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
 
-        info!("CVE kontrolü tamamlandı: {} güvenlik açığı bulundu", cve_findings_count);
+        info!("CVE check completed: {} vulnerabilities found", cve_findings_count);
         Ok(())
     }
 
@@ -377,7 +377,7 @@ impl PackageAudit {
                 let package_name = parts[0].split('.').next().unwrap_or(parts[0]);
                 packages.push((
                     package_name.to_string(),
-                    "unknown".to_string(), // Eski versiyon bilgisi yok
+                    "unknown".to_string(), // No old version information available
                     parts[1].to_string(),   // Yeni versiyon
                 ));
             }

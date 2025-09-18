@@ -6,14 +6,14 @@ use crate::report::{
     // pdf_reporter::PdfReporter, // TODO: Add back when PDF is fixed
 };
 
-/// Rapor yönetici yapısı - tüm rapor formatlarını koordine eder
+/// Report manager structure - coordinates all report formats
 pub struct ReportManager {
     output_directory: String,
     default_format: ReportFormat,
 }
 
 impl ReportManager {
-    /// Yeni rapor yöneticisi oluştur
+    /// Create new report manager
     pub fn new(output_directory: Option<String>, default_format: Option<ReportFormat>) -> Self {
         Self {
             output_directory: output_directory.unwrap_or_else(|| "reports".to_string()),
@@ -21,12 +21,12 @@ impl ReportManager {
         }
     }
 
-    /// Varsayılan rapor yöneticisi
+    /// Default report manager
     pub fn default() -> Self {
         Self::new(None, None)
     }
 
-    /// Belirtilen formatta rapor oluştur
+    /// Generate report in specified format
     pub fn generate_report(
         &self,
         report: &SecurityReport,
@@ -50,7 +50,7 @@ impl ReportManager {
         reporter.generate_report(report, &output_path_str)
     }
 
-    /// Birden fazla formatta rapor oluştur
+    /// Generate report in multiple formats
     pub fn generate_multi_format_report(
         &self,
         report: &SecurityReport,
@@ -81,7 +81,7 @@ impl ReportManager {
         }
     }
 
-    /// Hızlı rapor oluşturma - varsayılan ayarlarla
+    /// Quick report generation - with default settings
     pub fn quick_report(
         &self,
         report: &SecurityReport,
@@ -91,7 +91,7 @@ impl ReportManager {
         self.generate_report(report, &report_format, None)
     }
 
-    /// Tüm desteklenen formatlarda rapor oluştur
+    /// Generate report in all supported formats
     pub fn generate_all_formats(
         &self,
         report: &SecurityReport,
@@ -106,7 +106,7 @@ impl ReportManager {
         self.generate_multi_format_report(report, formats, base_filename)
     }
 
-    /// Rapor özeti konsola yazdır
+    /// Print report summary to console
     pub fn print_report_summary(&self, report: &SecurityReport) -> Result<(), ReportError> {
         println!("PINGUARD SECURITY REPORT SUMMARY");
         println!("=====================================");
@@ -153,7 +153,7 @@ impl ReportManager {
         Ok(())
     }
 
-    /// Rapor istatistiklerini detaylı yazdır
+    /// Print detailed report statistics
     pub fn print_detailed_statistics(&self, report: &SecurityReport) -> Result<(), ReportError> {
         println!("DETAILED STATISTICS");
         println!("======================");
@@ -182,7 +182,7 @@ impl ReportManager {
         Ok(())
     }
 
-    /// Çıkış dizinini ayarla
+    /// Set output directory
     pub fn set_output_directory(&mut self, directory: String) -> Result<(), ReportError> {
         std::fs::create_dir_all(&directory)
             .map_err(|e| ReportError::IoError(format!("Failed to create output directory: {}", e)))?;
@@ -191,22 +191,22 @@ impl ReportManager {
         Ok(())
     }
 
-    /// Çıkış dizinini al
+    /// Get output directory
     pub fn get_output_directory(&self) -> &str {
         &self.output_directory
     }
 
-    /// Varsayılan format ayarla
+    /// Set default format
     pub fn set_default_format(&mut self, format: ReportFormat) {
         self.default_format = format;
     }
 
-    /// Varsayılan format al
+    /// Get default format
     pub fn get_default_format(&self) -> &ReportFormat {
         &self.default_format
     }
 
-    /// Desteklenen formatları listele
+    /// List supported formats
     pub fn list_supported_formats(&self) -> Vec<ReportFormat> {
         vec![
             ReportFormat::Json,
@@ -215,7 +215,7 @@ impl ReportManager {
         ]
     }
 
-    /// Format bilgilerini yazdır
+    /// Print format information
     pub fn print_format_info(&self) {
         println!("SUPPORTED REPORT FORMATS");
         println!("============================");
@@ -235,12 +235,12 @@ impl ReportManager {
         println!("Output directory: {}", self.output_directory);
     }
 
-    /// Varsayılan dosya adı oluştur
+    /// Generate default filename
     fn generate_default_filename(&self, report_id: &str, format: &ReportFormat) -> String {
         format!("{}.{}", report_id, self.get_file_extension(format))
     }
 
-    /// Dosya uzantısı al
+    /// Get file extension
     fn get_file_extension(&self, format: &ReportFormat) -> &'static str {
         match format {
             ReportFormat::Json => "json",
@@ -250,7 +250,7 @@ impl ReportManager {
         }
     }
 
-    /// Timestamp formatla
+    /// Format timestamp
     fn format_timestamp(&self, timestamp: u64) -> String {
         use std::time::{SystemTime, UNIX_EPOCH, Duration};
         
@@ -262,34 +262,34 @@ impl ReportManager {
     }
 }
 
-/// Hızlı rapor oluşturma fonksiyonları
+/// Quick report generation functions
 pub mod quick {
     use super::*;
 
-    /// JSON rapor oluştur
+    /// Generate JSON report
     pub fn json_report(report: &SecurityReport, output_path: &str) -> Result<String, ReportError> {
         let reporter = JsonReporter::default();
         reporter.generate_report(report, output_path)
     }
 
-    /// HTML rapor oluştur
+    /// Generate HTML report
     pub fn html_report(report: &SecurityReport, output_path: &str) -> Result<String, ReportError> {
         let reporter = HtmlReporter::default();
         reporter.generate_report(report, output_path)
     }
 
-    /// PDF rapor oluştur (şu an devre dışı)
+    /// Generate PDF report (currently disabled)
     pub fn pdf_report(_report: &SecurityReport, _output_path: &str) -> Result<String, ReportError> {
         Err(ReportError::IoError("PDF reporting is temporarily disabled".to_string()))
     }
 
-    /// Konsola özet yazdır
+    /// Print summary to console
     pub fn print_summary(report: &SecurityReport) -> Result<(), ReportError> {
         let manager = ReportManager::default();
         manager.print_report_summary(report)
     }
 
-    /// Konsola detaylı istatistik yazdır
+    /// Print detailed statistics to console
     pub fn print_statistics(report: &SecurityReport) -> Result<(), ReportError> {
         let manager = ReportManager::default();
         manager.print_detailed_statistics(report)
@@ -393,7 +393,7 @@ mod tests {
         
         assert!(formats.contains(&ReportFormat::Json));
         assert!(formats.contains(&ReportFormat::Html));
-        // PDF desteği şu anda disabled
+        // PDF support is currently disabled
         // assert!(formats.contains(&ReportFormat::Pdf));
     }
 }

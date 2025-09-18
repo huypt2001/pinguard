@@ -11,7 +11,7 @@ pub mod cve_manager;
 // Re-export için
 pub use cve_manager::CveManager;
 
-/// CVE API hata türleri
+/// CVE API error types
 #[derive(Debug, thiserror::Error)]
 pub enum CveApiError {
     #[error("HTTP request failed: {0}")]
@@ -38,7 +38,7 @@ pub enum CveApiError {
 
 pub type CveApiResult<T> = Result<T, CveApiError>;
 
-/// NVD API response yapıları
+/// NVD API response structures
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct NvdApiResponse {
     #[serde(rename = "resultsPerPage")]
@@ -170,7 +170,7 @@ pub struct NvdReference {
     pub tags: Option<Vec<String>>,
 }
 
-/// CVE arama kriterleri
+/// CVE search criteria
 #[derive(Debug, Clone)]
 pub struct CveSearchCriteria {
     pub cve_id: Option<String>,
@@ -217,57 +217,57 @@ impl Default for CveSearchCriteria {
 }
 
 impl CveSearchCriteria {
-    /// Builder pattern için yeni criteria oluştur
+    /// Create new criteria for builder pattern
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// CVE ID ile arama
+    /// Search by CVE ID
     pub fn with_cve_id(mut self, cve_id: String) -> Self {
         self.cve_id = Some(cve_id);
         self
     }
 
-    /// Keyword ile arama
+    /// Search by keyword
     pub fn with_keyword(mut self, keyword: String) -> Self {
         self.keyword = Some(keyword);
         self
     }
 
-    /// CPE name ile arama
+    /// Search by CPE name
     pub fn with_cpe_name(mut self, cpe_name: String) -> Self {
         self.cpe_name = Some(cpe_name);
         self
     }
 
-    /// CVSS severity ile arama
+    /// Search by CVSS severity
     pub fn with_severity(mut self, severity: CveSeverity) -> Self {
         self.cvss_severity = Some(severity);
         self
     }
 
-    /// CVSS score aralığı ile arama
+    /// Search by CVSS score range
     pub fn with_score_range(mut self, min: Option<f64>, max: Option<f64>) -> Self {
         self.cvss_score_min = min;
         self.cvss_score_max = max;
         self
     }
 
-    /// Tarih aralığı ile arama (published)
+    /// Search by date range (published)
     pub fn with_published_date_range(mut self, start: Option<DateTime<Utc>>, end: Option<DateTime<Utc>>) -> Self {
         self.published_start_date = start;
         self.published_end_date = end;
         self
     }
 
-    /// Sayfa ayarları
+    /// Page settings
     pub fn with_pagination(mut self, results_per_page: u32, start_index: u32) -> Self {
         self.results_per_page = Some(results_per_page);
         self.start_index = Some(start_index);
         self
     }
 
-    /// Query parameter'larını oluştur
+    /// Create query parameters
     pub fn to_query_params(&self) -> HashMap<String, String> {
         let mut params = HashMap::new();
 
@@ -343,7 +343,7 @@ impl CveSearchCriteria {
     }
 }
 
-/// NVD API response'unu CveData'ya dönüştür
+/// Convert NVD API response to CveData
 pub fn nvd_to_cve_data(nvd_vuln: &NvdVulnerability) -> CveApiResult<CveData> {
     let cve = &nvd_vuln.cve;
 
@@ -393,7 +393,7 @@ pub fn nvd_to_cve_data(nvd_vuln: &NvdVulnerability) -> CveApiResult<CveData> {
     })
 }
 
-/// CVSS bilgilerini çıkar
+/// Extract CVSS information
 fn extract_cvss_info(metrics: &Option<NvdMetrics>) -> (CveSeverity, Option<f64>, Option<String>) {
     if let Some(metrics) = metrics {
         // CVSS v3.1'i tercih et
@@ -465,7 +465,7 @@ fn extract_cvss_info(metrics: &Option<NvdMetrics>) -> (CveSeverity, Option<f64>,
     (CveSeverity::None, None, None)
 }
 
-/// Affected packages'i CPE configuration'dan çıkar
+/// Extract affected packages from CPE configuration
 fn extract_affected_packages(configurations: &Option<Vec<NvdConfiguration>>) -> (Vec<String>, Vec<CpeMatch>) {
     let mut packages = Vec::new();
     let mut cpe_matches = Vec::new();
@@ -506,7 +506,7 @@ fn extract_affected_packages(configurations: &Option<Vec<NvdConfiguration>>) -> 
     (packages, cpe_matches)
 }
 
-/// CPE string'inden package name'i çıkar
+/// Extract package name from CPE string
 fn extract_package_name_from_cpe(cpe: &str) -> Option<String> {
     // CPE format: cpe:2.3:a:vendor:product:version:update:edition:language:sw_edition:target_sw:target_hw:other
     let parts: Vec<&str> = cpe.split(':').collect();
@@ -518,7 +518,7 @@ fn extract_package_name_from_cpe(cpe: &str) -> Option<String> {
     }
 }
 
-/// NVD tarih string'ini DateTime'a çevir
+/// Convert NVD date string to DateTime
 fn parse_nvd_date(date_str: &Option<String>) -> CveApiResult<DateTime<Utc>> {
     match date_str {
         Some(date) => {

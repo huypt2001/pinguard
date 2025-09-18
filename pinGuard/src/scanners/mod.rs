@@ -5,7 +5,7 @@ pub mod service_audit;
 pub mod user_audit;
 pub mod network_audit;
 pub mod manager;
-// Diğer modüller aşamalı olarak eklenecek
+// Other modules will be added progressively
 // pub mod service_audit;
 // pub mod user_audit;
 // pub mod network_audit;
@@ -13,14 +13,14 @@ pub mod manager;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Ana scanner trait - tüm tarayıcılar bunu implement eder
+/// Main scanner trait - all scanners implement this
 pub trait Scanner {
     fn name(&self) -> &'static str;
     fn scan(&self) -> Result<ScanResult, ScanError>;
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool;
 }
 
-/// Tarama sonucu ana yapısı
+/// Main scan result structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScanResult {
     pub scanner_name: String,
@@ -31,7 +31,7 @@ pub struct ScanResult {
     pub raw_data: Option<HashMap<String, String>>,
 }
 
-/// Tarama durumu
+/// Scan status
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
 pub enum ScanStatus {
     Success,
@@ -40,7 +40,7 @@ pub enum ScanStatus {
     Skipped(String),
 }
 
-/// Bireysel bulgu (vulnerability, misconfiguration, vb.)
+/// Individual finding (vulnerability, misconfiguration, etc.)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Finding {
     pub id: String,
@@ -56,7 +56,7 @@ pub struct Finding {
     pub fix_available: bool,
 }
 
-/// Bulgu önem derecesi
+/// Finding severity level
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Severity {
     Info,
@@ -66,7 +66,7 @@ pub enum Severity {
     Critical,
 }
 
-/// Bulgu kategorisi
+/// Finding category
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Hash)]
 pub enum Category {
     Package,
@@ -79,7 +79,7 @@ pub enum Category {
     Security,
 }
 
-/// Tarama metadata bilgileri
+/// Scan metadata information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScanMetadata {
     pub duration_ms: u64,
@@ -89,7 +89,7 @@ pub struct ScanMetadata {
     pub scanner_version: String,
 }
 
-/// Scanner hataları
+/// Scanner errors
 #[derive(Debug, thiserror::Error)]
 pub enum ScanError {
     #[error("Command execution failed: {0}")]

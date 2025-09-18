@@ -6,7 +6,7 @@ use crate::database::{DatabaseManager, DatabaseError, DatabaseResult};
 use crate::scanners::ScanResult;
 use crate::core::config::Config;
 
-/// Scan history kaydı
+/// Scan history record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScanHistoryRecord {
     pub id: Option<i64>,
@@ -31,14 +31,14 @@ pub struct ScanHistoryRecord {
     pub created_at: DateTime<Utc>,
 }
 
-/// Scan türleri
+/// Scan types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum ScanType {
-    Full,           // Tüm modüller
-    Partial,        // Belirli modüller
-    SingleModule,   // Tek modül
-    Quick,          // Hızlı tarama
-    Deep,           // Derin tarama
+    Full,           // All modules
+    Partial,        // Specific modules
+    SingleModule,   // Single module
+    Quick,          // Quick scan
+    Deep,           // Deep scan
 }
 
 impl std::fmt::Display for ScanType {
@@ -68,7 +68,7 @@ impl std::str::FromStr for ScanType {
     }
 }
 
-/// İşletim sistemi bilgileri
+/// Operating system information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OsInfo {
     pub name: String,
@@ -84,14 +84,14 @@ pub struct ScanHistory {
 }
 
 impl ScanHistory {
-    /// Yeni scan history manager oluştur
+    /// Create new scan history manager
     pub fn new(db: DatabaseManager) -> Self {
         Self { db }
     }
 
-    /// Scan history kaydını ekle
+    /// Add scan history record
     pub fn add_scan_record(&self, record: &ScanHistoryRecord) -> DatabaseResult<i64> {
-        debug!("💾 Scan history kaydı ekleniyor: {}", record.scan_id);
+        debug!("💾 Adding scan history record: {}", record.scan_id);
 
         let scan_modules_json = serde_json::to_string(&record.scan_modules)
             .map_err(|e| DatabaseError::SerializationError(format!("Failed to serialize scan modules: {}", e)))?;
@@ -139,14 +139,14 @@ impl ScanHistory {
             |row| row.get(0)
         )?;
 
-        // Findings'leri detay tablosuna ekle
+        // Add findings to detail table
         self.add_scan_findings(row_id, &record.scan_id, &record.scan_results)?;
 
-        info!("✅ Scan history kaydı eklendi: {} (ID: {})", record.scan_id, row_id);
+        info!("✅ Scan history record added: {} (ID: {})", record.scan_id, row_id);
         Ok(row_id)
     }
 
-    /// Scan findings'leri detay tablosuna ekle
+    /// Add scan findings to detail table
     fn add_scan_findings(&self, _scan_history_id: i64, scan_id: &str, scan_results: &[ScanResult]) -> DatabaseResult<()> {
         let mut stmt = self.db.connection().prepare(
             "INSERT INTO scan_findings (
@@ -184,9 +184,9 @@ impl ScanHistory {
         Ok(())
     }
 
-    /// Scan history kaydını ID ile al
+    /// Get scan history record by ID
     pub fn get_scan_record(&self, scan_id: &str) -> DatabaseResult<Option<ScanHistoryRecord>> {
-        debug!("🔍 Scan history kaydı aranıyor: {}", scan_id);
+        debug!("🔍 Searching for scan history record: {}", scan_id);
 
         let mut stmt = self.db.connection().prepare(
             "SELECT id, scan_id, scan_type, scan_modules, hostname, os_info, kernel_version,
@@ -202,20 +202,20 @@ impl ScanHistory {
 
         match result {
             Ok(record) => {
-                debug!("✅ Scan history kaydı bulundu: {}", scan_id);
+                debug!("✅ Scan history record found: {}", scan_id);
                 Ok(Some(record))
             }
             Err(rusqlite::Error::QueryReturnedNoRows) => {
-                debug!("❌ Scan history kaydı bulunamadı: {}", scan_id);
+                debug!("❌ Scan history record not found: {}", scan_id);
                 Ok(None)
             }
             Err(e) => Err(DatabaseError::SqliteError(e)),
         }
     }
 
-    /// Son N scan kaydını al
+    /// Get last N scan records
     pub fn get_recent_scans(&self, limit: u32) -> DatabaseResult<Vec<ScanHistoryRecord>> {
-        debug!("🔍 Son {} scan kaydı alınıyor", limit);
+        debug!("🔍 Getting last {} scan records", limit);
 
         let mut stmt = self.db.connection().prepare(
             "SELECT id, scan_id, scan_type, scan_modules, hostname, os_info, kernel_version,
@@ -232,13 +232,13 @@ impl ScanHistory {
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
-        debug!("✅ {} scan kaydı bulundu", records.len());
+        debug!("✅ {} scan records found", records.len());
         Ok(records)
     }
 
-    /// Hostname için scan geçmişini al
+    /// Get scan history for hostname
     pub fn get_scans_by_hostname(&self, hostname: &str, limit: Option<u32>) -> DatabaseResult<Vec<ScanHistoryRecord>> {
-        debug!("🔍 Hostname için scan geçmişi: {}", hostname);
+        debug!("🔍 Scan history for hostname: {}", hostname);
 
         let limit_clause = match limit {
             Some(l) => format!(" LIMIT {}", l),
@@ -262,17 +262,17 @@ impl ScanHistory {
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
-        debug!("✅ {} scan kaydı bulundu hostname için: {}", records.len(), hostname);
+        debug!("✅ {} scan records found for hostname: {}", records.len(), hostname);
         Ok(records)
     }
 
-    /// Belirli tarih aralığındaki scan'leri al
+    /// Get scans in specific date range
     pub fn get_scans_by_date_range(
         &self, 
         start_date: DateTime<Utc>, 
         end_date: DateTime<Utc>
     ) -> DatabaseResult<Vec<ScanHistoryRecord>> {
-        debug!("🔍 Tarih aralığı için scan geçmişi: {} - {}", start_date, end_date);
+        debug!("🔍 Scan history for date range: {} - {}", start_date, end_date);
 
         let mut stmt = self.db.connection().prepare(
             "SELECT id, scan_id, scan_type, scan_modules, hostname, os_info, kernel_version,
@@ -289,13 +289,13 @@ impl ScanHistory {
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
-        debug!("✅ {} scan kaydı bulundu tarih aralığı için", records.len());
+        debug!("✅ {} scan records found for date range", records.len());
         Ok(records)
     }
 
-    /// Güvenlik puanı trend'ini al
+    /// Get security score trend
     pub fn get_security_score_trend(&self, hostname: &str, days: u32) -> DatabaseResult<Vec<SecurityScoreTrend>> {
-        debug!("📈 Güvenlik puanı trendi alınıyor: {} (son {} gün)", hostname, days);
+        debug!("📈 Getting security score trend: {} (last {} days)", hostname, days);
 
         let since_date = Utc::now() - chrono::Duration::days(days as i64);
 
@@ -316,13 +316,13 @@ impl ScanHistory {
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
-        debug!("✅ {} trend kaydı bulundu", trends.len());
+        debug!("✅ {} trend records found", trends.len());
         Ok(trends)
     }
 
-    /// Finding'leri scan ID ile al
+    /// Get findings by scan ID
     pub fn get_scan_findings(&self, scan_id: &str) -> DatabaseResult<Vec<ScanFinding>> {
-        debug!("🔍 Scan findings alınıyor: {}", scan_id);
+        debug!("🔍 Getting scan findings: {}", scan_id);
 
         let mut stmt = self.db.connection().prepare(
             "SELECT finding_id, scanner_name, title, description, severity, category,
@@ -367,38 +367,38 @@ impl ScanHistory {
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
-        debug!("✅ {} finding bulundu", findings.len());
+        debug!("✅ {} findings found", findings.len());
         Ok(findings)
     }
 
-    /// Scan history istatistiklerini al
+    /// Get scan history statistics
     pub fn get_history_stats(&self) -> DatabaseResult<HistoryStats> {
-        debug!("📊 Scan history istatistikleri hesaplanıyor...");
+        debug!("📊 Calculating scan history statistics...");
 
         let mut stats = HistoryStats::default();
 
-        // Toplam scan sayısı
+        // Total scan count
         let mut stmt = self.db.connection().prepare("SELECT COUNT(*) FROM scan_history")?;
         stats.total_scans = stmt.query_row([], |row| row.get(0))?;
 
-        // Son 30 gün scan sayısı
+        // Scan count last 30 days
         let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
         let mut stmt = self.db.connection().prepare("SELECT COUNT(*) FROM scan_history WHERE scan_started_at >= ?1")?;
         stats.scans_last_30_days = stmt.query_row(params![thirty_days_ago], |row| row.get(0))?;
 
-        // Unique hostname sayısı
+        // Unique hostname count
         let mut stmt = self.db.connection().prepare("SELECT COUNT(DISTINCT hostname) FROM scan_history")?;
         stats.unique_hostnames = stmt.query_row([], |row| row.get(0))?;
 
-        // Ortalama güvenlik puanı
+        // Average security score
         let mut stmt = self.db.connection().prepare("SELECT AVG(security_score) FROM scan_history WHERE security_score IS NOT NULL")?;
         stats.average_security_score = stmt.query_row([], |row| row.get(0)).unwrap_or(0.0);
 
-        // Toplam finding sayısı
+        // Total finding count
         let mut stmt = self.db.connection().prepare("SELECT SUM(total_findings) FROM scan_history")?;
         stats.total_findings = stmt.query_row([], |row| row.get(0)).unwrap_or(0);
 
-        // Scan türü dağılımı
+        // Scan type distribution
         let mut stmt = self.db.connection().prepare(
             "SELECT scan_type, COUNT(*) FROM scan_history GROUP BY scan_type"
         )?;
@@ -418,13 +418,13 @@ impl ScanHistory {
             }
         }
 
-        debug!("✅ Scan history istatistikleri hazırlandı");
+        debug!("✅ Scan history statistics prepared");
         Ok(stats)
     }
 
-    /// Eski scan kayıtlarını temizle
+    /// Clean up old scan records
     pub fn cleanup_old_scans(&self, days_to_keep: u32) -> DatabaseResult<usize> {
-        info!("🧹 {} günden eski scan kayıtları temizleniyor...", days_to_keep);
+        info!("🧹 Cleaning up scan records older than {} days...", days_to_keep);
 
         let cutoff_date = Utc::now() - chrono::Duration::days(days_to_keep as i64);
         
@@ -434,15 +434,15 @@ impl ScanHistory {
         )?;
 
         if deleted_count > 0 {
-            info!("{} eski scan kaydı temizlendi", deleted_count);
+            info!("{} old scan records cleaned", deleted_count);
         } else {
-            debug!("Temizlenecek eski scan kaydı bulunamadı");
+            debug!("No old scan records to clean found");
         }
 
         Ok(deleted_count)
     }
 
-    /// Row'dan ScanHistoryRecord oluştur
+    /// Create ScanHistoryRecord from row
     fn row_to_scan_record(&self, row: &Row) -> rusqlite::Result<ScanHistoryRecord> {
         let scan_modules_json: String = row.get("scan_modules")?;
         let os_info_json: String = row.get("os_info")?;
@@ -508,7 +508,7 @@ impl ScanHistory {
     }
 }
 
-/// Güvenlik puanı trend verisi
+/// Security score trend data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityScoreTrend {
     pub date: DateTime<Utc>,
@@ -517,7 +517,7 @@ pub struct SecurityScoreTrend {
     pub risk_level: String,
 }
 
-/// Scan finding (detay tablosundan)
+/// Scan finding (from detail table)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScanFinding {
     pub finding_id: String,
@@ -535,7 +535,7 @@ pub struct ScanFinding {
     pub created_at: DateTime<Utc>,
 }
 
-/// History istatistikleri
+/// History statistics
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct HistoryStats {
     pub total_scans: i32,
@@ -608,11 +608,11 @@ mod tests {
         let history = ScanHistory::new(db);
         let test_record = create_test_scan_record();
 
-        // Scan kaydını ekle
+        // Add scan record
         let record_id = history.add_scan_record(&test_record).unwrap();
         assert!(record_id > 0);
 
-        // Scan kaydını geri al
+        // Retrieve scan record
         let retrieved = history.get_scan_record(&test_record.scan_id).unwrap();
         assert!(retrieved.is_some());
 

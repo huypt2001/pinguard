@@ -7,26 +7,26 @@ use chrono::{DateTime, Utc};
 pub struct ScheduleConfig {
     /// Schedule adı (benzersiz)
     pub name: String,
-    /// Açıklama
+    /// Description
     pub description: String,
-    /// Schedule ifadesi (cron-like format)
+    /// Schedule expression (cron-like format)
     pub schedule: String,
-    /// Çalıştırılacak tarama türü
+    /// Scan type to execute
     pub scan_type: ScanType,
-    /// Tarama modülleri
+    /// Scan modules
     pub scan_modules: Vec<String>,
-    /// Özel konfigürasyon
+    /// Custom configuration
     pub options: HashMap<String, String>,
-    /// Aktif mi
+    /// Is active
     pub enabled: bool,
-    /// Oluşturulma tarihi
+    /// Creation date
     pub created_at: DateTime<Utc>,
-    /// Son güncelleme
+    /// Last update
     pub updated_at: DateTime<Utc>,
 }
 
 impl ScheduleConfig {
-    /// Yeni schedule config oluştur
+    /// Create new schedule config
     pub fn new(name: String, description: String, schedule: String, scan_type: ScanType) -> Self {
         let now = Utc::now();
         Self {
@@ -65,16 +65,16 @@ impl ScheduleConfig {
     }
 }
 
-/// Tarama türü
+/// Scan type
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ScanType {
-    /// Tam tarama - tüm scannerları çalıştır
+    /// Full scan - run all scanners
     Full,
-    /// Hızlı tarama - sadece package audit
+    /// Quick scan - only package audit
     Quick,
-    /// Güvenlik taraması - permission, service, user audits
+    /// Security scan - permission, service, user audits
     Security,
-    /// Özel tarama - belirtilen modüller
+    /// Custom scan - specified modules
     Custom { modules: Vec<String> },
 }
 
@@ -98,35 +98,35 @@ pub struct ScheduleStatus {
     pub enabled: bool,
     /// Aktif mi (çalışıyor mu)
     pub active: bool,
-    /// Son çalışma bilgisi
+    /// Last run information
     pub last_run: Option<LastRunInfo>,
-    /// Bir sonraki çalışma zamanı
+    /// Next run time
     pub next_run: Option<DateTime<Utc>>,
-    /// Schedule konfigürasyonu
+    /// Schedule configuration
     pub config: ScheduleConfig,
 }
 
-/// Son çalışma bilgisi
+/// Last run information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LastRunInfo {
     /// Çalışma zamanı
     pub run_time: DateTime<Utc>,
     /// Başarılı mı
     pub success: bool,
-    /// Süre (milisaniye)
+    /// Duration (milliseconds)
     pub duration_ms: u64,
-    /// Bulunan finding sayısı
+    /// Number of findings found
     pub findings_count: u32,
-    /// Hata mesajı (varsa)
+    /// Error message (if any)
     pub error_message: Option<String>,
 }
 
-/// Systemd timer durumu
+/// Systemd timer status
 #[derive(Debug, Clone)]
 pub struct SystemdTimerStatus {
-    /// Timer etkin mi
+    /// Is timer enabled
     pub enabled: bool,
-    /// Timer aktif mi
+    /// Is timer active
     pub active: bool,
     /// Bir sonraki çalışma zamanı
     pub next_run: Option<DateTime<Utc>>,
