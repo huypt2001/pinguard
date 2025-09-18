@@ -63,7 +63,7 @@ pub struct SecurityReport {
 pub struct ReportMetadata {
     pub report_id: String,
     pub generated_at: u64, // Unix timestamp
-    pub pinGuard_version: String,
+    pub pin_guard_version: String,
     pub system_info: SystemInfo,
     pub scan_duration_ms: u64,
     pub report_format: String,
@@ -137,7 +137,7 @@ impl SecurityReport {
         fix_results: Option<Vec<FixResult>>,
         scan_duration_ms: u64
     ) -> Self {
-        let total_findings: u32 = scan_results.iter()
+        let _total_findings: u32 = scan_results.iter()
             .map(|result| result.findings.len() as u32)
             .sum();
 
@@ -152,7 +152,7 @@ impl SecurityReport {
                     .duration_since(UNIX_EPOCH)
                     .unwrap_or(Duration::ZERO)
                     .as_secs(),
-                pinGuard_version: env!("CARGO_PKG_VERSION").to_string(),
+                pin_guard_version: env!("CARGO_PKG_VERSION").to_string(),
                 system_info: Self::get_system_info(),
                 scan_duration_ms,
                 report_format: "multi".to_string(),

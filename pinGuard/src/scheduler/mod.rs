@@ -179,7 +179,7 @@ impl Scheduler {
     }
 
     /// Get last run information
-    fn get_last_run_info(&self, schedule_name: &str) -> SchedulerResult<Option<LastRunInfo>> {
+    fn get_last_run_info(&self, _schedule_name: &str) -> SchedulerResult<Option<LastRunInfo>> {
         // Get last run information from database
         // This implementation will depend on database module
         Ok(None) // Placeholder

@@ -108,7 +108,7 @@ impl ServiceHardener {
     }
 
     /// Harden SSH configuration
-    fn harden_ssh_config(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn harden_ssh_config(&self, _finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         tracing::info!("Hardening SSH configuration...");
 
         let ssh_config_path = "/etc/ssh/sshd_config";
@@ -142,7 +142,7 @@ impl ServiceHardener {
                 continue; // Administrator should manually add AllowUsers
             }
 
-            let pattern = format!("^{}\\s+", setting);
+            let _pattern = format!("^{}\\s+", setting);
             let replacement = if value.is_empty() {
                 format!("#{} ", setting)
             } else {

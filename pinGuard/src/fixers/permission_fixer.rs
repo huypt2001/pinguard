@@ -294,9 +294,8 @@ impl PermissionFixer {
             }
         }
 
-    Ok(results);
-
-    /// Fix permissions of a specific file
+        Ok(results)
+    }
     fn fix_file_permission(&self, file_path: &str, expected_mode: u32) -> Result<FixResult, FixError> {
         let start_time = Instant::now();
         let mut result = FixResult::new(
@@ -365,8 +364,6 @@ impl PermissionFixer {
 
         Ok(results)
     }
-    }
-    }
 
     /// Fix a single world-writable file
     fn fix_world_writable_single_file(&self, file_path: &str) -> Result<FixResult, FixError> {
@@ -418,5 +415,6 @@ impl PermissionFixer {
             Err(e) => tracing::error!("Failed to fix world-writable files: {}", e),
         }
 
-    Ok(results)
+        Ok(results)
+    }
 }

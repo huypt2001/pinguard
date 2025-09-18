@@ -57,7 +57,7 @@ impl Fixer for KernelUpdater {
         );
 
         let package_manager = self.detect_package_manager()?;
-        let current_kernel = self.get_current_kernel_version()?;
+        let _current_kernel = self.get_current_kernel_version()?;
         
         plan = plan
             .requires_reboot()

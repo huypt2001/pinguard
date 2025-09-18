@@ -114,7 +114,7 @@ impl UserPolicyFixer {
         ];
 
         for (setting, value) in password_settings {
-            let pattern = format!("^{}\\s+\\d+", setting);
+            let _pattern = format!("^{}\\s+\\d+", setting);
             let replacement = format!("{}\t{}", setting, value);
 
             let lines: Vec<&str> = new_content.lines().collect();
@@ -216,7 +216,7 @@ impl UserPolicyFixer {
     }
 
     /// Fix sudo NOPASSWD security vulnerability
-    fn fix_sudo_nopasswd(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn fix_sudo_nopasswd(&self, _finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         tracing::info!("Fixing sudo NOPASSWD security vulnerability...");
 
         let sudoers_path = "/etc/sudoers";

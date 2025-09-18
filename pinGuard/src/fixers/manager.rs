@@ -208,7 +208,7 @@ impl FixerManager {
     }
 
     /// Comprehensive system hardening
-    pub fn comprehensive_hardening(&self, config: &Config) -> Result<Vec<FixResult>, FixError> {
+    pub fn comprehensive_hardening(&self, _config: &Config) -> Result<Vec<FixResult>, FixError> {
         let mut results = Vec::new();
 
         tracing::info!("Starting comprehensive system hardening...");

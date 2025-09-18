@@ -252,7 +252,7 @@ impl ReportManager {
 
     /// Format timestamp
     fn format_timestamp(&self, timestamp: u64) -> String {
-        use std::time::{SystemTime, UNIX_EPOCH, Duration};
+        use std::time::{SystemTime, Duration};
         
         let datetime = SystemTime::UNIX_EPOCH + Duration::from_secs(timestamp);
         format!("{:?}", datetime)

@@ -243,12 +243,12 @@ WantedBy=timers.target
         let user = std::env::var("USER")
             .map_err(|_| SchedulerError::InvalidConfig("USER environment variable not set".to_string()))?;
         
-        let pinGuard_path = self.get_pinGuard_executable_path()?;
+        let pin_guard_path = self.get_pin_guard_executable_path()?;
 
         let content = self.service_template
             .replace("{schedule_name}", &config.name)
             .replace("{user}", &user)
-            .replace("{pinGuard_path}", &pinGuard_path);
+            .replace("{pinGuard_path}", &pin_guard_path);
 
         Ok(content)
     }
@@ -269,7 +269,7 @@ WantedBy=timers.target
     }
 
     /// PinGuard executable yolunu al
-    fn get_pinGuard_executable_path(&self) -> SchedulerResult<String> {
+    fn get_pin_guard_executable_path(&self) -> SchedulerResult<String> {
         // Önce cargo binary path'ini dene
         if let Ok(current_exe) = std::env::current_exe() {
             if let Some(path_str) = current_exe.to_str() {

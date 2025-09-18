@@ -255,7 +255,7 @@ impl FirewallConfigurator {
     }
 
     /// Configure SSH port security
-    fn configure_ssh_port_security(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
+    fn configure_ssh_port_security(&self, _finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         tracing::info!("Configuring SSH port security...");
 
         // SSH bruteforce protection

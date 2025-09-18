@@ -1,0 +1,18 @@
+# Use the official Rust image as the base image
+FROM rust:1.75-slim
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the Cargo.toml and Cargo.lock files
+COPY pinGuard/Cargo.toml pinGuard/Cargo.lock ./
+
+# Copy the source code
+COPY pinGuard/src ./src
+
+# Copy test files if any
+COPY pinGuard/tests ./tests
+COPY pinGuard/benches ./benches
+
+# Run tests
+CMD ["cargo", "test", "--release"]

@@ -89,7 +89,7 @@ impl KernelCheck {
         if version_parts.len() >= 3 {
             let major: u32 = version_parts[0].parse().unwrap_or(0);
             let minor: u32 = version_parts[1].parse().unwrap_or(0);
-            let patch: u32 = version_parts[2].split('-').next().unwrap_or("0").parse().unwrap_or(0);
+            let _patch: u32 = version_parts[2].split('-').next().unwrap_or("0").parse().unwrap_or(0);
             
             // Çok eski kernel versiyonları kontrol et
             if major < 4 || (major == 4 && minor < 19) {

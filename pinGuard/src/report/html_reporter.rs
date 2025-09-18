@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::Path;
 use crate::report::{Reporter, ReportError, SecurityReport};
+use crate::scanners::{ScanResult, ScanStatus, Finding, Severity, Category, ScanMetadata};
 
 /// Structure that generates reports in HTML format
 pub struct HtmlReporter {
@@ -481,7 +482,7 @@ impl HtmlReporter {
             report.metadata.system_info.os_version,
             report.metadata.system_info.kernel_version,
             report.metadata.system_info.architecture,
-            report.metadata.pinGuard_version,
+            report.metadata.pin_guard_version,
             self.format_timestamp(report.metadata.generated_at)
         )
     }
@@ -967,7 +968,7 @@ impl HtmlReporter {
 
     /// Format timestamp
     fn format_timestamp(&self, timestamp: u64) -> String {
-        use std::time::{SystemTime, UNIX_EPOCH, Duration};
+        use std::time::{SystemTime, Duration};
         
         let datetime = SystemTime::UNIX_EPOCH + Duration::from_secs(timestamp);
         
@@ -1031,13 +1032,11 @@ pub fn generate_html_report(
 mod tests {
     use super::*;
     use crate::scanners::{ScanResult, ScanStatus, Finding, Severity, Category};
-    use std::collections::HashMap;
-
     fn create_test_report() -> SecurityReport {
         let scan_result = ScanResult {
             scanner_name: "test_scanner".to_string(),
+            scan_time: "2024-01-01T00:00:00Z".to_string(),
             status: ScanStatus::Success,
-            message: "Test scan completed".to_string(),
             findings: vec![
                 Finding {
                     id: "TEST-001".to_string(),
@@ -1046,15 +1045,21 @@ mod tests {
                     severity: Severity::High,
                     category: Category::Package,
                     affected_item: "test-package".to_string(),
-                    remediation: Some("Update package".to_string()),
-                    cve_ids: vec!["CVE-2023-12345".to_string()],
+                    current_value: Some("1.0.0".to_string()),
+                    recommended_value: Some("1.1.0".to_string()),
                     references: vec!["https://example.com".to_string()],
-                    metadata: HashMap::new(),
+                    cve_ids: vec!["CVE-2023-12345".to_string()],
+                    fix_available: true,
                 }
             ],
-            items_scanned: 100,
-            duration_ms: 5000,
-            scanner_version: "1.0.0".to_string(),
+            metadata: ScanMetadata {
+                duration_ms: 5000,
+                items_scanned: 100,
+                issues_found: 1,
+                scan_timestamp: "2024-01-01T00:00:00Z".to_string(),
+                scanner_version: "1.0.0".to_string(),
+            },
+            raw_data: None,
         };
 
         SecurityReport::new(vec![scan_result], None, 5000)
