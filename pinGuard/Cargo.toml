@@ -1,7 +1,7 @@
 [package]
 name = "pinGuard"
 version = "0.1.0"
-edition = "2021"
+edition = "2025"
 rust-version = "1.70"
 authors = ["PinGuard Team <team@pinGuard.dev>"]
 description = "Linux-first Vulnerability Scanner & Remediator"
