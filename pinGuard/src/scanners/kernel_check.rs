@@ -60,7 +60,7 @@ impl KernelCheck {
     fn get_kernel_info(&self) -> Result<KernelInfo, ScanError> {
         // Get kernel information using uname -a command
         let output = Command::new("uname")
-            .args(&["-a"])
+            .args(["-a"])
             .output()
             .map_err(|e| ScanError::CommandError(format!("uname failed: {}", e)))?;
 
@@ -69,7 +69,7 @@ impl KernelCheck {
         }
 
         let uname_output = String::from_utf8_lossy(&output.stdout);
-        let parts: Vec<&str> = uname_output.trim().split_whitespace().collect();
+        let parts: Vec<&str> = uname_output.split_whitespace().collect();
 
         if parts.len() < 3 {
             return Err(ScanError::ParseError("Invalid uname output".to_string()));

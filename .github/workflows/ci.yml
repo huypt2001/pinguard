@@ -110,10 +110,10 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Build Docker image
-      run: docker build -f docker/Dockerfile -t pinGuard:test .
+      run: docker build -f docker/Dockerfile -t pinguard:test .
     
     - name: Test Docker image
-      run: docker run --rm pinGuard:test --help
+      run: docker run --rm pinguard:test --help
 
   benchmark:
     name: Performance Benchmark

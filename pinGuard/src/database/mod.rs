@@ -88,7 +88,8 @@ impl DatabaseManager {
         )?;
 
         // Table creation migrations
-        let migrations: Vec<(&str, fn(&mut Connection) -> DatabaseResult<()>)> = vec![
+        type MigrationFn = fn(&mut Connection) -> DatabaseResult<()>;
+        let migrations: Vec<(&str, MigrationFn)> = vec![
             ("create_cve_cache_table", |conn| {
                 migrations::create_cve_cache_table(conn)
             }),
@@ -98,9 +99,7 @@ impl DatabaseManager {
             ("create_schedule_logs_table", |conn| {
                 migrations::create_schedule_logs_table(conn)
             }),
-            ("create_indexes", |conn| {
-                migrations::create_indexes(conn)
-            }),
+            ("create_indexes", |conn| migrations::create_indexes(conn)),
         ];
 
         for (name, migration_fn) in migrations {

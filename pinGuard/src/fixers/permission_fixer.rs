@@ -219,11 +219,12 @@ impl PermissionFixer {
         }
 
         // Determine appropriate permissions based on file type
-        let new_permissions = if Path::new(&file_path).is_dir() || self.is_executable_file(&file_path)? {
-            "755" // For directories and executable files
-        } else {
-            "644" // For normal files
-        };
+        let new_permissions =
+            if Path::new(&file_path).is_dir() || self.is_executable_file(&file_path)? {
+                "755" // For directories and executable files
+            } else {
+                "644" // For normal files
+            };
 
         // Apply permissions
         let _output = execute_command("chmod", &[new_permissions, &file_path])?;

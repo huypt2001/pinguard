@@ -76,8 +76,8 @@ jobs:
     
     - name: Test Docker image
       run: |
-        docker build -f ${{ matrix.dockerfile }} -t test-image .
-        docker run --rm test-image --help
+        docker build -f ${{ matrix.dockerfile }} -t pinguard:test .
+        docker run --rm pinguard:test --help
     
     - name: Run security scan
       uses: aquasecurity/trivy-action@master
