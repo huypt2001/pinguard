@@ -1,6 +1,5 @@
 use std::fs;
 use std::path::Path;
-use std::collections::HashMap;
 use crate::report::{Reporter, ReportError, SecurityReport};
 
 /// HTML formatında rapor üreten yapı

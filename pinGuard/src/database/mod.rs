@@ -1,8 +1,8 @@
-use rusqlite::{Connection, Result as SqliteResult, params};
+use rusqlite::Connection;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use tracing::{info, warn, error, debug};
+use tracing::{info, error, debug};
 
 pub mod cve_cache;
 pub mod scan_history;

@@ -2,14 +2,14 @@ use reqwest::{Client, header::{HeaderMap, HeaderValue, USER_AGENT}};
 use serde_json;
 use tokio::time::{sleep, Duration};
 use tracing::{info, debug, warn, error};
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use std::collections::HashMap;
 
 use crate::cve::{
     CveApiError, CveApiResult, NvdApiResponse, CveSearchCriteria,
     nvd_to_cve_data
 };
-use crate::database::cve_cache::{CveData, CveCache};
+use crate::database::cve_cache::CveData;
 
 /// NVD API client
 pub struct NvdClient {
@@ -353,7 +353,6 @@ impl Default for NvdClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio_test;
 
     #[tokio::test]
     async fn test_nvd_client_creation() {

@@ -23,7 +23,7 @@ impl Fixer for PermissionFixer {
         finding.title.contains("SGID")
     }
 
-    fn fix(&self, finding: &Finding, config: &crate::core::config::Config) -> Result<FixResult, FixError> {
+    fn fix(&self, finding: &Finding, _config: &crate::core::config::Config) -> Result<FixResult, FixError> {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 

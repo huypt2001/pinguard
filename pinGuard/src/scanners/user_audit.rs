@@ -232,7 +232,7 @@ impl UserAudit {
     }
 
     /// Root yetkili kullanıcıları kontrol et
-    fn check_privileged_users(&self, users: &[UserAccount], result: &mut ScanResult) -> Result<(), ScanError> {
+    fn check_privileged_users(&self, _users: &[UserAccount], result: &mut ScanResult) -> Result<(), ScanError> {
         tracing::info!("👑 Yetkili kullanıcılar kontrol ediliyor...");
 
         // sudo grubu üyelerini kontrol et

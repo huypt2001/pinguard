@@ -4,11 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use tracing::{info, debug, warn, error};
 
-use crate::cve::cve_manager::{CveManager, CveManagerHealth};
-use crate::database::{
-    DatabaseManager,
-    cve_cache::{CveData, CveSeverity},
-};
+use crate::cve::cve_manager::CveManager;
+use crate::database::cve_cache::{CveData, CveSeverity};
 
 pub struct PackageAudit {
     cve_manager: Option<CveManager>,
@@ -174,7 +171,7 @@ impl PackageAudit {
     }
 
     /// Güncel olmayan paketleri kontrol et
-    fn check_outdated_packages(&self, packages: &[Package], result: &mut ScanResult) -> Result<(), ScanError> {
+    fn check_outdated_packages(&self, _packages: &[Package], result: &mut ScanResult) -> Result<(), ScanError> {
         info!("🔍 Güncel olmayan paketler kontrol ediliyor...");
         
         // apt list --upgradable komutu ile güncellenebilir paketleri bul

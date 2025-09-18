@@ -1,33 +1,16 @@
 # PinGuard Configuration File
-# Bu dosya PinGuard'ın genel ayarlarını içerir
-
-# Ana configuration
-app:
-  name: "PinGuard"
-  version: "0.1.0"
-  log_level: "info"
-  
 # Tarama ayarları
 scanner:
-  enabled_modules:
-    - "package_audit"
-    - "kernel_check"
-    - "permission_audit"
-    - "service_audit"
-    - "user_audit"
-    - "network_audit"
+  modules:
+    package_audit: true
+    kernel_check: true
+    permission_audit: true
+    service_audit: true
+    user_audit: true
+    network_audit: true
+  concurrent_scans: true
+  max_scan_time: 300  # seconds
   
-  # Paket audit ayarları
-  package_audit:
-    check_cve: true
-    check_outdated: true
-    exclude_packages: []
-    
-  # Kernel kontrol ayarları
-  kernel_check:
-    check_eol: true
-    check_patches: true
-    
 # Rapor ayarları
 report:
   format: "json"
@@ -59,7 +42,3 @@ fixer:
     - "service_hardener"
     - "user_policy_fixer"
     - "firewall_configurator"
-
-# Diğer ayarlar
-key: "example_key"
-value: "example_value"

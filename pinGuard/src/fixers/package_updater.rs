@@ -1,4 +1,4 @@
-use super::{Fixer, FixResult, FixError, FixPlan, FixStatus, RiskLevel, execute_command, create_backup};
+use super::{Fixer, FixResult, FixError, FixPlan, FixStatus, RiskLevel, execute_command};
 use crate::scanners::Finding;
 use std::time::{Duration, Instant};
 use std::process::Command;
@@ -18,7 +18,7 @@ impl Fixer for PackageUpdater {
         finding.title.contains("vulnerable")
     }
 
-    fn fix(&self, finding: &Finding, config: &crate::core::config::Config) -> Result<FixResult, FixError> {
+    fn fix(&self, finding: &Finding, _config: &crate::core::config::Config) -> Result<FixResult, FixError> {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 

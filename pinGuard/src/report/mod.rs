@@ -408,13 +408,24 @@ impl SecurityReport {
             .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
             .unwrap_or_else(|_| "Unknown".to_string());
 
+        // Uptime hesaplama - /proc/uptime dosyasından oku
+        let uptime_seconds = match std::fs::read_to_string("/proc/uptime") {
+            Ok(content) => {
+                content.split_whitespace()
+                    .next()
+                    .and_then(|s| s.parse::<f64>().ok())
+                    .map(|seconds| seconds as u64)
+            }
+            Err(_) => None,
+        };
+
         SystemInfo {
             hostname,
             os_name: "Linux".to_string(),
             os_version: os_info,
             kernel_version,
             architecture,
-            uptime_seconds: None, // TODO: Implement uptime calculation
+            uptime_seconds,
         }
     }
 

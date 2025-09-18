@@ -1,12 +1,11 @@
 use chrono::{DateTime, Utc, Duration};
 use tracing::{info, debug, warn, error};
 use tokio::time::sleep;
-use std::collections::HashMap;
 
 use crate::cve::{CveApiError, CveApiResult, nvd_client::NvdClient};
 use crate::database::{
     DatabaseManager, 
-    cve_cache::{CveData, CveCache, CveSeverity, CachedCve}
+    cve_cache::{CveData, CveCache, CachedCve}
 };
 
 /// CVE manager - cache ve NVD API'yi koordine eder

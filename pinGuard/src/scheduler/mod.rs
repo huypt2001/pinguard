@@ -10,8 +10,6 @@ use crate::database::DatabaseManager;
 use crate::scanners::manager::ScannerManager;
 use crate::core::config::Config;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::Path;
 use thiserror::Error;
 use tracing::{info, warn, error, debug};
 

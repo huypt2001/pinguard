@@ -1,9 +1,9 @@
 use rusqlite::{params, Row};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use tracing::{info, debug, warn, error};
+use tracing::{info, debug};
 use crate::database::{DatabaseManager, DatabaseError, DatabaseResult};
-use crate::scanners::{ScanResult, Finding};
+use crate::scanners::ScanResult;
 use crate::core::config::Config;
 
 /// Scan history kaydı
@@ -147,7 +147,7 @@ impl ScanHistory {
     }
 
     /// Scan findings'leri detay tablosuna ekle
-    fn add_scan_findings(&self, scan_history_id: i64, scan_id: &str, scan_results: &[ScanResult]) -> DatabaseResult<()> {
+    fn add_scan_findings(&self, _scan_history_id: i64, scan_id: &str, scan_results: &[ScanResult]) -> DatabaseResult<()> {
         let mut stmt = self.db.connection().prepare(
             "INSERT INTO scan_findings (
                 scan_id, finding_id, scanner_name, title, description, severity, category,

@@ -1,7 +1,7 @@
 use rusqlite::{params, Row};
 use chrono::{DateTime, Utc, Duration};
 use serde::{Deserialize, Serialize};
-use tracing::{info, debug, warn, error};
+use tracing::{info, debug};
 use crate::database::{DatabaseManager, DatabaseError, DatabaseResult};
 
 /// CVE verisi yapısı (NVD API'den gelen data)

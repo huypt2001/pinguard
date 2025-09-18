@@ -1,9 +1,9 @@
 use reqwest;
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc, Duration};
-use tracing::{info, debug, warn, error};
+use chrono::{DateTime, Utc};
+use tracing::{error};
 use std::collections::HashMap;
-use crate::database::{DatabaseManager, cve_cache::{CveData, CveSeverity, VersionRange, CpeMatch, CveCache}};
+use crate::database::cve_cache::{CveData, CveSeverity, CpeMatch};
 
 pub mod nvd_client;
 pub mod cve_manager;

@@ -1,9 +1,9 @@
 use super::{ScheduleConfig, SchedulerError, SchedulerResult, SystemdTimerStatus};
 use chrono::{DateTime, Utc};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
-use tracing::{info, warn, error, debug};
+use tracing::{info, warn, debug};
 
 /// Systemd entegrasyonu
 pub struct SystemdIntegration {
@@ -309,14 +309,14 @@ WantedBy=timers.target
     }
 
     /// Bir sonraki çalışma zamanını al
-    fn get_next_run(&self, timer_name: &str) -> SchedulerResult<Option<DateTime<Utc>>> {
+    fn get_next_run(&self, _timer_name: &str) -> SchedulerResult<Option<DateTime<Utc>>> {
         // systemctl list-timers kullanarak next run bilgisini al
         // Bu karmaşık parsing gerektirdiği için şimdilik None döndürüyoruz
         Ok(None)
     }
 
     /// Son çalışma zamanını al
-    fn get_last_run(&self, timer_name: &str) -> SchedulerResult<Option<DateTime<Utc>>> {
+    fn get_last_run(&self, _timer_name: &str) -> SchedulerResult<Option<DateTime<Utc>>> {
         // journalctl kullanarak son run bilgisini al
         // Bu karmaşık parsing gerektirdiği için şimdilik None döndürüyoruz
         Ok(None)
