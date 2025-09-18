@@ -279,7 +279,7 @@ impl SecurityReport {
         let max_possible_score = total_findings * critical_weight;
         let score_percentage = 100.0 - ((weighted_score / max_possible_score) * 100.0);
 
-        score_percentage.max(0.0).min(100.0) as u32
+        score_percentage.clamp(0.0, 100.0) as u32
     }
 
     /// Calculate risk level
@@ -433,7 +433,7 @@ impl SecurityReport {
             .unwrap_or_else(|_| "Unknown".to_string());
 
         let os_info = std::process::Command::new("lsb_release")
-            .args(&["-d", "-s"])
+            .args(["-d", "-s"])
             .output()
             .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
             .unwrap_or_else(|_| "Unknown Linux".to_string());

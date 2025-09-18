@@ -1,6 +1,5 @@
 use crate::database::cve_cache::{CpeMatch, CveData, CveSeverity};
 use chrono::{DateTime, Utc};
-use reqwest;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use tracing::error;

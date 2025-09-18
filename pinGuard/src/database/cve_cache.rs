@@ -81,6 +81,7 @@ pub struct CpeMatch {
 
 /// Cached CVE data
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct CachedCve {
     pub data: CveData,
     pub cached_at: DateTime<Utc>,
@@ -93,6 +94,7 @@ pub struct CveCache {
     cache_ttl: Duration, // Cache validity period
 }
 
+#[allow(dead_code)]
 impl CveCache {
     /// Create a new CVE cache
     pub fn new(db: DatabaseManager) -> Self {

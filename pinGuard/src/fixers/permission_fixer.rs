@@ -219,10 +219,8 @@ impl PermissionFixer {
         }
 
         // Determine appropriate permissions based on file type
-        let new_permissions = if Path::new(&file_path).is_dir() {
-            "755" // For directories
-        } else if self.is_executable_file(&file_path)? {
-            "755" // For executable files
+        let new_permissions = if Path::new(&file_path).is_dir() || self.is_executable_file(&file_path)? {
+            "755" // For directories and executable files
         } else {
             "644" // For normal files
         };
@@ -283,7 +281,7 @@ impl PermissionFixer {
             "/usr/bin/ping6",
         ];
 
-        legitimate_suid_files.iter().any(|&path| file_path == path)
+        legitimate_suid_files.contains(&file_path)
     }
 
     /// Check if file is a legitimate SGID file

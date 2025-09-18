@@ -9,6 +9,7 @@ use crate::database::{
 };
 
 /// CVE manager - coordinates cache and NVD API
+#[allow(dead_code)]
 pub struct CveManager {
     nvd_client: NvdClient,
     cve_cache: CveCache,
@@ -18,6 +19,7 @@ pub struct CveManager {
     fallback_enabled: bool,
 }
 
+#[allow(dead_code)]
 impl CveManager {
     /// Create a new CVE manager
     pub fn new(db: DatabaseManager) -> CveApiResult<Self> {
@@ -274,7 +276,7 @@ impl CveManager {
 
                 let mut cached_count = 0;
                 for cve_data in recent_cves {
-                    if let Ok(_) = self.cve_cache.cache_cve(&cve_data) {
+                    if self.cve_cache.cache_cve(&cve_data).is_ok() {
                         cached_count += 1;
                     }
                 }

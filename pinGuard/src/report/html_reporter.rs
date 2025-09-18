@@ -1,5 +1,6 @@
 use crate::report::{ReportError, Reporter, SecurityReport};
-use crate::scanners::{Category, Finding, ScanMetadata, ScanResult, ScanStatus, Severity};
+#[cfg(test)]
+use crate::scanners::ScanMetadata;
 use std::fs;
 use std::path::Path;
 

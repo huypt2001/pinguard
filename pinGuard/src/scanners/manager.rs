@@ -9,17 +9,17 @@ pub struct ScannerManager {
     scanners: Vec<Box<dyn Scanner>>,
 }
 
+#[allow(dead_code)]
 impl ScannerManager {
     pub fn new() -> Self {
-        let mut scanners: Vec<Box<dyn Scanner>> = Vec::new();
-
-        // Add existing scanners
-        scanners.push(Box::new(PackageAudit::new()));
-        scanners.push(Box::new(KernelCheck));
-        scanners.push(Box::new(PermissionAudit));
-        scanners.push(Box::new(ServiceAudit));
-        scanners.push(Box::new(UserAudit));
-        scanners.push(Box::new(NetworkAudit));
+        let scanners: Vec<Box<dyn Scanner>> = vec![
+            Box::new(PackageAudit::new()),
+            Box::new(KernelCheck),
+            Box::new(PermissionAudit),
+            Box::new(ServiceAudit),
+            Box::new(UserAudit),
+            Box::new(NetworkAudit),
+        ];
 
         Self { scanners }
     }

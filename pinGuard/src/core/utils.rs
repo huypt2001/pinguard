@@ -1,9 +1,12 @@
 // Core error types and common utilities
+#![allow(dead_code)]
 
 use std::fmt;
 
 /// Main error type for PinGuard
 #[derive(Debug)]
+#[allow(dead_code)]
+#[allow(clippy::enum_variant_names)]
 pub enum PinGuardError {
     ConfigError(String),
     ScanError(String),

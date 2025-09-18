@@ -10,6 +10,8 @@ pub mod scan_history;
 
 /// Database error types
 #[derive(Debug, thiserror::Error)]
+#[allow(dead_code)]
+#[allow(clippy::enum_variant_names)]
 pub enum DatabaseError {
     #[error("SQLite error: {0}")]
     SqliteError(#[from] rusqlite::Error),
@@ -31,6 +33,7 @@ pub struct DatabaseManager {
     db_path: String,
 }
 
+#[allow(dead_code)]
 impl DatabaseManager {
     /// Create new database manager
     pub fn new(db_path: &str) -> DatabaseResult<Self> {
@@ -87,16 +90,16 @@ impl DatabaseManager {
         // Table creation migrations
         let migrations: Vec<(&str, fn(&mut Connection) -> DatabaseResult<()>)> = vec![
             ("create_cve_cache_table", |conn| {
-                migrations::create_cve_cache_table(conn).map_err(|e| e)
+                migrations::create_cve_cache_table(conn)
             }),
             ("create_scan_history_table", |conn| {
-                migrations::create_scan_history_table(conn).map_err(|e| e)
+                migrations::create_scan_history_table(conn)
             }),
             ("create_schedule_logs_table", |conn| {
-                migrations::create_schedule_logs_table(conn).map_err(|e| e)
+                migrations::create_schedule_logs_table(conn)
             }),
             ("create_indexes", |conn| {
-                migrations::create_indexes(conn).map_err(|e| e)
+                migrations::create_indexes(conn)
             }),
         ];
 
@@ -260,6 +263,7 @@ impl DatabaseHealth {
 }
 
 /// Trait for database connection pool
+#[allow(dead_code)]
 pub trait DatabaseConnection {
     fn execute_query(&self, query: &str, params: &[&dyn rusqlite::ToSql]) -> DatabaseResult<usize>;
     fn fetch_one<T>(

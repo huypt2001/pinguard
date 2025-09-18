@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::core::config::Config;
 use crate::database::{DatabaseError, DatabaseManager, DatabaseResult};
 use crate::scanners::ScanResult;
@@ -8,6 +10,7 @@ use tracing::{debug, info};
 
 /// Scan history record
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct ScanHistoryRecord {
     pub id: Option<i64>,
     pub scan_id: String,

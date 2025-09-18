@@ -14,15 +14,14 @@ pub struct FixerManager {
 
 impl FixerManager {
     pub fn new() -> Self {
-        let mut fixers: Vec<Box<dyn Fixer>> = Vec::new();
-
-        // Add existing fixers
-        fixers.push(Box::new(PackageUpdater));
-        fixers.push(Box::new(KernelUpdater));
-        fixers.push(Box::new(PermissionFixer));
-        fixers.push(Box::new(ServiceHardener));
-        fixers.push(Box::new(UserPolicyFixer));
-        fixers.push(Box::new(FirewallConfigurator));
+        let fixers: Vec<Box<dyn Fixer>> = vec![
+            Box::new(PackageUpdater),
+            Box::new(KernelUpdater),
+            Box::new(PermissionFixer),
+            Box::new(ServiceHardener),
+            Box::new(UserPolicyFixer),
+            Box::new(FirewallConfigurator),
+        ];
 
         Self { fixers }
     }

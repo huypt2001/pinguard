@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::scanners::Finding;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};

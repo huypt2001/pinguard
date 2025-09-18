@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod schedule_manager;
 pub mod scheduler_types;
 pub mod systemd_integration;
@@ -190,7 +192,6 @@ impl Scheduler {
 
     /// Execute scan
     async fn execute_scan(&self, config: &ScheduleConfig) -> SchedulerResult<ScheduledScanResult> {
-        use chrono::Utc;
         use std::time::Instant;
         use uuid::Uuid;
 

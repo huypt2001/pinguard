@@ -91,6 +91,8 @@ pub struct ScanMetadata {
 
 /// Scanner errors
 #[derive(Debug, thiserror::Error)]
+#[allow(clippy::enum_variant_names)]
+#[allow(dead_code)]
 pub enum ScanError {
     #[error("Command execution failed: {0}")]
     CommandError(String),
@@ -112,6 +114,7 @@ pub enum ScanError {
     ConfigError(String),
 }
 
+#[allow(dead_code)]
 impl ScanResult {
     pub fn new(scanner_name: String) -> Self {
         Self {
