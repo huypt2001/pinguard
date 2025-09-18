@@ -10,11 +10,13 @@ use crate::report::{
 use std::path::Path;
 
 /// Report manager structure - coordinates all report formats
+#[allow(dead_code)]
 pub struct ReportManager {
     output_directory: String,
     default_format: ReportFormat,
 }
 
+#[allow(dead_code)]
 impl ReportManager {
     /// Create new report manager
     pub fn new(output_directory: Option<String>, default_format: Option<ReportFormat>) -> Self {
@@ -317,18 +319,21 @@ pub mod quick {
     use super::*;
 
     /// Generate JSON report
+    #[allow(dead_code)]
     pub fn json_report(report: &SecurityReport, output_path: &str) -> Result<String, ReportError> {
         let reporter = JsonReporter::default();
         reporter.generate_report(report, output_path)
     }
 
     /// Generate HTML report
+    #[allow(dead_code)]
     pub fn html_report(report: &SecurityReport, output_path: &str) -> Result<String, ReportError> {
         let reporter = HtmlReporter::default();
         reporter.generate_report(report, output_path)
     }
 
     /// Generate PDF report (currently disabled)
+    #[allow(dead_code)]
     pub fn pdf_report(_report: &SecurityReport, _output_path: &str) -> Result<String, ReportError> {
         Err(ReportError::IoError(
             "PDF reporting is temporarily disabled".to_string(),
@@ -336,12 +341,14 @@ pub mod quick {
     }
 
     /// Print summary to console
+    #[allow(dead_code)]
     pub fn print_summary(report: &SecurityReport) -> Result<(), ReportError> {
         let manager = ReportManager::default();
         manager.print_report_summary(report)
     }
 
     /// Print detailed statistics to console
+    #[allow(dead_code)]
     pub fn print_statistics(report: &SecurityReport) -> Result<(), ReportError> {
         let manager = ReportManager::default();
         manager.print_detailed_statistics(report)
@@ -351,7 +358,7 @@ pub mod quick {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scanners::{Category, Finding, ScanMetadata, ScanResult, ScanStatus, Severity};
+    use crate::scanners::{Category, Finding, ScanResult, ScanStatus, Severity};
     use std::collections::HashMap;
     use std::fs;
 

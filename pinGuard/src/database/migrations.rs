@@ -140,6 +140,7 @@ pub fn create_indexes(conn: &mut Connection) -> MigrationResult {
 }
 
 /// Check and upgrade database schema version
+#[allow(dead_code)]
 pub fn check_and_upgrade_schema(conn: &mut Connection) -> MigrationResult {
     // Create schema version table
     conn.execute(
@@ -186,6 +187,7 @@ pub fn check_and_upgrade_schema(conn: &mut Connection) -> MigrationResult {
 }
 
 /// Upgrades for version 1
+#[allow(dead_code)]
 fn apply_version_1_upgrades(_conn: &mut Connection) -> MigrationResult {
     // Future schema changes will be made here
 

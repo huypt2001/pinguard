@@ -12,6 +12,7 @@ pub use cve_manager::CveManager;
 
 /// CVE API error types
 #[derive(Debug, thiserror::Error)]
+#[allow(dead_code)]
 pub enum CveApiError {
     #[error("HTTP request failed: {0}")]
     RequestError(#[from] reqwest::Error),
@@ -215,6 +216,7 @@ impl Default for CveSearchCriteria {
     }
 }
 
+#[allow(dead_code)]
 impl CveSearchCriteria {
     /// Create new criteria for builder pattern
     pub fn new() -> Self {

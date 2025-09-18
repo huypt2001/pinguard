@@ -5,6 +5,7 @@ use std::fs;
 use std::path::Path;
 
 /// Structure that generates reports in HTML format
+#[allow(dead_code)]
 pub struct HtmlReporter {
     template_dir: String,
     include_css: bool,
@@ -1038,6 +1039,7 @@ impl Reporter for HtmlReporter {
 }
 
 /// Quick HTML report generation function
+#[allow(dead_code)]
 pub fn generate_html_report(
     report: &SecurityReport,
     output_path: &str,

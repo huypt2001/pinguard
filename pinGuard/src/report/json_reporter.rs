@@ -8,6 +8,7 @@ pub struct JsonReporter {
     pretty_print: bool,
 }
 
+#[allow(dead_code)]
 impl JsonReporter {
     /// Create new JSON reporter
     pub fn new(pretty_print: bool) -> Self {
@@ -111,6 +112,7 @@ impl Reporter for JsonReporter {
 }
 
 /// Quick JSON report generation function
+#[allow(dead_code)]
 pub fn generate_json_report(
     report: &SecurityReport,
     output_path: &str,
@@ -121,6 +123,7 @@ pub fn generate_json_report(
 }
 
 /// Function that outputs JSON to console
+#[allow(dead_code)]
 pub fn print_json_summary(report: &SecurityReport) -> Result<(), ReportError> {
     let reporter = JsonReporter::new(true);
 

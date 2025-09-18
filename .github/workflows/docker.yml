@@ -26,12 +26,12 @@ jobs:
     
     strategy:
       matrix:
-        dockerfile:
+        include:
           - dockerfile: docker/Dockerfile
-            tag-suffix: ""
+            tag_suffix: ""
             description: "Production image"
           - dockerfile: docker/Dockerfile.test
-            tag-suffix: "-test"
+            tag_suffix: "-test"
             description: "Test image with additional tools"
     
     steps:
@@ -55,7 +55,7 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         flavor: |
-          suffix=${{ matrix.tag-suffix }}
+          suffix=${{ matrix.tag_suffix }}
         tags: |
           type=ref,event=branch
           type=ref,event=pr

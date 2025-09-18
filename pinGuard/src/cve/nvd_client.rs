@@ -20,6 +20,7 @@ pub struct NvdClient {
     max_retries: u32,
 }
 
+#[allow(dead_code)]
 impl NvdClient {
     /// NVD API endpoint
     const NVD_API_BASE_URL: &'static str = "https://services.nvd.nist.gov/rest/json";

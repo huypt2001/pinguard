@@ -130,7 +130,9 @@ pub trait Reporter {
         report: &SecurityReport,
         output_path: &str,
     ) -> Result<String, ReportError>;
+    #[allow(dead_code)]
     fn format_name(&self) -> &'static str;
+    #[allow(dead_code)]
     fn file_extension(&self) -> &'static str;
 }
 
