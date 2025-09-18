@@ -5,6 +5,7 @@ pub mod package_audit;
 pub mod permission_audit;
 pub mod service_audit;
 pub mod user_audit;
+pub mod container_security;
 // Other modules will be added progressively
 // pub mod service_audit;
 // pub mod user_audit;
@@ -77,6 +78,7 @@ pub enum Category {
     Network,
     Configuration,
     Security,
+    Container,
 }
 
 /// Scan metadata information

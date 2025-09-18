@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2025-09-18
+
+### Added
+- **Container Security Scanner** - Comprehensive Docker and Kubernetes security auditing
+  - Docker container vulnerability scanning and privilege escalation detection
+  - Docker image security analysis including base image checks and layer scanning
+  - Docker daemon configuration audit for security best practices
+  - Container runtime security checks and secrets scanning
+  - Container network security analysis
+  - Basic Kubernetes cluster security audit with RBAC and network policy checks
+- Enhanced configuration support for container_security module
+- Extended CLI support for container-specific findings filtering
+
+### Security
+- Added detection for privileged containers running with elevated privileges
+- Implemented secrets scanning in container environment variables
+- Added sensitive port exposure detection for containers
+- Enhanced Docker daemon security configuration validation
+
+## [0.1.0] - 2024-12-XX
+
 ### Added
 - Initial release of PinGuard
 - Complete vulnerability scanning system

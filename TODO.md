@@ -13,14 +13,14 @@ This document contains a comprehensive list of features and improvements that ca
 ## 🔍 **New Scanner Modules**
 
 ### Container Security Scanner 🔴 P1
-- [ ] Docker container vulnerability scanning
-- [ ] Docker image security analysis
-- [ ] Kubernetes cluster security audit
-- [ ] Container runtime security checks
-- [ ] Docker daemon configuration audit
-- [ ] Container network security analysis
-- [ ] Secrets scanning in containers
-- [ ] Container privilege escalation detection
+- [x] Docker container vulnerability scanning
+- [x] Docker image security analysis
+- [x] Kubernetes cluster security audit
+- [x] Container runtime security checks
+- [x] Docker daemon configuration audit
+- [x] Container network security analysis
+- [x] Secrets scanning in containers
+- [x] Container privilege escalation detection
 
 ### Web Application Security Scanner 🟡 P1
 - [ ] Local web services vulnerability scanning

@@ -104,7 +104,15 @@ impl Config {
                 log_level: "info".to_string(),
             },
             scanner: ScannerConfig {
-                enabled_modules: vec!["package_audit".to_string(), "kernel_check".to_string()],
+                enabled_modules: vec![
+                    "package_audit".to_string(), 
+                    "kernel_check".to_string(),
+                    "permission_audit".to_string(),
+                    "service_audit".to_string(),
+                    "user_audit".to_string(),
+                    "network_audit".to_string(),
+                    "container_security".to_string(),
+                ],
                 package_audit: PackageAuditConfig {
                     check_cve: true,
                     check_outdated: true,

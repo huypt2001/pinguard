@@ -14,6 +14,7 @@ scanner:
     service_audit: true      # Check service configurations
     user_audit: true         # Audit user accounts and policies
     network_audit: true      # Check network configurations and open ports
+    container_security: true # Check Docker containers and images security
   
   # Performance settings
   concurrent_scans: true     # Run multiple scans in parallel

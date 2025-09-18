@@ -487,8 +487,13 @@ fn handle_fix_command(matches: &ArgMatches, config: &core::config::Config) {
                 .filter(|f| f.id.starts_with("NET-"))
                 .cloned()
                 .collect(),
+            "container" => all_findings
+                .iter()
+                .filter(|f| f.id.starts_with("CONTAINER-") || f.id.starts_with("IMAGE-") || f.id.starts_with("K8S-") || f.id.starts_with("DOCKER-"))
+                .cloned()
+                .collect(),
             _ => {
-                error!("Invalid module: {}. Valid modules: package, kernel, permission, service, user, network", module);
+                error!("Invalid module: {}. Valid modules: package, kernel, permission, service, user, network, container", module);
                 return;
             }
         };
