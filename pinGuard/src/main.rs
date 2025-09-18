@@ -72,7 +72,7 @@ fn main() {
 
 fn build_cli() -> Command {
     Command::new("pinGuard")
-        .version("0.1.0")
+        .version("0.1.1")
         .author("PinGuard Team")
         .about("Linux-first Vulnerability Scanner & Remediator")
         .long_about("PinGuard scans, reports, and fixes security vulnerabilities on Linux systems.")

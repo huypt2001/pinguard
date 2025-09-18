@@ -129,7 +129,7 @@ impl ScanResult {
                 items_scanned: 0,
                 issues_found: 0,
                 scan_timestamp: chrono::Utc::now().to_rfc3339(),
-                scanner_version: "0.1.0".to_string(),
+                scanner_version: "0.1.1".to_string(),
             },
             raw_data: Some(HashMap::new()),
         }

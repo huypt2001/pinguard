@@ -100,7 +100,7 @@ impl Config {
         Config {
             app: AppConfig {
                 name: "PinGuard".to_string(),
-                version: "0.1.0".to_string(),
+                version: "0.1.1".to_string(),
                 log_level: "info".to_string(),
             },
             scanner: ScannerConfig {
