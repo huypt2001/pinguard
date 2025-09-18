@@ -54,9 +54,6 @@ jobs:
     - name: Run tests
       run: cd pinGuard && cargo test --verbose
     
-    - name: Run integration tests
-      run: cd pinGuard && cargo test --test '*' --verbose
-    
     - name: Build
       run: cd pinGuard && cargo build --release --verbose
 
