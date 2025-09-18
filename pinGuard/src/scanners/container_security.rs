@@ -83,6 +83,7 @@ impl ContainerSecurityScanner {
         Self { cve_manager: None }
     }
 
+    #[allow(dead_code)]
     pub fn with_cve_manager(mut self, cve_manager: CveManager) -> Self {
         self.cve_manager = Some(cve_manager);
         self
