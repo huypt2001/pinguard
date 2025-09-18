@@ -61,7 +61,7 @@ impl Scheduler {
 
     /// Scheduler'ı başlat
     pub fn enable(&mut self, schedule_config: ScheduleConfig) -> SchedulerResult<()> {
-        info!("🕐 Scheduler etkinleştiriliyor: {}", schedule_config.name);
+        info!("Scheduler etkinleştiriliyor: {}", schedule_config.name);
 
         // Mevcut schedule'ı kontrol et
         if self.schedule_manager.exists(&schedule_config.name)? {
@@ -78,13 +78,13 @@ impl Scheduler {
         // Systemd timer'ı etkinleştir
         self.systemd.enable_timer(&schedule_config.name)?;
 
-        info!("✅ Scheduler başarıyla etkinleştirildi: {}", schedule_config.name);
+        info!("Scheduler başarıyla etkinleştirildi: {}", schedule_config.name);
         Ok(())
     }
 
     /// Scheduler'ı durdur
     pub fn disable(&mut self, schedule_name: &str) -> SchedulerResult<()> {
-        info!("🛑 Scheduler devre dışı bırakılıyor: {}", schedule_name);
+        info!("Scheduler devre dışı bırakılıyor: {}", schedule_name);
 
         // Schedule'ın var olduğunu kontrol et
         if !self.schedule_manager.exists(schedule_name)? {
@@ -101,19 +101,19 @@ impl Scheduler {
         // Schedule config'ini sil
         self.schedule_manager.remove_schedule(schedule_name)?;
 
-        info!("✅ Scheduler başarıyla devre dışı bırakıldı: {}", schedule_name);
+        info!("Scheduler başarıyla devre dışı bırakıldı: {}", schedule_name);
         Ok(())
     }
 
     /// Aktif schedule'ları listele
     pub fn list_schedules(&self) -> SchedulerResult<Vec<ScheduleConfig>> {
-        debug!("📋 Aktif schedule'lar listeleniyor");
+        debug!("Aktif schedule'lar listeleniyor");
         self.schedule_manager.list_schedules()
     }
 
     /// Schedule durumunu kontrol et
     pub fn get_schedule_status(&self, schedule_name: &str) -> SchedulerResult<ScheduleStatus> {
-        debug!("🔍 Schedule durumu kontrol ediliyor: {}", schedule_name);
+        debug!("Schedule durumu kontrol ediliyor: {}", schedule_name);
         
         let config = self.schedule_manager.get_schedule(schedule_name)?;
         let systemd_status = self.systemd.get_timer_status(schedule_name)?;
@@ -138,7 +138,7 @@ impl Scheduler {
             match self.get_schedule_status(&schedule.name) {
                 Ok(status) => statuses.push(status),
                 Err(e) => {
-                    warn!("⚠️ Schedule durumu alınamadı {}: {}", schedule.name, e);
+                    warn!("Schedule durumu alınamadı {}: {}", schedule.name, e);
                 }
             }
         }
@@ -148,18 +148,18 @@ impl Scheduler {
 
     /// Scheduled scan çalıştır (systemd tarafından çağrılır)
     pub async fn run_scheduled_scan(&self, schedule_name: &str) -> SchedulerResult<()> {
-        info!("🚀 Scheduled scan başlatılıyor: {}", schedule_name);
+        info!("Scheduled scan başlatılıyor: {}", schedule_name);
 
         let config = self.schedule_manager.get_schedule(schedule_name)?;
         
         // Scan çalıştır ve sonuçları kaydet
         match self.execute_scan(&config).await {
             Ok(scan_result) => {
-                info!("✅ Scheduled scan tamamlandı: {} - {} finding", 
+                info!("Scheduled scan tamamlandı: {} - {} finding", 
                     schedule_name, scan_result.total_findings);
             }
             Err(e) => {
-                error!("❌ Scheduled scan başarısız: {} - {}", schedule_name, e);
+                error!("Scheduled scan başarısız: {} - {}", schedule_name, e);
                 return Err(e);
             }
         }
@@ -194,7 +194,7 @@ impl Scheduler {
         let start_time = Instant::now();
         let scan_id = Uuid::new_v4().to_string();
         
-        info!("🔍 Scheduled scan başlatılıyor: {} (ID: {})", config.name, scan_id);
+        info!("Scheduled scan başlatılıyor: {} (ID: {})", config.name, scan_id);
 
         // Schedule log başlat
         self.log_scan_start(&config.name, &scan_id).await?;
@@ -208,7 +208,7 @@ impl Scheduler {
         // Scan türüne göre tarama yap
         let scan_results = match &config.scan_type {
             ScanType::Full => {
-                info!("🔍 Tam tarama çalıştırılıyor");
+                info!("Tam tarama çalıştırılıyor");
                 scanner_manager.run_all_scans(&default_config)
             }
             ScanType::Quick => {
@@ -222,7 +222,7 @@ impl Scheduler {
                 }
             }
             ScanType::Security => {
-                info!("🛡️ Güvenlik taraması çalıştırılıyor");
+                info!("Güvenlik taraması çalıştırılıyor");
                 let mut results = Vec::new();
                 for scanner_type in &["permission", "service", "user"] {
                     match scanner_manager.run_specific_scan(scanner_type, &default_config) {
@@ -233,7 +233,7 @@ impl Scheduler {
                 results
             }
             ScanType::Custom { modules } => {
-                info!("🔧 Özel tarama çalıştırılıyor: {:?}", modules);
+                info!("Özel tarama çalıştırılıyor: {:?}", modules);
                 let mut results = Vec::new();
                 for module in modules {
                     match scanner_manager.run_specific_scan(module, &default_config) {
@@ -262,7 +262,7 @@ impl Scheduler {
         // Başarılı scan'i logla
         self.log_scan_complete(&config.name, &scan_id, &scheduled_result, None).await?;
 
-        info!("✅ Scheduled scan tamamlandı: {} findings, {}ms", 
+        info!("Scheduled scan tamamlandı: {} findings, {}ms", 
             total_findings, duration_ms);
 
         Ok(scheduled_result)
@@ -280,11 +280,11 @@ impl Scheduler {
 
         match result {
             Ok(_) => {
-                debug!("📝 Scan başlangıcı loglandı: {} -> {}", schedule_name, scan_id);
+                debug!("Scan başlangıcı loglandı: {} -> {}", schedule_name, scan_id);
                 Ok(())
             }
             Err(e) => {
-                warn!("⚠️ Scan başlangıcı logu yazılamadı: {}", e);
+                warn!("Scan başlangıcı logu yazılamadı: {}", e);
                 Ok(()) // Log hatası scan'i durdurmasın
             }
         }
@@ -314,11 +314,11 @@ impl Scheduler {
 
         match db_result {
             Ok(_) => {
-                debug!("📝 Scan tamamlanması loglandı: {} -> {}", schedule_name, scan_id);
+                debug!("Scan tamamlanması loglandı: {} -> {}", schedule_name, scan_id);
                 Ok(())
             }
             Err(e) => {
-                warn!("⚠️ Scan tamamlanma logu yazılamadı: {}", e);
+                warn!("Scan tamamlanma logu yazılamadı: {}", e);
                 Ok(()) // Log hatası scan'i durdurmasın
             }
         }

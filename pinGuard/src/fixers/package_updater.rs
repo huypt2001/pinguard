@@ -22,11 +22,11 @@ impl Fixer for PackageUpdater {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
-        tracing::info!("📦 Package fix başlatılıyor: {}", finding.title);
+        tracing::info!("Package fix başlatılıyor: {}", finding.title);
 
         // Package manager'ı tespit et
         let package_manager = self.detect_package_manager()?;
-        tracing::info!("📋 Package manager tespit edildi: {}", package_manager);
+        tracing::info!("Package manager tespit edildi: {}", package_manager);
 
         match package_manager.as_str() {
             "apt" => self.fix_with_apt(finding, &mut result)?,
@@ -37,7 +37,7 @@ impl Fixer for PackageUpdater {
         }
 
         result = result.set_duration(start_time);
-        tracing::info!("✅ Package fix tamamlandı: {}", result.message);
+        tracing::info!("Package fix tamamlandı: {}", result.message);
         
         Ok(result)
     }
@@ -120,7 +120,7 @@ impl PackageUpdater {
 
     /// APT ile düzeltme
     fn fix_with_apt(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔄 APT repository güncelleniyor...");
+        tracing::info!("APT repository güncelleniyor...");
         
         // Repository güncellemesi
         let _output = execute_command("apt", &["update"])?;
@@ -128,12 +128,12 @@ impl PackageUpdater {
 
         // Eğer spesifik paket varsa onu güncelle, yoksa tümünü güncelle
         if let Some(package_name) = self.extract_package_name(&finding.affected_item) {
-            tracing::info!("📦 Spesifik paket güncelleniyor: {}", package_name);
+            tracing::info!("Spesifik paket güncelleniyor: {}", package_name);
             let _output = execute_command("apt", &["install", "--only-upgrade", "-y", &package_name])?;
             result.commands_executed.push(format!("apt install --only-upgrade -y {}", package_name));
             result.message = format!("Package '{}' updated successfully", package_name);
         } else {
-            tracing::info!("📦 Tüm paketler güncelleniyor...");
+            tracing::info!("Tüm paketler güncelleniyor...");
             let _output = execute_command("apt", &["upgrade", "-y"])?;
             result.commands_executed.push("apt upgrade -y".to_string());
             result.message = "All packages updated successfully".to_string();
@@ -145,18 +145,18 @@ impl PackageUpdater {
 
     /// YUM ile düzeltme
     fn fix_with_yum(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔄 YUM cache güncelleniyor...");
+        tracing::info!("YUM cache güncelleniyor...");
         
         let _output = execute_command("yum", &["check-update"])?;
         result.commands_executed.push("yum check-update".to_string());
 
         if let Some(package_name) = self.extract_package_name(&finding.affected_item) {
-            tracing::info!("📦 Spesifik paket güncelleniyor: {}", package_name);
+            tracing::info!("Spesifik paket güncelleniyor: {}", package_name);
             let _output = execute_command("yum", &["update", "-y", &package_name])?;
             result.commands_executed.push(format!("yum update -y {}", package_name));
             result.message = format!("Package '{}' updated successfully", package_name);
         } else {
-            tracing::info!("📦 Tüm paketler güncelleniyor...");
+            tracing::info!("Tüm paketler güncelleniyor...");
             let _output = execute_command("yum", &["update", "-y"])?;
             result.commands_executed.push("yum update -y".to_string());
             result.message = "All packages updated successfully".to_string();
@@ -168,18 +168,18 @@ impl PackageUpdater {
 
     /// DNF ile düzeltme
     fn fix_with_dnf(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔄 DNF metadata güncelleniyor...");
+        tracing::info!("DNF metadata güncelleniyor...");
         
         let _output = execute_command("dnf", &["check-update"])?;
         result.commands_executed.push("dnf check-update".to_string());
 
         if let Some(package_name) = self.extract_package_name(&finding.affected_item) {
-            tracing::info!("📦 Spesifik paket güncelleniyor: {}", package_name);
+            tracing::info!("Spesifik paket güncelleniyor: {}", package_name);
             let _output = execute_command("dnf", &["update", "-y", &package_name])?;
             result.commands_executed.push(format!("dnf update -y {}", package_name));
             result.message = format!("Package '{}' updated successfully", package_name);
         } else {
-            tracing::info!("📦 Tüm paketler güncelleniyor...");
+            tracing::info!("Tüm paketler güncelleniyor...");
             let _output = execute_command("dnf", &["update", "-y"])?;
             result.commands_executed.push("dnf update -y".to_string());
             result.message = "All packages updated successfully".to_string();
@@ -191,18 +191,18 @@ impl PackageUpdater {
 
     /// Zypper ile düzeltme
     fn fix_with_zypper(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔄 Zypper repositories güncelleniyor...");
+        tracing::info!("Zypper repositories güncelleniyor...");
         
         let _output = execute_command("zypper", &["refresh"])?;
         result.commands_executed.push("zypper refresh".to_string());
 
         if let Some(package_name) = self.extract_package_name(&finding.affected_item) {
-            tracing::info!("📦 Spesifik paket güncelleniyor: {}", package_name);
+            tracing::info!("Spesifik paket güncelleniyor: {}", package_name);
             let _output = execute_command("zypper", &["update", "-y", &package_name])?;
             result.commands_executed.push(format!("zypper update -y {}", package_name));
             result.message = format!("Package '{}' updated successfully", package_name);
         } else {
-            tracing::info!("📦 Tüm paketler güncelleniyor...");
+            tracing::info!("Tüm paketler güncelleniyor...");
             let _output = execute_command("zypper", &["update", "-y"])?;
             result.commands_executed.push("zypper update -y".to_string());
             result.message = "All packages updated successfully".to_string();

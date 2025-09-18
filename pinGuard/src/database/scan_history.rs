@@ -434,9 +434,9 @@ impl ScanHistory {
         )?;
 
         if deleted_count > 0 {
-            info!("✅ {} eski scan kaydı temizlendi", deleted_count);
+            info!("{} eski scan kaydı temizlendi", deleted_count);
         } else {
-            debug!("ℹ️ Temizlenecek eski scan kaydı bulunamadı");
+            debug!("Temizlenecek eski scan kaydı bulunamadı");
         }
 
         Ok(deleted_count)

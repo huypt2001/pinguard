@@ -26,13 +26,13 @@ impl Scanner for KernelCheck {
         let start_time = Instant::now();
         let mut result = ScanResult::new("Kernel Check".to_string());
         
-        tracing::info!("🔍 Kernel güvenlik taraması başlatılıyor...");
+        tracing::info!("Kernel güvenlik taraması başlatılıyor...");
         
         // Kernel bilgilerini al
         let kernel_info = self.get_kernel_info()?;
         result.set_items_scanned(1);
         
-        tracing::info!("🐧 Kernel bilgisi: {} {}", kernel_info.os, kernel_info.release);
+        tracing::info!("Kernel bilgisi: {} {}", kernel_info.os, kernel_info.release);
         
         // Kernel versiyonu kontrolleri
         self.check_kernel_version(&kernel_info, &mut result)?;
@@ -46,7 +46,7 @@ impl Scanner for KernelCheck {
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
         
-        tracing::info!("✅ Kernel check tamamlandı: {} bulgu", result.findings.len());
+        tracing::info!("Kernel check tamamlandı: {} bulgu", result.findings.len());
         
         Ok(result)
     }
@@ -82,7 +82,7 @@ impl KernelCheck {
 
     /// Kernel versiyonu güvenlik kontrolleri
     fn check_kernel_version(&self, kernel_info: &KernelInfo, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🔍 Kernel versiyon güvenliği kontrol ediliyor...");
+        tracing::info!("Kernel versiyon güvenliği kontrol ediliyor...");
         
         // Kernel version parsing
         let version_parts: Vec<&str> = kernel_info.version.split('.').collect();
@@ -145,7 +145,7 @@ impl KernelCheck {
 
     /// Güvenlik güncellemelerini kontrol et
     fn check_security_updates(&self, _kernel_info: &KernelInfo, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🔍 Kernel güvenlik güncellemeleri kontrol ediliyor...");
+        tracing::info!("Kernel güvenlik güncellemeleri kontrol ediliyor...");
         
         // apt list --upgradable ile kernel güncellemelerini kontrol et
         let output = Command::new("apt")

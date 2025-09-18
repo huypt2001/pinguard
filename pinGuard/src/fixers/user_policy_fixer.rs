@@ -24,7 +24,7 @@ impl Fixer for UserPolicyFixer {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
-        tracing::info!("👥 User policy hardening başlatılıyor: {}", finding.title);
+        tracing::info!("User policy hardening başlatılıyor: {}", finding.title);
 
         // Finding türüne göre uygun düzeltme yöntemini seç
         if finding.id.starts_with("USR-WEAK-PASSWORD") {
@@ -44,7 +44,7 @@ impl Fixer for UserPolicyFixer {
         }
 
         result = result.set_duration(start_time);
-        tracing::info!("✅ User policy hardening tamamlandı: {}", result.message);
+        tracing::info!("User policy hardening tamamlandı: {}", result.message);
         
         Ok(result)
     }
@@ -92,7 +92,7 @@ impl Fixer for UserPolicyFixer {
 impl UserPolicyFixer {
     /// Güçlü parola politikası uygula
     fn enforce_password_policy(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔐 Güçlü parola politikası uygulanıyor...");
+        tracing::info!("Güçlü parola politikası uygulanıyor...");
 
         // /etc/login.defs backup ve düzenleme
         let login_defs_path = "/etc/login.defs";
@@ -199,7 +199,7 @@ impl UserPolicyFixer {
     fn set_password_expiry(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let username = self.extract_username(&finding.affected_item)?;
         
-        tracing::info!("⏰ Parola süresi ayarlanıyor: {}", username);
+        tracing::info!("Parola süresi ayarlanıyor: {}", username);
 
         // Maksimum parola yaşı 90 gün
         let _output = execute_command("chage", &["-M", "90", &username])?;
@@ -217,7 +217,7 @@ impl UserPolicyFixer {
 
     /// Sudo NOPASSWD güvenlik açığını düzelt
     fn fix_sudo_nopasswd(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔧 Sudo NOPASSWD güvenlik açığı düzeltiliyor...");
+        tracing::info!("Sudo NOPASSWD güvenlik açığı düzeltiliyor...");
 
         let sudoers_path = "/etc/sudoers";
         let backup_path = create_backup(sudoers_path)?;
@@ -267,7 +267,7 @@ impl UserPolicyFixer {
     fn disable_inactive_user(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let username = self.extract_username(&finding.affected_item)?;
         
-        tracing::info!("🚫 İnaktif kullanıcı devre dışı bırakılıyor: {}", username);
+        tracing::info!("İnaktif kullanıcı devre dışı bırakılıyor: {}", username);
 
         // Kullanıcı hesabını kilitle
         let _output = execute_command("passwd", &["-l", &username])?;
@@ -285,7 +285,7 @@ impl UserPolicyFixer {
 
     /// Root login'i devre dışı bırak
     fn disable_root_login(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔒 Root login devre dışı bırakılıyor...");
+        tracing::info!("Root login devre dışı bırakılıyor...");
 
         // Root hesabını kilitle
         let _output = execute_command("passwd", &["-l", "root"])?;
@@ -333,7 +333,7 @@ impl UserPolicyFixer {
     fn secure_shared_account(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let username = self.extract_username(&finding.affected_item)?;
         
-        tracing::info!("👥 Paylaşımlı hesap güvenliği artırılıyor: {}", username);
+        tracing::info!("Paylaşımlı hesap güvenliği artırılıyor: {}", username);
 
         // Zorunlu parola değişikliği
         let _output = execute_command("chage", &["-d", "0", &username])?;

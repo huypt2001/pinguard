@@ -63,13 +63,13 @@ impl Scanner for PackageAudit {
         let start_time = Instant::now();
         let mut result = ScanResult::new("Package Audit".to_string());
         
-        info!("📦 Package audit taraması başlatılıyor...");
+        info!("Package audit taraması başlatılıyor...");
         
         // Paket listesini al
         let packages = self.get_installed_packages()?;
         result.set_items_scanned(packages.len() as u32);
         
-        info!("📋 {} paket tespit edildi", packages.len());
+        info!("{} paket tespit edildi", packages.len());
         
         // Eski paketleri bul
         self.check_outdated_packages(&packages, &mut result)?;
@@ -78,7 +78,7 @@ impl Scanner for PackageAudit {
         if self.cve_manager.is_some() {
             match self.check_cve_vulnerabilities(&packages, &mut result) {
                 Ok(_) => {
-                    info!("✅ CVE kontrolü tamamlandı");
+                    info!("CVE kontrolü tamamlandı");
                 }
                 Err(e) => {
                     warn!("CVE kontrolü hatası: {}", e);
@@ -92,7 +92,7 @@ impl Scanner for PackageAudit {
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
         
-        info!("✅ Package audit tamamlandı: {} bulgu", result.findings.len());
+        info!("Package audit tamamlandı: {} bulgu", result.findings.len());
         
         Ok(result)
     }
@@ -172,7 +172,7 @@ impl PackageAudit {
 
     /// Güncel olmayan paketleri kontrol et
     fn check_outdated_packages(&self, _packages: &[Package], result: &mut ScanResult) -> Result<(), ScanError> {
-        info!("🔍 Güncel olmayan paketler kontrol ediliyor...");
+        info!("Güncel olmayan paketler kontrol ediliyor...");
         
         // apt list --upgradable komutu ile güncellenebilir paketleri bul
         let output = Command::new("apt")
@@ -220,7 +220,7 @@ impl PackageAudit {
 
     /// CVE güvenlik açıklarını kontrol et
     fn check_cve_vulnerabilities(&self, packages: &[Package], result: &mut ScanResult) -> Result<(), ScanError> {
-        info!("🔍 CVE güvenlik açıkları kontrol ediliyor...");
+        info!("CVE güvenlik açıkları kontrol ediliyor...");
 
         let cve_manager = match &self.cve_manager {
             Some(manager) => manager,
@@ -267,7 +267,7 @@ impl PackageAudit {
             }) {
                 Ok(cve_list) => {
                     if !cve_list.is_empty() {
-                        info!("⚠️ {} için {} CVE bulundu", package_name, cve_list.len());
+                        info!("{} için {} CVE bulundu", package_name, cve_list.len());
 
                         // Her CVE için finding oluştur
                         for cve_data in cve_list {
@@ -317,7 +317,7 @@ impl PackageAudit {
             std::thread::sleep(std::time::Duration::from_millis(100));
         }
 
-        info!("✅ CVE kontrolü tamamlandı: {} güvenlik açığı bulundu", cve_findings_count);
+        info!("CVE kontrolü tamamlandı: {} güvenlik açığı bulundu", cve_findings_count);
         Ok(())
     }
 

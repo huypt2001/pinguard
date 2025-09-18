@@ -37,7 +37,7 @@ impl FixerManager {
             .find(|f| f.can_fix(finding))
             .ok_or_else(|| FixError::UnsupportedFix(format!("No fixer available for: {}", finding.id)))?;
 
-        tracing::info!("🔧 Fixer bulundu: {} -> {}", finding.id, fixer.name());
+        tracing::info!("Fixer bulundu: {} -> {}", finding.id, fixer.name());
 
         // Kullanıcı onayı iste (eğer auto_approve false ise)
         if !auto_approve {
@@ -57,16 +57,16 @@ impl FixerManager {
     pub fn fix_findings(&self, findings: &[Finding], config: &Config, auto_approve: bool) -> Vec<FixResult> {
         let mut results = Vec::new();
 
-        tracing::info!("🚀 {} bulgu için düzeltme işlemi başlatılıyor...", findings.len());
+        tracing::info!("{} bulgu için düzeltme işlemi başlatılıyor...", findings.len());
 
         for finding in findings {
             match self.fix_finding(finding, config, auto_approve) {
                 Ok(result) => {
-                    tracing::info!("✅ {} düzeltildi: {}", finding.id, result.message);
+                    tracing::info!("{} düzeltildi: {}", finding.id, result.message);
                     results.push(result);
                 }
                 Err(e) => {
-                    tracing::error!("❌ {} düzeltilemedi: {}", finding.id, e);
+                    tracing::error!("{} düzeltilemedi: {}", finding.id, e);
                     let error_result = FixResult::new(finding.id.clone(), "Unknown".to_string())
                         .with_status(FixStatus::Failed)
                         .with_message(format!("Fix failed: {}", e));
@@ -81,36 +81,36 @@ impl FixerManager {
 
     /// Kullanıcıdan onay iste
     fn get_user_approval(&self, plan: &FixPlan) -> Result<bool, FixError> {
-        println!("\n🔧 Düzeltme Planı:");
-        println!("  📋 ID: {}", plan.finding_id);
-        println!("  🛠️  Fixer: {}", plan.fixer_name);
-        println!("  📝 Açıklama: {}", plan.description);
-        println!("  ⚠️  Risk Seviyesi: {:?}", plan.risk_level);
-        println!("  ⏱️  Tahmini Süre: {:?}", plan.estimated_duration);
+        println!("Düzeltme Planı:");
+        println!("ID: {}", plan.finding_id);
+        println!("Fixer: {}", plan.fixer_name);
+        println!("Açıklama: {}", plan.description);
+        println!("Risk Seviyesi: {:?}", plan.risk_level);
+        println!("Tahmini Süre: {:?}", plan.estimated_duration);
 
         if !plan.commands_to_execute.is_empty() {
-            println!("  📜 Çalıştırılacak Komutlar:");
+            println!("Çalıştırılacak Komutlar:");
             for cmd in &plan.commands_to_execute {
                 println!("    • {}", cmd);
             }
         }
 
         if !plan.files_to_modify.is_empty() {
-            println!("  📁 Değiştirilecek Dosyalar:");
+            println!("Değiştirilecek Dosyalar:");
             for file in &plan.files_to_modify {
                 println!("    • {}", file);
             }
         }
 
         if plan.backup_required {
-            println!("  💾 Backup oluşturulacak: Evet");
+            println!("Backup oluşturulacak: Evet");
         }
 
         if plan.reboot_required {
-            println!("  🔄 Yeniden başlatma gerekli: Evet");
+            println!("Yeniden başlatma gerekli: Evet");
         }
 
-        print!("\n❓ Bu düzeltmeyi uygulamak istiyorsunız? [y/N]: ");
+        print!("Bu düzeltmeyi uygulamak istiyorsunız? [y/N]: ");
         io::stdout().flush().map_err(|e| FixError::IoError(format!("Stdout flush error: {}", e)))?;
 
         let mut input = String::new();
@@ -123,7 +123,7 @@ impl FixerManager {
 
     /// Düzeltme özeti yazdır
     fn print_fix_summary(&self, results: &[FixResult]) {
-        println!("\n🎯 Düzeltme Özeti:");
+        println!("Düzeltme Özeti:");
         
         let successful = results.iter().filter(|r| r.status == FixStatus::Success).count();
         let failed = results.iter().filter(|r| r.status == FixStatus::Failed).count();
@@ -131,35 +131,35 @@ impl FixerManager {
         let requires_action = results.iter().filter(|r| r.status == FixStatus::RequiresUserAction).count();
         let requires_reboot = results.iter().filter(|r| r.status == FixStatus::RequiresReboot).count();
 
-        println!("  📊 Toplam: {}", results.len());
-        println!("  ✅ Başarılı: {}", successful);
-        println!("  ❌ Başarısız: {}", failed);
-        println!("  ⏸️  İptal Edildi: {}", cancelled);
-        println!("  👤 Kullanıcı Eylemi Gerekli: {}", requires_action);
-        println!("  🔄 Yeniden Başlatma Gerekli: {}", requires_reboot);
+        println!("Toplam: {}", results.len());
+        println!("Başarılı: {}", successful);
+        println!("Başarısız: {}", failed);
+        println!("İptal Edildi: {}", cancelled);
+        println!("Kullanıcı Eylemi Gerekli: {}", requires_action);
+        println!("Yeniden Başlatma Gerekli: {}", requires_reboot);
 
         // Detayları göster
         for result in results {
             match result.status {
-                FixStatus::Success => println!("  ✅ {}: {}", result.finding_id, result.message),
-                FixStatus::Failed => println!("  ❌ {}: {}", result.finding_id, result.message),
-                FixStatus::RequiresUserAction => println!("  👤 {}: {}", result.finding_id, result.message),
-                FixStatus::RequiresReboot => println!("  🔄 {}: {}", result.finding_id, result.message),
-                FixStatus::Cancelled => println!("  ⏸️  {}: {}", result.finding_id, result.message),
+                FixStatus::Success => println!("{}: {}", result.finding_id, result.message),
+                FixStatus::Failed => println!("{}: {}", result.finding_id, result.message),
+                FixStatus::RequiresUserAction => println!("{}: {}", result.finding_id, result.message),
+                FixStatus::RequiresReboot => println!("{}: {}", result.finding_id, result.message),
+                FixStatus::Cancelled => println!("{}: {}", result.finding_id, result.message),
                 _ => {}
             }
         }
 
         // Yeniden başlatma uyarısı
         if requires_reboot > 0 {
-            println!("\n⚠️  UYARI: {} düzeltme yeniden başlatma gerektiriyor!", requires_reboot);
+            println!("UYARI: {} düzeltme yeniden başlatma gerektiriyor!", requires_reboot);
             println!("   Sistemin tam güvenli hale gelmesi için yeniden başlatın: sudo reboot");
         }
 
         // Backup bilgisi
         let backup_count = results.iter().filter(|r| r.backup_created.is_some()).count();
         if backup_count > 0 {
-            println!("\n💾 {} dosya için backup oluşturuldu:", backup_count);
+            println!("\n{} dosya için backup oluşturuldu:", backup_count);
             for result in results {
                 if let Some(backup_path) = &result.backup_created {
                     println!("   • {}", backup_path);
@@ -202,7 +202,7 @@ impl FixerManager {
             .filter(|f| f.category == *category)
             .collect();
 
-        tracing::info!("🎯 {:?} kategorisinde {} bulgu düzeltilecek", category, filtered_findings.len());
+        tracing::info!("{:?} kategorisinde {} bulgu düzeltilecek", category, filtered_findings.len());
 
         self.fix_findings(&filtered_findings.into_iter().cloned().collect::<Vec<_>>(), config, auto_approve)
     }
@@ -211,7 +211,7 @@ impl FixerManager {
     pub fn comprehensive_hardening(&self, config: &Config) -> Result<Vec<FixResult>, FixError> {
         let mut results = Vec::new();
 
-        tracing::info!("🛡️ Kapsamlı sistem sertleştirmesi başlatılıyor...");
+        tracing::info!("Kapsamlı sistem sertleştirmesi başlatılıyor...");
 
         // Service hardening
         let service_hardener = ServiceHardener;
@@ -241,7 +241,7 @@ impl FixerManager {
             Err(e) => tracing::error!("Permission fixing failed: {}", e),
         }
 
-        tracing::info!("✅ Kapsamlı sistem sertleştirmesi tamamlandı: {} işlem", results.len());
+        tracing::info!("Kapsamlı sistem sertleştirmesi tamamlandı: {} işlem", results.len());
 
         Ok(results)
     }

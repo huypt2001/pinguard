@@ -27,7 +27,7 @@ impl Fixer for PermissionFixer {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
-        tracing::info!("🔒 Permission fix başlatılıyor: {}", finding.title);
+        tracing::info!("Permission fix başlatılıyor: {}", finding.title);
 
         // Finding türüne göre uygun düzeltme yöntemini seç
         if finding.id.starts_with("PERM-WORLD-WRITABLE") {
@@ -43,7 +43,7 @@ impl Fixer for PermissionFixer {
         }
 
         result = result.set_duration(start_time);
-        tracing::info!("✅ Permission fix tamamlandı: {}", result.message);
+        tracing::info!("Permission fix tamamlandı: {}", result.message);
         
         Ok(result)
     }
@@ -89,7 +89,7 @@ impl PermissionFixer {
     fn fix_world_writable_file(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let file_path = self.extract_file_path(&finding.affected_item)?;
         
-        tracing::info!("🔧 World-writable dosya düzeltiliyor: {}", file_path);
+        tracing::info!("World-writable dosya düzeltiliyor: {}", file_path);
 
         // Backup oluştur
         if Path::new(&file_path).is_file() {
@@ -102,11 +102,11 @@ impl PermissionFixer {
             .map_err(|e| FixError::FileError(format!("Cannot read file metadata: {}", e)))?;
         
         let current_mode = metadata.permissions().mode();
-        tracing::info!("📋 Mevcut izinler: {:o}", current_mode);
+        tracing::info!("Mevcut izinler: {:o}", current_mode);
 
         // World write iznini kaldır (o-w)
         let new_mode = current_mode & !0o002;
-        tracing::info!("📋 Yeni izinler: {:o}", new_mode);
+        tracing::info!("Yeni izinler: {:o}", new_mode);
 
         // İzinleri uygula
         let _output = execute_command("chmod", &[&format!("{:o}", new_mode), &file_path])?;
@@ -123,7 +123,7 @@ impl PermissionFixer {
     fn fix_risky_suid_file(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let file_path = self.extract_file_path(&finding.affected_item)?;
         
-        tracing::info!("🔧 Riskli SUID dosyası düzeltiliyor: {}", file_path);
+        tracing::info!("Riskli SUID dosyası düzeltiliyor: {}", file_path);
 
         // Bu dosyanın gerçekten SUID'a ihtiyacı var mı kontrol et
         if self.is_legitimate_suid_file(&file_path) {
@@ -151,7 +151,7 @@ impl PermissionFixer {
     fn fix_risky_sgid_file(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let file_path = self.extract_file_path(&finding.affected_item)?;
         
-        tracing::info!("🔧 Riskli SGID dosyası düzeltiliyor: {}", file_path);
+        tracing::info!("Riskli SGID dosyası düzeltiliyor: {}", file_path);
 
         // Bu dosyanın gerçekten SGID'a ihtiyacı var mı kontrol et
         if self.is_legitimate_sgid_file(&file_path) {
@@ -179,7 +179,7 @@ impl PermissionFixer {
     fn fix_generic_permission(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let file_path = self.extract_file_path(&finding.affected_item)?;
         
-        tracing::info!("🔧 Genel permission düzeltmesi: {}", file_path);
+        tracing::info!("Genel permission düzeltmesi: {}", file_path);
 
         // Backup oluştur
         if Path::new(&file_path).is_file() {
@@ -311,7 +311,7 @@ impl PermissionFixer {
         let current_mode = metadata.permissions().mode() & 0o777;
         
         if current_mode != expected_mode {
-            tracing::info!("🔧 Fixing permissions for {}: {:o} -> {:o}", file_path, current_mode, expected_mode);
+            tracing::info!("Fixing permissions for {}: {:o} -> {:o}", file_path, current_mode, expected_mode);
 
             // Backup oluştur
             if Path::new(file_path).is_file() {

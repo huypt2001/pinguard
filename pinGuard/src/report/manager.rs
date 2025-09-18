@@ -108,32 +108,32 @@ impl ReportManager {
 
     /// Rapor özeti konsola yazdır
     pub fn print_report_summary(&self, report: &SecurityReport) -> Result<(), ReportError> {
-        println!("\n🛡️ PINGUARD SECURITY REPORT SUMMARY");
+        println!("PINGUARD SECURITY REPORT SUMMARY");
         println!("=====================================");
         
-        println!("📋 Report ID: {}", report.metadata.report_id);
-        println!("🕒 Generated: {}", self.format_timestamp(report.metadata.generated_at));
-        println!("💻 System: {} ({})", 
+        println!("Report ID: {}", report.metadata.report_id);
+        println!("Generated: {}", self.format_timestamp(report.metadata.generated_at));
+        println!("System: {} ({})", 
             report.metadata.system_info.hostname,
             report.metadata.system_info.os_version
         );
         
-        println!("\n🎯 SECURITY DASHBOARD");
+        println!("SECURITY DASHBOARD");
         println!("---------------------");
         println!("Security Score: {}/100 ({})", 
             report.summary.security_score,
             report.summary.risk_level
         );
         
-        println!("\n📊 FINDINGS BREAKDOWN");
+        println!("FINDINGS BREAKDOWN");
         println!("---------------------");
-        println!("🚨 Critical: {}", report.summary.critical_findings);
-        println!("🔥 High:     {}", report.summary.high_findings);
-        println!("⚠️ Medium:   {}", report.summary.medium_findings);
-        println!("ℹ️ Low:      {}", report.summary.low_findings);
-        println!("📋 Total:    {}", report.summary.total_findings);
+        println!("Critical: {}", report.summary.critical_findings);
+        println!("High:     {}", report.summary.high_findings);
+        println!("Medium:   {}", report.summary.medium_findings);
+        println!("Low:      {}", report.summary.low_findings);
+        println!("Total:    {}", report.summary.total_findings);
 
-        println!("\n⏱️ SCAN PERFORMANCE");
+        println!("SCAN PERFORMANCE");
         println!("-------------------");
         println!("Duration: {} ms", report.metadata.scan_duration_ms);
         println!("Items/sec: {:.1}", report.statistics.scan_performance.items_per_second);
@@ -143,7 +143,7 @@ impl ReportManager {
         );
 
         if !report.recommendations.is_empty() {
-            println!("\n💡 TOP RECOMMENDATIONS");
+            println!("TOP RECOMMENDATIONS");
             println!("----------------------");
             for (i, recommendation) in report.recommendations.iter().take(3).enumerate() {
                 println!("{}. {}", i + 1, recommendation);
@@ -155,10 +155,10 @@ impl ReportManager {
 
     /// Rapor istatistiklerini detaylı yazdır
     pub fn print_detailed_statistics(&self, report: &SecurityReport) -> Result<(), ReportError> {
-        println!("\n📈 DETAILED STATISTICS");
+        println!("DETAILED STATISTICS");
         println!("======================");
 
-        println!("\n🏷️ Findings by Category:");
+        println!("Findings by Category:");
         for (category, count) in &report.statistics.findings_by_category {
             println!("  • {}: {}", category, count);
         }
@@ -168,13 +168,13 @@ impl ReportManager {
             println!("  • {}: {}", severity, count);
         }
 
-        println!("\n🔝 Top Vulnerabilities:");
+        println!("Top Vulnerabilities:");
         for (i, vuln) in report.statistics.top_vulnerabilities.iter().take(5).enumerate() {
             println!("  {}. {} ({} - Count: {})", 
                 i + 1, vuln.title, vuln.severity, vuln.count);
         }
 
-        println!("\n🔍 Scanner Performance:");
+        println!("Scanner Performance:");
         println!("  • Fastest: {}", report.statistics.scan_performance.fastest_scanner);
         println!("  • Slowest: {}", report.statistics.scan_performance.slowest_scanner);
         println!("  • Total Items: {}", report.statistics.scan_performance.total_items_scanned);
@@ -217,7 +217,7 @@ impl ReportManager {
 
     /// Format bilgilerini yazdır
     pub fn print_format_info(&self) {
-        println!("\n📋 SUPPORTED REPORT FORMATS");
+        println!("SUPPORTED REPORT FORMATS");
         println!("============================");
         
         let formats = [

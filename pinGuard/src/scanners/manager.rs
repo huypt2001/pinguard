@@ -32,20 +32,20 @@ impl ScannerManager {
     pub fn run_all_scans(&self, config: &Config) -> Vec<ScanResult> {
         let mut results = Vec::new();
         
-        tracing::info!("🚀 Tüm taramalar başlatılıyor...");
+        tracing::info!("Tüm taramalar başlatılıyor...");
         
         for scanner in &self.scanners {
             if scanner.is_enabled(config) {
-                tracing::info!("▶️  {} taraması başlatılıyor...", scanner.name());
+                tracing::info!("{} taraması başlatılıyor...", scanner.name());
                 
                 match scanner.scan() {
                     Ok(result) => {
-                        tracing::info!("✅ {} tamamlandı: {} bulgu", 
+                        tracing::info!("{} tamamlandı: {} bulgu", 
                             scanner.name(), result.findings.len());
                         results.push(result);
                     }
                     Err(e) => {
-                        tracing::error!("❌ {} taraması başarısız: {}", scanner.name(), e);
+                        tracing::error!("{} taraması başarısız: {}", scanner.name(), e);
                         // Hata durumunda bile boş bir result ekle
                         let mut error_result = ScanResult::new(scanner.name().to_string());
                         error_result.status = super::ScanStatus::Error(e.to_string());
@@ -53,17 +53,17 @@ impl ScannerManager {
                     }
                 }
             } else {
-                tracing::info!("⏭️  {} taraması devre dışı", scanner.name());
+                tracing::info!("{} taraması devre dışı", scanner.name());
             }
         }
         
-        tracing::info!("🎯 Tüm taramalar tamamlandı: {} scanner çalıştı", results.len());
+        tracing::info!("Tüm taramalar tamamlandı: {} scanner çalıştı", results.len());
         results
     }
 
     /// Belirli bir scanner'ı çalıştır
     pub fn run_specific_scan(&self, scanner_name: &str, config: &Config) -> Result<ScanResult, ScanError> {
-        tracing::info!("🎯 Belirli tarama başlatılıyor: {}", scanner_name);
+        tracing::info!("Belirli tarama başlatılıyor: {}", scanner_name);
         
         for scanner in &self.scanners {
             if scanner.name().to_lowercase().contains(&scanner_name.to_lowercase()) {

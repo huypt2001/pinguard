@@ -378,7 +378,7 @@ fn handle_scan_command(matches: &ArgMatches, config: &core::config::Config) {
                 }
             }
             Err(e) => {
-                error!("❌ Tarama başarısız: {}", e);
+                error!("Tarama başarısız: {}", e);
             }
         }
     } else {
@@ -387,72 +387,72 @@ fn handle_scan_command(matches: &ArgMatches, config: &core::config::Config) {
         let results = scanner_manager.run_all_scans(config);
         let summary = scanner_manager.generate_summary(&results);
         
-        info!("🎯 Tarama özeti:");
-        info!("   📊 Toplam tarama: {}", summary.total_scans);
-        info!("   ✅ Başarılı: {}", summary.successful_scans);
-        info!("   ⚠️  Uyarı: {}", summary.warning_scans);
-        info!("   ❌ Başarısız: {}", summary.failed_scans);
-        info!("   🔍 Toplam bulgu: {}", summary.total_findings);
-        info!("   🚨 Kritik: {}", summary.critical_issues);
-        info!("   🔥 Yüksek: {}", summary.high_issues);
-        info!("   ⚠️  Orta: {}", summary.medium_issues);
-        info!("   ℹ️  Düşük: {}", summary.low_issues);
-        info!("   📈 Güvenlik puanı: {}/100", summary.get_security_score());
-        info!("   🎯 Risk seviyesi: {}", summary.get_risk_level());
+        info!("Tarama özeti:");
+        info!("   Toplam tarama: {}", summary.total_scans);
+        info!("   Başarılı: {}", summary.successful_scans);
+        info!("   Uyarı: {}", summary.warning_scans);
+        info!("   Başarısız: {}", summary.failed_scans);
+        info!("   oplam bulgu: {}", summary.total_findings);
+        info!("   Kritik: {}", summary.critical_issues);
+        info!("   Yüksek: {}", summary.high_issues);
+        info!("   Orta: {}", summary.medium_issues);
+        info!("   Düşük: {}", summary.low_issues);
+        info!("   Güvenlik puanı: {}/100", summary.get_security_score());
+        info!("   Risk seviyesi: {}", summary.get_risk_level());
         
         // JSON çıktısı
         if let Some(output_file) = matches.get_one::<String>("output") {
             match scanner_manager.results_to_json(&results) {
                 Ok(json) => {
                     match std::fs::write(output_file, json) {
-                        Ok(_) => info!("📄 Tüm sonuçlar şuraya kaydedildi: {}", output_file),
-                        Err(e) => error!("❌ Dosya yazma hatası: {}", e),
+                        Ok(_) => info!("Tüm sonuçlar şuraya kaydedildi: {}", output_file),
+                        Err(e) => error!("Dosya yazma hatası: {}", e),
                     }
                 }
-                Err(e) => error!("❌ JSON oluşturma hatası: {}", e),
+                Err(e) => error!("JSON oluşturma hatası: {}", e),
             }
         }
     }
 }
 
 fn print_scan_summary(result: &scanners::ScanResult) {
-    println!("\n🔍 {} Tarama Sonucu", result.scanner_name);
+    println!("{} Tarama Sonucu", result.scanner_name);
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("📅 Tarama zamanı: {}", result.scan_time);
-    println!("⏱️  Süre: {} ms", result.metadata.duration_ms);
-    println!("📊 Taranan öğe: {}", result.metadata.items_scanned);
-    println!("🔍 Toplam bulgu: {}", result.findings.len());
+    println!("Tarama zamanı: {}", result.scan_time);
+    println!("Süre: {} ms", result.metadata.duration_ms);
+    println!("Taranan öğe: {}", result.metadata.items_scanned);
+    println!("Toplam bulgu: {}", result.findings.len());
     
     if !result.findings.is_empty() {
         println!("\n📋 Bulgular:");
         for (i, finding) in result.findings.iter().enumerate() {
             let severity_icon = match finding.severity {
-                scanners::Severity::Critical => "🚨",
-                scanners::Severity::High => "🔥",
-                scanners::Severity::Medium => "⚠️",
-                scanners::Severity::Low => "ℹ️",
-                scanners::Severity::Info => "💡",
+                scanners::Severity::Critical => "",
+                scanners::Severity::High => "",
+                scanners::Severity::Medium => "",
+                scanners::Severity::Low => "",
+                scanners::Severity::Info => "",
             };
             println!("{}. {} {} - {}", i + 1, severity_icon, finding.title, finding.description);
         }
     } else {
-        println!("✅ Güvenlik açığı bulunamadı!");
+        println!("Güvenlik açığı bulunamadı!");
     }
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 }
 
 fn handle_fix_command(matches: &ArgMatches, config: &core::config::Config) {
-    info!("🔧 Düzeltme başlatılıyor...");
+    info!("Düzeltme başlatılıyor...");
     
     let auto_fix = matches.get_flag("auto");
     if auto_fix {
         warn!("⚡ Otomatik düzeltme modu etkin - kullanıcı onayı istenmeyecek");
     } else {
-        info!("👤 İnteraktif düzeltme modu - her düzeltme için onay istenecek");
+        info!("İnteraktif düzeltme modu - her düzeltme için onay istenecek");
     }
 
     // Önce tarama yaparak bulguları elde et
-    info!("🔍 Mevcut güvenlik bulgularını alıyor...");
+    info!("Mevcut güvenlik bulgularını alıyor...");
     let scanner_manager = scanners::manager::ScannerManager::new();
     let scan_results = scanner_manager.run_all_scans(config);
     
@@ -463,11 +463,11 @@ fn handle_fix_command(matches: &ArgMatches, config: &core::config::Config) {
     }
 
     if all_findings.is_empty() {
-        info!("✅ Düzeltilecek güvenlik açığı bulunamadı!");
+        info!("Düzeltilecek güvenlik açığı bulunamadı!");
         return;
     }
 
-    info!("🎯 {} güvenlik açığı tespit edildi", all_findings.len());
+    info!("{} güvenlik açığı tespit edildi", all_findings.len());
 
     // Fixer manager oluştur
     let fixer_manager = fixers::manager::FixerManager::new();
@@ -482,21 +482,21 @@ fn handle_fix_command(matches: &ArgMatches, config: &core::config::Config) {
             "user" => all_findings.iter().filter(|f| f.id.starts_with("USR-")).cloned().collect(),
             "network" => all_findings.iter().filter(|f| f.id.starts_with("NET-")).cloned().collect(),
             _ => {
-                error!("❌ Geçersiz modül: {}. Geçerli modüller: package, kernel, permission, service, user, network", module);
+                error!("Geçersiz modül: {}. Geçerli modüller: package, kernel, permission, service, user, network", module);
                 return;
             }
         };
 
         if filtered_findings.is_empty() {
-            info!("ℹ️  '{}' modülü için düzeltilecek bulgu yok", module);
+            info!(" '{}' modülü için düzeltilecek bulgu yok", module);
             return;
         }
 
-        info!("🎯 '{}' modülü için {} bulgu düzeltilecek", module, filtered_findings.len());
+        info!("'{}' modülü için {} bulgu düzeltilecek", module, filtered_findings.len());
         let _results = fixer_manager.fix_findings(&filtered_findings, config, auto_fix);
     } else {
         // Tüm bulguları düzelt
-        info!("🚀 Tüm bulgular düzeltilecek...");
+        info!("Tüm bulgular düzeltilecek...");
 
         // Önceliğe göre sırala (kritik -> yüksek -> orta -> düşük)
         let prioritized_findings = fixer_manager.prioritize_fixes(&all_findings);
@@ -505,7 +505,7 @@ fn handle_fix_command(matches: &ArgMatches, config: &core::config::Config) {
         // Düzeltilemeyen bulguları bildir
         let unfixable = fixer_manager.get_unfixable_findings(&all_findings);
         if !unfixable.is_empty() {
-            warn!("⚠️  {} bulgu otomatik olarak düzeltilemez:", unfixable.len());
+            warn!(" {} bulgu otomatik olarak düzeltilemez:", unfixable.len());
             for finding in unfixable {
                 warn!("   • {}: {}", finding.id, finding.title);
             }
@@ -515,11 +515,11 @@ fn handle_fix_command(matches: &ArgMatches, config: &core::config::Config) {
         let _results = fixer_manager.fix_findings(&prioritized_findings_owned, config, auto_fix);
     }
 
-    info!("✅ Düzeltme işlemi tamamlandı!");
+    info!("Düzeltme işlemi tamamlandı!");
 }
 
 fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
-    info!("📊 Rapor oluşturuluyor...");
+    info!("Rapor oluşturuluyor...");
     
     // Rapor manager oluştur
     let mut report_manager = report::manager::ReportManager::default();
@@ -531,44 +531,44 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
                 error!("❌ Çıktı dizini ayarlanamadı: {}", e);
                 return;
             }
-            info!("📁 Çıktı dizini: {}", output);
+            info!("Çıktı dizini: {}", output);
         }
     }
 
     let security_report = if matches.get_flag("scan") {
         // Yeni tarama yap
-        info!("🔍 Yeni tarama başlatılıyor...");
+        info!("Yeni tarama başlatılıyor...");
         let scanner_manager = scanners::manager::ScannerManager::new();
         let scan_start = std::time::Instant::now();
         let scan_results = scanner_manager.run_all_scans(config);
         let scan_duration = scan_start.elapsed().as_millis() as u64;
         
-        info!("✅ Tarama tamamlandı ({} ms)", scan_duration);
+        info!("Tarama tamamlandı ({} ms)", scan_duration);
         
         // SecurityReport oluştur
         Some(report::SecurityReport::new(scan_results, None, scan_duration))
         
     } else if let Some(input_file) = matches.get_one::<String>("input") {
         // Mevcut tarama sonuçlarını yükle
-        info!("📥 Tarama sonuçları yükleniyor: {}", input_file);
+        info!("Tarama sonuçları yükleniyor: {}", input_file);
         
         match std::fs::read_to_string(input_file) {
             Ok(json_content) => {
                 // Önce SecurityReport olarak okumayı dene
                 match serde_json::from_str::<report::SecurityReport>(&json_content) {
                     Ok(security_report) => {
-                        info!("✅ SecurityReport yüklendi");
+                        info!("SecurityReport yüklendi");
                         Some(security_report)
                     }
                     Err(_) => {
                         // SecurityReport olarak okunamazsa Vec<ScanResult> dene
                         match serde_json::from_str::<Vec<scanners::ScanResult>>(&json_content) {
                             Ok(scan_results) => {
-                                info!("✅ {} tarama sonucu yüklendi", scan_results.len());
+                                info!("{} tarama sonucu yüklendi", scan_results.len());
                                 Some(report::SecurityReport::new(scan_results, None, 0))
                             }
                             Err(e) => {
-                                error!("❌ JSON parse hatası: {}", e);
+                                error!("JSON parse hatası: {}", e);
                                 None
                             }
                         }
@@ -576,13 +576,13 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
                 }
             }
             Err(e) => {
-                error!("❌ Dosya okuma hatası: {}", e);
+                error!("Dosya okuma hatası: {}", e);
                 None
             }
         }
     } else {
         // Hızlı tarama yap (input dosyası verilmemişse)
-        warn!("⚠️  Girdi dosyası belirtilmedi, hızlı tarama yapılıyor...");
+        warn!(" Girdi dosyası belirtilmedi, hızlı tarama yapılıyor...");
         let scanner_manager = scanners::manager::ScannerManager::new();
         let scan_start = std::time::Instant::now();
         let scan_results = scanner_manager.run_all_scans(config);
@@ -592,17 +592,17 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
     };
 
     let Some(security_report) = security_report else {
-        error!("❌ Rapor oluşturulamadı: Geçerli tarama verisi bulunamadı");
+        error!("Rapor oluşturulamadı: Geçerli tarama verisi bulunamadı");
         return;
     };
 
     // Sadece özet isteniyorsa
     if matches.get_flag("summary") {
         if let Err(e) = report_manager.print_report_summary(&security_report) {
-            error!("❌ Özet yazdırma hatası: {}", e);
+            error!("Özet yazdırma hatası: {}", e);
         }
         if let Err(e) = report_manager.print_detailed_statistics(&security_report) {
-            error!("❌ İstatistik yazdırma hatası: {}", e);
+            error!("İstatistik yazdırma hatası: {}", e);
         }
         return;
     }
@@ -613,19 +613,19 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
     match format_str.as_str() {
         "all" => {
             // Tüm formatları oluştur
-            info!("� Tüm rapor formatları oluşturuluyor...");
+            info!("Tüm rapor formatları oluşturuluyor...");
             
             let base_filename = format!("pinGuard-report-{}", security_report.metadata.report_id);
             
             match report_manager.generate_all_formats(&security_report, Some(base_filename)) {
                 Ok(files) => {
-                    info!("✅ Tüm raporlar oluşturuldu:");
+                    info!("Tüm raporlar oluşturuldu:");
                     for file in files {
-                        info!("   📄 {}", file);
+                        info!("   {}", file);
                     }
                 }
                 Err(e) => {
-                    error!("❌ Rapor oluşturma hatası: {}", e);
+                    error!("Rapor oluşturma hatası: {}", e);
                 }
             }
         }
@@ -635,13 +635,13 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
             let report_format = match format_name.parse::<report::ReportFormat>() {
                 Ok(format) => format,
                 Err(e) => {
-                    error!("❌ Geçersiz rapor formatı '{}': {}", format_name, e);
-                    info!("✅ Geçerli formatlar: json, html, pdf, all");
+                    error!("Geçersiz rapor formatı '{}': {}", format_name, e);
+                    info!("Geçerli formatlar: json, html, pdf, all");
                     return;
                 }
             };
 
-            info!("📋 {} formatında rapor oluşturuluyor...", format_name.to_uppercase());
+            info!("{} formatında rapor oluşturuluyor...", format_name.to_uppercase());
 
             // Çıktı dosya adını belirle
             let output_filename = if let Some(output) = matches.get_one::<String>("output") {
@@ -656,24 +656,24 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
 
             match report_manager.generate_report(&security_report, &report_format, output_filename) {
                 Ok(output_path) => {
-                    info!("✅ Rapor başarıyla oluşturuldu: {}", output_path);
+                    info!("Rapor başarıyla oluşturuldu: {}", output_path);
                     
                     // Rapor hakkında bilgi ver
-                    info!("📊 Rapor bilgileri:");
-                    info!("   🆔 Report ID: {}", security_report.metadata.report_id);
-                    info!("   📈 Güvenlik puanı: {}/100", security_report.summary.security_score);
-                    info!("   🎯 Risk seviyesi: {}", security_report.summary.risk_level);
-                    info!("   🔍 Toplam bulgu: {}", security_report.summary.total_findings);
-                    info!("   🚨 Kritik: {}", security_report.summary.critical_findings);
-                    info!("   🔥 Yüksek: {}", security_report.summary.high_findings);
+                    info!("Rapor bilgileri:");
+                    info!("   Report ID: {}", security_report.metadata.report_id);
+                    info!("   Güvenlik puanı: {}/100", security_report.summary.security_score);
+                    info!("   Risk seviyesi: {}", security_report.summary.risk_level);
+                    info!("   Toplam bulgu: {}", security_report.summary.total_findings);
+                    info!("   Kritik: {}", security_report.summary.critical_findings);
+                    info!("   Yüksek: {}", security_report.summary.high_findings);
                     
                     // HTML/PDF raporları için ek bilgi
                     if matches!(&report_format, report::ReportFormat::Html) {
-                        info!("💡 Raporu görüntülemek için uygun program ile açın");
+                        info!("Raporu görüntülemek için uygun program ile açın");
                     }
                 }
                 Err(e) => {
-                    error!("❌ Rapor oluşturma hatası: {}", e);
+                    error!("Rapor oluşturma hatası: {}", e);
                 }
             }
         }
@@ -688,12 +688,12 @@ fn handle_report_command(matches: &ArgMatches, config: &core::config::Config) {
 
 fn handle_config_command(matches: &ArgMatches, config: &core::config::Config) {
     if matches.get_flag("show") {
-        info!("📋 Mevcut konfigürasyon:");
+        info!("Mevcut konfigürasyon:");
         println!("{:#?}", config);
     }
     
     if matches.get_flag("init") {
-        info!("🔧 Varsayılan config dosyası oluşturuluyor...");
+        info!("Varsayılan config dosyası oluşturuluyor...");
         
         let config_content = r#"# PinGuard Configuration File
 # Tarama ayarları
@@ -742,8 +742,8 @@ fixer:
 "#;
         
         match std::fs::write("config.yaml", config_content) {
-            Ok(_) => info!("✅ Varsayılan config dosyası oluşturuldu: config.yaml"),
-            Err(e) => error!("❌ Config dosyası oluşturma hatası: {}", e),
+            Ok(_) => info!("Varsayılan config dosyası oluşturuldu: config.yaml"),
+            Err(e) => error!("Config dosyası oluşturma hatası: {}", e),
         }
     }
 }
@@ -751,93 +751,93 @@ fixer:
 fn handle_database_command(matches: &ArgMatches, _config: &core::config::Config) {
     match matches.subcommand() {
         Some(("init", _)) => {
-            info!("💾 Veritabanı başlatılıyor...");
+            info!("Veritabanı başlatılıyor...");
             match DatabaseManager::new_default() {
                 Ok(mut db) => {
-                    info!("✅ Veritabanı başarıyla başlatıldı");
+                    info!("Veritabanı başarıyla başlatıldı");
                     match db.run_migrations() {
-                        Ok(_) => info!("✅ Migration'lar başarıyla uygulandı"),
-                        Err(e) => error!("❌ Migration hatası: {}", e),
+                        Ok(_) => info!("Migration'lar başarıyla uygulandı"),
+                        Err(e) => error!("Migration hatası: {}", e),
                     }
                 }
-                Err(e) => error!("❌ Veritabanı başlatma hatası: {}", e),
+                Err(e) => error!("Veritabanı başlatma hatası: {}", e),
             }
         }
         
         Some(("migrate", _)) => {
-            info!("🔄 Migration'lar çalıştırılıyor...");
+            info!("Migration'lar çalıştırılıyor...");
             match DatabaseManager::new_default() {
                 Ok(mut db) => {
                     match db.run_migrations() {
-                        Ok(_) => info!("✅ Migration'lar başarıyla uygulandı"),
-                        Err(e) => error!("❌ Migration hatası: {}", e),
+                        Ok(_) => info!("Migration'lar başarıyla uygulandı"),
+                        Err(e) => error!("Migration hatası: {}", e),
                     }
                 }
-                Err(e) => error!("❌ Veritabanı bağlantı hatası: {}", e),
+                Err(e) => error!("Veritabanı bağlantı hatası: {}", e),
             }
         }
         
         Some(("health", _)) => {
-            info!("🔍 Veritabanı sağlık kontrolü yapılıyor...");
+            info!("Veritabanı sağlık kontrolü yapılıyor...");
             match DatabaseManager::new_default() {
                 Ok(db) => {
                     match db.health_check() {
                         Ok(health) => {
                             if health.is_healthy() {
-                                info!("✅ Veritabanı sağlıklı");
+                                info!("Veritabanı sağlıklı");
                             } else {
-                                warn!("⚠️ Veritabanı sağlık sorunları tespit edildi");
+                                warn!("Veritabanı sağlık sorunları tespit edildi");
                             }
                         }
-                        Err(e) => error!("❌ Sağlık kontrolü hatası: {}", e),
+                        Err(e) => error!("Sağlık kontrolü hatası: {}", e),
                     }
                 }
-                Err(e) => error!("❌ Veritabanı bağlantı hatası: {}", e),
+                Err(e) => error!("Veritabanı bağlantı hatası: {}", e),
             }
         }
         
         Some(("stats", _)) => {
-            info!("📊 Veritabanı istatistikleri alınıyor...");
+            info!("Veritabanı istatistikleri alınıyor...");
             match DatabaseManager::new_default() {
                 Ok(db) => {
                     match db.health_check() {
                         Ok(health) => {
-                            info!("📈 Veritabanı İstatistikleri:");
-                            info!("   📁 Dosya boyutu: {:.2} MB", health.database_size_mb());
-                            info!("   🔗 Bağlantı durumu: {}", if health.is_healthy() { "Sağlıklı" } else { "Sorunlu" });
-                            info!("   📊 Toplam tablo sayısı: ~5 (CVE cache, scan history, schedule logs vb.)");
-                            info!("   🕒 Son kontrol: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"));
+                            info!("Veritabanı İstatistikleri:");
+                            info!("   Dosya boyutu: {:.2} MB", health.database_size_mb());
+                            info!("   Bağlantı durumu: {}", if health.is_healthy() { "Sağlıklı" } else { "Sorunlu" });
+                            info!("   Toplam tablo sayısı: ~5 (CVE cache, scan history, schedule logs vb.)");
+                            info!("   Son kontrol: {}", chrono::Utc::now().format("%Y-%m-%d %H:%M:%S"));
                         }
-                        Err(e) => error!("❌ Veritabanı istatistikleri alınamadı: {}", e),
+                        Err(e) => error!("Veritabanı istatistikleri alınamadı: {}", e),
                     }
                 }
-                Err(e) => error!("❌ Veritabanı bağlantı hatası: {}", e),
+                Err(e) => error!("Veritabanı bağlantı hatası: {}", e),
             }
         }
         
         Some(("cleanup", sub_matches)) => {
             let days = *sub_matches.get_one::<u32>("days").unwrap_or(&30);
-            info!("🧹 {} günden eski veriler temizleniyor...", days);
+            info!("{} günden eski veriler temizleniyor...", days);
             match DatabaseManager::new_default() {
                 Ok(_db) => {
                     // CVE cache temizleme
                     let cleanup_date = chrono::Utc::now() - chrono::Duration::days(days as i64);
-                    info!("📅 {} tarihinden eski veriler temizlenecek", cleanup_date.format("%Y-%m-%d"));
+                    info!("{} tarihinden eski veriler temizlenecek", cleanup_date.format("%Y-%m-%d"));
                     
                     // Burada gerçek cleanup implementasyonu olacak
                     // Şimdilik simüle ediyoruz
                     let cleaned_count = 0; // Gerçek cleanup sonrası bu güncellenecek
                     
-                    info!("✅ Temizlik tamamlandı: {} kayıt silindi", cleaned_count);
-                    info!("💡 Not: Cleanup functionality henüz tam implementasyonda");
+                    info!("Temizlik tamamlandı: {} kayıt silindi", cleaned_count);
+                    info!("Not: Cleanup functionality henüz tam implementasyonda");
                 }
-                Err(e) => error!("❌ Veritabanı bağlantı hatası: {}", e),
+                Err(e) => error!("Veritabanı bağlantı hatası: {}", e),
             }
         }
         
         _ => {
-            error!("❌ Geçersiz database komutu");
-            info!("ℹ️ Kullanılabilir komutlar: init, migrate, health, stats, cleanup");
+            error!("Geçersiz database komutu");
+            info!("Kullanılabilir komutlar: init, migrate, health, stats, cleanup");
         }
     }
 }
@@ -847,7 +847,7 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
     let rt = match tokio::runtime::Runtime::new() {
         Ok(rt) => rt,
         Err(e) => {
-            error!("❌ Async runtime hatası: {}", e);
+            error!("Async runtime hatası: {}", e);
             return;
         }
     };
@@ -857,7 +857,7 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
         let db = match DatabaseManager::new_default() {
             Ok(db) => db,
             Err(e) => {
-                error!("❌ Veritabanı bağlantı hatası: {}", e);
+                error!("Veritabanı bağlantı hatası: {}", e);
                 return;
             }
         };
@@ -865,7 +865,7 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
         let cve_manager = match CveManager::new(db) {
             Ok(manager) => manager,
             Err(e) => {
-                error!("❌ CVE manager hatası: {}", e);
+                error!("CVE manager hatası: {}", e);
                 return;
             }
         };
@@ -873,11 +873,11 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
         match matches.subcommand() {
             Some(("sync", sub_matches)) => {
                 let days = *sub_matches.get_one::<u32>("days").unwrap_or(&7);
-                info!("🔄 Son {} günün CVE'leri senkronize ediliyor...", days);
+                info!("Son {} günün CVE'leri senkronize ediliyor...", days);
                 
                 match cve_manager.sync_recent_cves(days).await {
-                    Ok(count) => info!("✅ {} CVE senkronize edildi", count),
-                    Err(e) => error!("❌ CVE senkronizasyon hatası: {}", e),
+                    Ok(count) => info!("{} CVE senkronize edildi", count),
+                    Err(e) => error!("CVE senkronizasyon hatası: {}", e),
                 }
             }
             
@@ -885,30 +885,30 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
                 let query = sub_matches.get_one::<String>("query").unwrap();
                 let limit = *sub_matches.get_one::<usize>("limit").unwrap_or(&10);
                 
-                info!("🔍 '{}' için CVE aranıyor (limit: {})...", query, limit);
+                info!("'{}' için CVE aranıyor (limit: {})...", query, limit);
                 
                 match cve_manager.find_cves_for_package(query).await {
                     Ok(cves) => {
                         let limited_cves: Vec<_> = cves.into_iter().take(limit).collect();
                         
                         if limited_cves.is_empty() {
-                            info!("🔍 '{}' için CVE bulunamadı", query);
+                            info!("'{}' için CVE bulunamadı", query);
                         } else {
-                            info!("✅ {} CVE bulundu:", limited_cves.len());
+                            info!("{} CVE bulundu:", limited_cves.len());
                             for cve in limited_cves {
-                                println!("\n📋 {} ({:?})", cve.cve_id, cve.severity);
-                                println!("   📝 {}", cve.description);
+                                println!("{} ({:?})", cve.cve_id, cve.severity);
+                                println!("{}", cve.description);
                                 if let Some(score) = cve.score {
-                                    println!("   📊 CVSS Score: {:.1}", score);
+                                    println!(" CVSS Score: {:.1}", score);
                                 }
-                                println!("   📅 Published: {}", cve.published_date.format("%Y-%m-%d"));
+                                println!("   Published: {}", cve.published_date.format("%Y-%m-%d"));
                                 if !cve.references.is_empty() {
-                                    println!("   🔗 References: {}", cve.references.join(", "));
+                                    println!("   References: {}", cve.references.join(", "));
                                 }
                             }
                         }
                     }
-                    Err(e) => error!("❌ CVE arama hatası: {}", e),
+                    Err(e) => error!("CVE arama hatası: {}", e),
                 }
             }
             
@@ -918,37 +918,37 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
                 
                 match cve_manager.get_cve(cve_id).await {
                     Ok(cve) => {
-                        println!("\n📋 CVE Detayları: {}", cve.cve_id);
-                        println!("   🔴 Severity: {:?}", cve.severity);
-                        println!("   📝 Description: {}", cve.description);
+                        println!("CVE Detayları: {}", cve.cve_id);
+                        println!("   Severity: {:?}", cve.severity);
+                        println!("   Description: {}", cve.description);
                         if let Some(score) = cve.score {
-                            println!("   📊 CVSS Score: {:.1}", score);
+                            println!("   CVSS Score: {:.1}", score);
                         }
                         if let Some(vector) = &cve.vector_string {
-                            println!("   🎯 CVSS Vector: {}", vector);
+                            println!("   CVSS Vector: {}", vector);
                         }
-                        println!("   📅 Published: {}", cve.published_date.format("%Y-%m-%d"));
-                        println!("   🔄 Last Modified: {}", cve.last_modified.format("%Y-%m-%d"));
+                        println!("   Published: {}", cve.published_date.format("%Y-%m-%d"));
+                        println!("   Last Modified: {}", cve.last_modified.format("%Y-%m-%d"));
                         
                         if !cve.affected_packages.is_empty() {
-                            println!("   🎯 Affected Products:");
+                            println!("   Affected Products:");
                             for product in &cve.affected_packages {
                                 println!("      • {}", product);
                             }
                         }
                         
                         if !cve.references.is_empty() {
-                            println!("   🔗 References:");
+                            println!("   References:");
                             for reference in &cve.references {
                                 println!("      • {}", reference);
                             }
                         }
                         
                         if !cve.cpe_matches.is_empty() {
-                            println!("   💻 CPE Matches: {} configurations", cve.cpe_matches.len());
+                            println!("   CPE Matches: {} configurations", cve.cpe_matches.len());
                         }
                     }
-                    Err(e) => error!("❌ CVE getirme hatası: {}", e),
+                    Err(e) => error!("CVE getirme hatası: {}", e),
                 }
             }
             
@@ -957,42 +957,42 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
                 
                 match cve_manager.health_check().await {
                     Ok(health) => {
-                        println!("\n📊 CVE Manager Sağlık Durumu:");
-                        println!("   🌐 NVD API: {}", if health.nvd_api_healthy { "✅ Sağlıklı" } else { "❌ Sorunlu" });
-                        println!("   📊 Response Time: {} ms", health.nvd_response_time_ms);
-                        println!("   💾 Cache: {}", if health.cache_healthy { "✅ Sağlıklı" } else { "❌ Sorunlu" });
-                        println!("   📋 Cache Entries: {}", health.cache_entries);
-                        println!("   📈 Hit Rate: {:.1}%", health.cache_hit_rate * 100.0);
-                        println!("   💽 Cache Size: {:.2} MB", health.cache_size_mb);
-                        println!("   🔄 Auto Refresh: {}", if health.auto_refresh_enabled { "✅ Etkin" } else { "❌ Devre dışı" });
-                        println!("   🛡️ Fallback: {}", if health.fallback_enabled { "✅ Etkin" } else { "❌ Devre dışı" });
-                        println!("   🕐 Last Check: {}", health.last_check.format("%Y-%m-%d %H:%M:%S UTC"));
+                        println!("CVE Manager Sağlık Durumu:");
+                        println!("   NVD API: {}", if health.nvd_api_healthy { "✅ Sağlıklı" } else { "❌ Sorunlu" });
+                        println!("   Response Time: {} ms", health.nvd_response_time_ms);
+                        println!("   Cache: {}", if health.cache_healthy { "✅ Sağlıklı" } else { "❌ Sorunlu" });
+                        println!("   Cache Entries: {}", health.cache_entries);
+                        println!("   Hit Rate: {:.1}%", health.cache_hit_rate * 100.0);
+                        println!("   Cache Size: {:.2} MB", health.cache_size_mb);
+                        println!("   Auto Refresh: {}", if health.auto_refresh_enabled { "✅ Etkin" } else { "❌ Devre dışı" });
+                        println!("   Fallback: {}", if health.fallback_enabled { "✅ Etkin" } else { "❌ Devre dışı" });
+                        println!("   Last Check: {}", health.last_check.format("%Y-%m-%d %H:%M:%S UTC"));
                         
                         if health.is_healthy() {
-                            info!("✅ CVE manager tamamen sağlıklı");
+                            info!("CVE manager tamamen sağlıklı");
                         } else {
-                            warn!("⚠️ CVE manager'da sorunlar tespit edildi");
+                            warn!("CVE manager'da sorunlar tespit edildi");
                         }
                     }
-                    Err(e) => error!("❌ Sağlık kontrolü hatası: {}", e),
+                    Err(e) => error!("Sağlık kontrolü hatası: {}", e),
                 }
             }
             
             Some(("cache", cache_matches)) => {
                 match cache_matches.subcommand() {
                     Some(("stats", _)) => {
-                        info!("📊 CVE cache istatistikleri alınıyor...");
+                        info!("CVE cache istatistikleri alınıyor...");
                         match cve_manager.health_check().await {
                             Ok(health) => {
-                                info!("📈 CVE Cache İstatistikleri:");
-                                info!("   📋 Toplam entry: {}", health.cache_entries);
-                                info!("   📊 Hit oranı: {:.1}%", health.cache_hit_rate * 100.0);
-                                info!("   💾 Cache boyutu: {:.2} MB", health.cache_size_mb);
-                                info!("   🔄 Auto refresh: {}", if health.auto_refresh_enabled { "Etkin" } else { "Devre dışı" });
-                                info!("   🛡️ Fallback: {}", if health.fallback_enabled { "Etkin" } else { "Devre dışı" });
-                                info!("   🕒 Son kontrol: {}", health.last_check.format("%Y-%m-%d %H:%M:%S"));
+                                info!("CVE Cache İstatistikleri:");
+                                info!("   Toplam entry: {}", health.cache_entries);
+                                info!("   Hit oranı: {:.1}%", health.cache_hit_rate * 100.0);
+                                info!("   Cache boyutu: {:.2} MB", health.cache_size_mb);
+                                info!("   Auto refresh: {}", if health.auto_refresh_enabled { "Etkin" } else { "Devre dışı" });
+                                info!("   Fallback: {}", if health.fallback_enabled { "Etkin" } else { "Devre dışı" });
+                                info!("   Son kontrol: {}", health.last_check.format("%Y-%m-%d %H:%M:%S"));
                             }
-                            Err(e) => error!("❌ Cache istatistikleri alınamadı: {}", e),
+                            Err(e) => error!("Cache istatistikleri alınamadı: {}", e),
                         }
                     }
                     
@@ -1000,47 +1000,47 @@ fn handle_cve_command(matches: &ArgMatches, _config: &core::config::Config) {
                         info!("🧹 Expire olmuş cache temizleniyor...");
                         match cve_manager.maintain_cache().await {
                             Ok(result) => {
-                                info!("✅ Cache maintenance tamamlandı:");
-                                info!("   🗑️ Temizlenen entries: {}", result.expired_entries_cleaned);
-                                info!("   📋 Toplam entries: {}", result.total_entries);
-                                info!("   💽 Cache boyutu: {:.2} MB", result.cache_size_mb);
-                                info!("   🔄 Sync edilen CVE: {}", result.synced_recent_cves);
+                                info!("Cache maintenance tamamlandı:");
+                                info!("   Temizlenen entries: {}", result.expired_entries_cleaned);
+                                info!("   Toplam entries: {}", result.total_entries);
+                                info!("   Cache boyutu: {:.2} MB", result.cache_size_mb);
+                                info!("   Sync edilen CVE: {}", result.synced_recent_cves);
                             }
-                            Err(e) => error!("❌ Cache maintenance hatası: {}", e),
+                            Err(e) => error!("Cache maintenance hatası: {}", e),
                         }
                     }
                     
                     Some(("refresh", _)) => {
-                        info!("🔄 Cache yenileniyor...");
+                        info!("Cache yenileniyor...");
                         match cve_manager.sync_recent_cves(1).await {
-                            Ok(count) => info!("✅ {} fresh CVE cache'e eklendi", count),
-                            Err(e) => error!("❌ Cache refresh hatası: {}", e),
+                            Ok(count) => info!("{} fresh CVE cache'e eklendi", count),
+                            Err(e) => error!("Cache refresh hatası: {}", e),
                         }
                     }
                     
                     _ => {
-                        error!("❌ Geçersiz cache komutu");
-                        info!("ℹ️ Kullanılabilir komutlar: stats, cleanup, refresh");
+                        error!("Geçersiz cache komutu");
+                        info!("Kullanılabilir komutlar: stats, cleanup, refresh");
                     }
                 }
             }
             
             _ => {
-                error!("❌ Geçersiz CVE komutu");
-                info!("ℹ️ Kullanılabilir komutlar: sync, search, get, health, cache");
+                error!("Geçersiz CVE komutu");
+                info!("Kullanılabilir komutlar: sync, search, get, health, cache");
             }
         }
     });
 }
 
 fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) {
-    info!("⏰ Schedule komutu çalıştırılıyor...");
+    info!("Schedule komutu çalıştırılıyor...");
 
     // Database bağlantısını kur
     let db = match DatabaseManager::new(&config.database.path) {
         Ok(db) => db,
         Err(e) => {
-            error!("❌ Database bağlantı hatası: {}", e);
+            error!("Database bağlantı hatası: {}", e);
             return;
         }
     };
@@ -1049,7 +1049,7 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
     let mut scheduler = match Scheduler::new(db) {
         Ok(scheduler) => scheduler,
         Err(e) => {
-            error!("❌ Scheduler oluşturma hatası: {}", e);
+            error!("Scheduler oluşturma hatası: {}", e);
             return;
         }
     };
@@ -1068,8 +1068,8 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
                 "quick" => scheduler::ScanType::Quick,
                 "security" => scheduler::ScanType::Security,
                 _ => {
-                    error!("❌ Geçersiz tarama türü: {}", scan_type_str);
-                    info!("ℹ️ Geçerli türler: full, quick, security");
+                    error!("Geçersiz tarama türü: {}", scan_type_str);
+                    info!("Geçerli türler: full, quick, security");
                     return;
                 }
             };
@@ -1084,13 +1084,13 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
             info!("🔧 Schedule etkinleştiriliyor: {}", name);
             match scheduler.enable(schedule_config) {
                 Ok(_) => {
-                    info!("✅ Schedule başarıyla etkinleştirildi: {}", name);
-                    info!("   📅 Zamanlama: {}", schedule);
-                    info!("   📝 Açıklama: {}", description);
-                    info!("   🔧 Systemd timer ve service dosyaları oluşturuldu");
+                    info!("Schedule başarıyla etkinleştirildi: {}", name);
+                    info!("   Zamanlama: {}", schedule);
+                    info!("   Açıklama: {}", description);
+                    info!("   Systemd timer ve service dosyaları oluşturuldu");
                 }
                 Err(e) => {
-                    error!("❌ Schedule etkinleştirme hatası: {}", e);
+                    error!("Schedule etkinleştirme hatası: {}", e);
                 }
             }
         }
@@ -1098,40 +1098,40 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
         Some(("disable", sub_matches)) => {
             let name = sub_matches.get_one::<String>("name").unwrap();
             
-            info!("🛑 Schedule devre dışı bırakılıyor: {}", name);
+            info!("Schedule devre dışı bırakılıyor: {}", name);
             match scheduler.disable(name) {
                 Ok(_) => {
-                    info!("✅ Schedule başarıyla devre dışı bırakıldı: {}", name);
-                    info!("   🗑️ Systemd timer ve service dosyaları kaldırıldı");
+                    info!("Schedule başarıyla devre dışı bırakıldı: {}", name);
+                    info!("   Systemd timer ve service dosyaları kaldırıldı");
                 }
                 Err(e) => {
-                    error!("❌ Schedule devre dışı bırakma hatası: {}", e);
+                    error!("Schedule devre dışı bırakma hatası: {}", e);
                 }
             }
         }
 
         Some(("list", _)) => {
-            info!("📋 Aktif schedule'lar listeleniyor...");
+            info!("Aktif schedule'lar listeleniyor...");
             match scheduler.list_schedules() {
                 Ok(schedules) => {
                     if schedules.is_empty() {
-                        info!("📄 Henüz aktif schedule yok");
-                        info!("ℹ️ 'pinGuard schedule presets' ile hazır schedule'ları yükleyebilirsiniz");
+                        info!("Henüz aktif schedule yok");
+                        info!("'pinGuard schedule presets' ile hazır schedule'ları yükleyebilirsiniz");
                     } else {
-                        info!("📋 {} aktif schedule bulundu:", schedules.len());
+                        info!("{} aktif schedule bulundu:", schedules.len());
                         for schedule in schedules {
                             println!();
-                            println!("   📅 {}", schedule.name);
-                            println!("      ⏰ Zamanlama: {}", schedule.schedule);
-                            println!("      📝 Açıklama: {}", schedule.description);
-                            println!("      🔧 Türü: {}", schedule.scan_type);
-                            println!("      ✅ Durum: {}", if schedule.enabled { "Etkin" } else { "Devre dışı" });
-                            println!("      📊 Modüller: {}", schedule.scan_modules.join(", "));
+                            println!("   {}", schedule.name);
+                            println!("      Zamanlama: {}", schedule.schedule);
+                            println!("      Açıklama: {}", schedule.description);
+                            println!("      Türü: {}", schedule.scan_type);
+                            println!("      Durum: {}", if schedule.enabled { "Etkin" } else { "Devre dışı" });
+                            println!("      Modüller: {}", schedule.scan_modules.join(", "));
                         }
                     }
                 }
                 Err(e) => {
-                    error!("❌ Schedule listesi alınamadı: {}", e);
+                    error!("Schedule listesi alınamadı: {}", e);
                 }
             }
         }
@@ -1143,55 +1143,55 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
                 match scheduler.get_schedule_status(name) {
                     Ok(status) => {
                         println!();
-                        println!("📊 Schedule Durumu: {}", status.name);
-                        println!("   ✅ Etkin: {}", if status.enabled { "Evet" } else { "Hayır" });
-                        println!("   🔄 Aktif: {}", if status.active { "Evet" } else { "Hayır" });
-                        println!("   ⏰ Zamanlama: {}", status.config.schedule);
-                        println!("   📝 Açıklama: {}", status.config.description);
+                        println!("Schedule Durumu: {}", status.name);
+                        println!("   Etkin: {}", if status.enabled { "Evet" } else { "Hayır" });
+                        println!("   Aktif: {}", if status.active { "Evet" } else { "Hayır" });
+                        println!("   Zamanlama: {}", status.config.schedule);
+                        println!("   Açıklama: {}", status.config.description);
                         
                         if let Some(last_run) = status.last_run {
-                            println!("   🏃 Son çalışma: {}", last_run.run_time.format("%Y-%m-%d %H:%M:%S UTC"));
-                            println!("   ✅ Başarılı: {}", if last_run.success { "Evet" } else { "Hayır" });
-                            println!("   ⏱️ Süre: {}ms", last_run.duration_ms);
-                            println!("   📊 Finding sayısı: {}", last_run.findings_count);
+                            println!("   Son çalışma: {}", last_run.run_time.format("%Y-%m-%d %H:%M:%S UTC"));
+                            println!("   Başarılı: {}", if last_run.success { "Evet" } else { "Hayır" });
+                            println!("   Süre: {}ms", last_run.duration_ms);
+                            println!("   Finding sayısı: {}", last_run.findings_count);
                             if let Some(error) = last_run.error_message {
-                                println!("   ❌ Hata: {}", error);
+                                println!("   Hata: {}", error);
                             }
                         }
                         
                         if let Some(next_run) = status.next_run {
-                            println!("   ⏭️ Bir sonraki çalışma: {}", next_run.format("%Y-%m-%d %H:%M:%S UTC"));
+                            println!("   Bir sonraki çalışma: {}", next_run.format("%Y-%m-%d %H:%M:%S UTC"));
                         }
                     }
                     Err(e) => {
-                        error!("❌ Schedule durumu alınamadı: {}", e);
+                        error!("Schedule durumu alınamadı: {}", e);
                     }
                 }
             } else {
                 // Tüm schedule'ların durumu
-                info!("🔍 Tüm schedule durumları kontrol ediliyor...");
+                info!("Tüm schedule durumları kontrol ediliyor...");
                 match scheduler.get_all_statuses() {
                     Ok(statuses) => {
                         if statuses.is_empty() {
-                            info!("📄 Aktif schedule yok");
+                            info!("Aktif schedule yok");
                         } else {
                             println!();
-                            println!("📊 Schedule Durumları ({})", statuses.len());
+                            println!("Schedule Durumları ({})", statuses.len());
                             for status in statuses {
                                 println!();
-                                println!("   📅 {}", status.name);
-                                println!("      ✅ Etkin: {} | 🔄 Aktif: {}", 
+                                println!("   {}", status.name);
+                                println!("      Etkin: {} | Aktif: {}", 
                                     if status.enabled { "Evet" } else { "Hayır" },
                                     if status.active { "Evet" } else { "Hayır" }
                                 );
                                 if let Some(next_run) = status.next_run {
-                                    println!("      ⏭️ Sonraki: {}", next_run.format("%Y-%m-%d %H:%M"));
+                                    println!("      Sonraki: {}", next_run.format("%Y-%m-%d %H:%M"));
                                 }
                             }
                         }
                     }
                     Err(e) => {
-                        error!("❌ Schedule durumları alınamadı: {}", e);
+                        error!("Schedule durumları alınamadı: {}", e);
                     }
                 }
             }
@@ -1201,21 +1201,21 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
             info!("🔧 Hazır schedule şablonları yükleniyor...");
             match scheduler.schedule_manager.create_default_schedules() {
                 Ok(_) => {
-                    info!("✅ Hazır schedule'lar başarıyla oluşturuldu:");
-                    info!("   📅 daily-full: Her gün 02:00'da tam tarama");
-                    info!("   📅 weekly-full: Her pazar 03:00'da tam tarama");
-                    info!("   📅 quick-3x: Günde 3 kez hızlı tarama (06:00, 12:00, 18:00)");
-                    info!("ℹ️ Bu schedule'ları etkinleştirmek için 'schedule enable' komutunu kullanın");
+                    info!("Hazır schedule'lar başarıyla oluşturuldu:");
+                    info!("   daily-full: Her gün 02:00'da tam tarama");
+                    info!("   weekly-full: Her pazar 03:00'da tam tarama");
+                    info!("   quick-3x: Günde 3 kez hızlı tarama (06:00, 12:00, 18:00)");
+                    info!("Bu schedule'ları etkinleştirmek için 'schedule enable' komutunu kullanın");
                 }
                 Err(e) => {
-                    error!("❌ Hazır schedule'lar oluşturulamadı: {}", e);
+                    error!("Hazır schedule'lar oluşturulamadı: {}", e);
                 }
             }
         }
 
         _ => {
-            error!("❌ Geçersiz schedule komutu");
-            info!("ℹ️ Kullanılabilir komutlar: enable, disable, list, status, presets");
+            error!("Geçersiz schedule komutu");
+            info!("Kullanılabilir komutlar: enable, disable, list, status, presets");
         }
     }
 }
@@ -1223,13 +1223,13 @@ fn handle_schedule_command(matches: &ArgMatches, config: &core::config::Config) 
 fn handle_run_scheduled_scan(matches: &ArgMatches, config: &core::config::Config) {
     let schedule_name = matches.get_one::<String>("schedule_name").unwrap();
     
-    info!("🤖 Planlı tarama çalıştırılıyor: {}", schedule_name);
+    info!("Planlı tarama çalıştırılıyor: {}", schedule_name);
 
     // Database bağlantısını kur
     let db = match DatabaseManager::new(&config.database.path) {
         Ok(db) => db,
         Err(e) => {
-            error!("❌ Database bağlantı hatası: {}", e);
+            error!("Database bağlantı hatası: {}", e);
             std::process::exit(1);
         }
     };
@@ -1238,7 +1238,7 @@ fn handle_run_scheduled_scan(matches: &ArgMatches, config: &core::config::Config
     let scheduler = match Scheduler::new(db) {
         Ok(scheduler) => scheduler,
         Err(e) => {
-            error!("❌ Scheduler oluşturma hatası: {}", e);
+            error!("Scheduler oluşturma hatası: {}", e);
             std::process::exit(1);
         }
     };
@@ -1247,10 +1247,10 @@ fn handle_run_scheduled_scan(matches: &ArgMatches, config: &core::config::Config
     let rt = tokio::runtime::Runtime::new().unwrap();
     match rt.block_on(scheduler.run_scheduled_scan(schedule_name)) {
         Ok(_) => {
-            info!("✅ Planlı tarama başarıyla tamamlandı: {}", schedule_name);
+            info!("Planlı tarama başarıyla tamamlandı: {}", schedule_name);
         }
         Err(e) => {
-            error!("❌ Planlı tarama hatası: {}", e);
+            error!("Planlı tarama hatası: {}", e);
             std::process::exit(1);
         }
     }

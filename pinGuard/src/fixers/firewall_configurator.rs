@@ -25,7 +25,7 @@ impl Fixer for FirewallConfigurator {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
-        tracing::info!("🛡️ Firewall configuration başlatılıyor: {}", finding.title);
+        tracing::info!("Firewall configuration başlatılıyor: {}", finding.title);
 
         // Finding türüne göre uygun düzeltme yöntemini seç
         if finding.id.starts_with("NET-UFW-DISABLED") {
@@ -45,7 +45,7 @@ impl Fixer for FirewallConfigurator {
         }
 
         result = result.set_duration(start_time);
-        tracing::info!("✅ Firewall configuration tamamlandı: {}", result.message);
+        tracing::info!("Firewall configuration tamamlandı: {}", result.message);
         
         Ok(result)
     }
@@ -86,7 +86,7 @@ impl Fixer for FirewallConfigurator {
 impl FirewallConfigurator {
     /// UFW firewall'ı etkinleştir ve temel kuralları ayarla
     fn enable_ufw_firewall(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🛡️ UFW firewall etkinleştiriliyor...");
+        tracing::info!("UFW firewall etkinleştiriliyor...");
 
         // UFW'nin kurulu olup olmadığını kontrol et
         let ufw_check = execute_command("which", &["ufw"]);
@@ -143,7 +143,7 @@ impl FirewallConfigurator {
 
     /// Temel iptables kurallarını yapılandır
     fn configure_basic_iptables(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔥 Temel iptables kuralları yapılandırılıyor...");
+        tracing::info!("Temel iptables kuralları yapılandırılıyor...");
 
         // Mevcut kuralları backup al
         let backup_output = execute_command("iptables-save", &[])?;
@@ -218,7 +218,7 @@ impl FirewallConfigurator {
     fn block_risky_port(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let port = self.extract_port_from_finding(finding)?;
         
-        tracing::info!("🚫 Riskli port bloklanıyor: {}", port);
+        tracing::info!("Riskli port bloklanıyor: {}", port);
 
         // UFW ile portu blokla
         let ufw_result = execute_command("ufw", &["deny", &port.to_string()]);
@@ -240,7 +240,7 @@ impl FirewallConfigurator {
     fn review_unusual_port(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let port = self.extract_port_from_finding(finding)?;
         
-        tracing::info!("🔍 Olağandışı port gözden geçiriliyor: {}", port);
+        tracing::info!("Olağandışı port gözden geçiriliyor: {}", port);
 
         // Port bilgilerini al
         let netstat_output = execute_command("netstat", &["-tulnp"]);
@@ -256,7 +256,7 @@ impl FirewallConfigurator {
 
     /// SSH port güvenliğini yapılandır
     fn configure_ssh_port_security(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔐 SSH port güvenliği yapılandırılıyor...");
+        tracing::info!("SSH port güvenliği yapılandırılıyor...");
 
         // SSH bruteforce koruması
         let ssh_protection_rules = vec![
@@ -280,7 +280,7 @@ impl FirewallConfigurator {
 
     /// Web güvenliğini yapılandır
     fn configure_web_security(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🌐 Web güvenliği yapılandırılıyor...");
+        tracing::info!("Web güvenliği yapılandırılıyor...");
 
         // HTTP trafiğini HTTPS'e yönlendir
         result.status = FixStatus::RequiresUserAction;

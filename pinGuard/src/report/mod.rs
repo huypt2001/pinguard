@@ -354,11 +354,11 @@ impl SecurityReport {
         let high_count = all_findings.iter().filter(|f| f.severity == Severity::High).count();
 
         if critical_count > 0 {
-            recommendations.push(format!("🚨 ACIL: {} kritik güvenlik açığı bulundu. Derhal düzeltilmesi gerekir.", critical_count));
+            recommendations.push(format!("ACIL: {} kritik güvenlik açığı bulundu. Derhal düzeltilmesi gerekir.", critical_count));
         }
 
         if high_count > 10 {
-            recommendations.push("🔥 Çok sayıda yüksek riskli güvenlik açığı tespit edildi. Sistem güvenliği tehlikede.".to_string());
+            recommendations.push("Çok sayıda yüksek riskli güvenlik açığı tespit edildi. Sistem güvenliği tehlikede.".to_string());
         }
 
         // Kategori bazlı öneriler
@@ -366,18 +366,18 @@ impl SecurityReport {
         
         for category in categories {
             match category {
-                Category::Package => recommendations.push("📦 Paket güvenlik açıkları için düzenli güncelleme yapın.".to_string()),
-                Category::Kernel => recommendations.push("🔧 Kernel güncellemelerini takip edin ve güvenlik yamalarını uygulayın.".to_string()),
-                Category::Permission => recommendations.push("🔒 Dosya izinlerini gözden geçirin ve en az yetki prensibini uygulayın.".to_string()),
-                Category::Service => recommendations.push("🛡️ Gereksiz servisleri devre dışı bırakın ve mevcut servisleri sertleştirin.".to_string()),
-                Category::User => recommendations.push("👥 Kullanıcı hesap politikalarını güçlendirin ve parola kurallarını uygulayın.".to_string()),
-                Category::Network => recommendations.push("🌐 Firewall kurallarını yapılandırın ve network trafiğini izleyin.".to_string()),
+                Category::Package => recommendations.push("Paket güvenlik açıkları için düzenli güncelleme yapın.".to_string()),
+                Category::Kernel => recommendations.push("Kernel güncellemelerini takip edin ve güvenlik yamalarını uygulayın.".to_string()),
+                Category::Permission => recommendations.push("Dosya izinlerini gözden geçirin ve en az yetki prensibini uygulayın.".to_string()),
+                Category::Service => recommendations.push("Gereksiz servisleri devre dışı bırakın ve mevcut servisleri sertleştirin.".to_string()),
+                Category::User => recommendations.push("Kullanıcı hesap politikalarını güçlendirin ve parola kurallarını uygulayın.".to_string()),
+                Category::Network => recommendations.push("Firewall kurallarını yapılandırın ve network trafiğini izleyin.".to_string()),
                 _ => {}
             }
         }
 
         if recommendations.is_empty() {
-            recommendations.push("✅ Sistem güvenliği iyi durumda. Düzenli tarama yapmaya devam edin.".to_string());
+            recommendations.push("Sistem güvenliği iyi durumda. Düzenli tarama yapmaya devam edin.".to_string());
         }
 
         recommendations

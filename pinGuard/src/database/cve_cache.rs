@@ -110,7 +110,7 @@ impl CveCache {
 
     /// CVE'yi cache'e ekle veya güncelle
     pub fn cache_cve(&self, cve_data: &CveData) -> DatabaseResult<()> {
-        debug!("💾 CVE cache'e ekleniyor: {}", cve_data.cve_id);
+        debug!("CVE cache'e ekleniyor: {}", cve_data.cve_id);
 
         let expires_at = Utc::now() + self.cache_ttl;
         
@@ -149,7 +149,7 @@ impl CveCache {
             ],
         )?;
 
-        debug!("✅ CVE başarıyla cache'lendi: {}", cve_data.cve_id);
+        debug!("CVE başarıyla cache'lendi: {}", cve_data.cve_id);
         Ok(())
     }
 
@@ -172,15 +172,15 @@ impl CveCache {
             Ok(cached_cve) => {
                 // Expire olmuş mu kontrol et
                 if cached_cve.expires_at < Utc::now() {
-                    debug!("⏰ CVE cache'i expire olmuş: {}", cve_id);
+                    debug!("CVE cache'i expire olmuş: {}", cve_id);
                     Ok(None)
                 } else {
-                    debug!("✅ CVE cache'ten bulundu: {}", cve_id);
+                    debug!("CVE cache'ten bulundu: {}", cve_id);
                     Ok(Some(cached_cve))
                 }
             }
             Err(rusqlite::Error::QueryReturnedNoRows) => {
-                debug!("❌ CVE cache'te bulunamadı: {}", cve_id);
+                debug!("CVE cache'te bulunamadı: {}", cve_id);
                 Ok(None)
             }
             Err(e) => Err(DatabaseError::SqliteError(e)),
@@ -193,7 +193,7 @@ impl CveCache {
             return Ok(Vec::new());
         }
 
-        debug!("🔍 {} CVE cache'ten toplu aranıyor", cve_ids.len());
+        debug!("{} CVE cache'ten toplu aranıyor", cve_ids.len());
 
         let placeholders = cve_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
         let query = format!(
@@ -215,13 +215,13 @@ impl CveCache {
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
-        debug!("✅ {} CVE cache'ten bulundu", cached_cves.len());
+        debug!("{} CVE cache'ten bulundu", cached_cves.len());
         Ok(cached_cves)
     }
 
     /// Package için ilgili CVE'leri bul
     pub fn find_cves_for_package(&self, package_name: &str) -> DatabaseResult<Vec<CachedCve>> {
-        debug!("🔍 Package için CVE aranıyor: {}", package_name);
+        debug!("Package için CVE aranıyor: {}", package_name);
 
         let mut stmt = self.db.connection().prepare(
             "SELECT cve_id, description, severity, score, vector_string,
@@ -241,13 +241,13 @@ impl CveCache {
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
-        debug!("✅ {} CVE bulundu package için: {}", cached_cves.len(), package_name);
+        debug!("{} CVE bulundu package için: {}", cached_cves.len(), package_name);
         Ok(cached_cves)
     }
 
     /// Severity'ye göre CVE'leri listele
     pub fn list_cves_by_severity(&self, severity: CveSeverity, limit: Option<u32>) -> DatabaseResult<Vec<CachedCve>> {
-        debug!("🔍 Severity'ye göre CVE listesi: {}", severity);
+        debug!("Severity'ye göre CVE listesi: {}", severity);
 
         let limit_clause = match limit {
             Some(l) => format!(" LIMIT {}", l),
@@ -272,7 +272,7 @@ impl CveCache {
         })?
         .collect::<Result<Vec<_>, _>>()?;
 
-        debug!("✅ {} CVE bulundu severity için: {}", cached_cves.len(), severity);
+        debug!("{} CVE bulundu severity için: {}", cached_cves.len(), severity);
         Ok(cached_cves)
     }
 
@@ -287,9 +287,9 @@ impl CveCache {
         )?;
 
         if deleted_count > 0 {
-            info!("✅ {} expire olmuş CVE girişi temizlendi", deleted_count);
+            info!("{} expire olmuş CVE girişi temizlendi", deleted_count);
         } else {
-            debug!("ℹ️ Temizlenecek expire olmuş giriş bulunamadı");
+            debug!("ℹTemizlenecek expire olmuş giriş bulunamadı");
         }
 
         Ok(deleted_count)
@@ -297,7 +297,7 @@ impl CveCache {
 
     /// Cache istatistiklerini al
     pub fn get_cache_stats(&self) -> DatabaseResult<CacheStats> {
-        debug!("📊 CVE cache istatistikleri hesaplanıyor...");
+        debug!("CVE cache istatistikleri hesaplanıyor...");
 
         let mut stats = CacheStats::default();
 
@@ -339,7 +339,7 @@ impl CveCache {
         )?;
         stats.cache_size_bytes = stmt.query_row([], |row| row.get(0)).unwrap_or(0);
 
-        debug!("✅ CVE cache istatistikleri hazırlandı");
+        debug!("CVE cache istatistikleri hazırlandı");
         Ok(stats)
     }
 

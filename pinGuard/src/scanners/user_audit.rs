@@ -44,13 +44,13 @@ impl Scanner for UserAudit {
         let start_time = Instant::now();
         let mut result = ScanResult::new("User Audit".to_string());
         
-        tracing::info!("👥 User audit taraması başlatılıyor...");
+        tracing::info!("User audit taraması başlatılıyor...");
         
         // Kullanıcı hesaplarını al
         let users = self.get_user_accounts()?;
         result.set_items_scanned(users.len() as u32);
         
-        tracing::info!("👤 {} kullanıcı hesabı tespit edildi", users.len());
+        tracing::info!("{} kullanıcı hesabı tespit edildi", users.len());
         
         // Kullanıcı güvenlik kontrolları
         self.check_user_security(&users, &mut result)?;
@@ -70,7 +70,7 @@ impl Scanner for UserAudit {
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
         
-        tracing::info!("✅ User audit tamamlandı: {} bulgu", result.findings.len());
+        tracing::info!("User audit tamamlandı: {} bulgu", result.findings.len());
         
         Ok(result)
     }
@@ -136,7 +136,7 @@ impl UserAudit {
 
     /// Kullanıcı güvenlik kontrolları
     fn check_user_security(&self, users: &[UserAccount], result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🔍 Kullanıcı güvenlik kontrolü yapılıyor...");
+        tracing::info!("Kullanıcı güvenlik kontrolü yapılıyor...");
 
         for user in users {
             // Boş parola kontrolü
@@ -233,7 +233,7 @@ impl UserAudit {
 
     /// Root yetkili kullanıcıları kontrol et
     fn check_privileged_users(&self, _users: &[UserAccount], result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("👑 Yetkili kullanıcılar kontrol ediliyor...");
+        tracing::info!("Yetkili kullanıcılar kontrol ediliyor...");
 
         // sudo grubu üyelerini kontrol et
         if let Ok(group_content) = fs::read_to_string("/etc/group") {
@@ -276,7 +276,7 @@ impl UserAudit {
 
     /// Grup üyeliklerini kontrol et
     fn check_group_memberships(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("👥 Grup üyelikleri kontrol ediliyor...");
+        tracing::info!("Grup üyelikleri kontrol ediliyor...");
 
         if let Ok(group_content) = fs::read_to_string("/etc/group") {
             let sensitive_groups = vec!["root", "shadow", "adm", "disk", "sys", "lp", "mail", "news", "uucp"];
@@ -317,7 +317,7 @@ impl UserAudit {
 
     /// Shadow dosyası kontrolü
     fn check_shadow_file(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🔒 Shadow dosyası kontrol ediliyor...");
+        tracing::info!("Shadow dosyası kontrol ediliyor...");
 
         // Shadow dosyası izinleri
         if let Ok(metadata) = fs::metadata("/etc/shadow") {
@@ -352,7 +352,7 @@ impl UserAudit {
 
     /// Sudo konfigürasyonunu kontrol et
     fn check_sudo_configuration(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🔧 Sudo konfigürasyonu kontrol ediliyor...");
+        tracing::info!("Sudo konfigürasyonu kontrol ediliyor...");
 
         if let Ok(sudoers_content) = fs::read_to_string("/etc/sudoers") {
             for line in sudoers_content.lines() {

@@ -115,7 +115,7 @@ impl PdfReporter {
         _page_width: f32,
     ) -> Result<(), ReportError> {
         // Ana başlık
-        layer.use_text(format!("🛡️ pinGuard Security Report"), self.font_size_title, Mm(x), Mm(*y), font_bold);
+        layer.use_text(format!("pinGuard Security Report"), self.font_size_title, Mm(x), Mm(*y), font_bold);
         *y -= 10.0;
 
         // Alt başlık bilgileri
@@ -164,7 +164,7 @@ impl PdfReporter {
         _page_width: f32,
     ) -> Result<(), ReportError> {
         // Bölüm başlığı
-        layer.use_text("📋 Executive Summary", self.font_size_heading, Mm(x), Mm(*y), font_bold);
+        layer.use_text("Executive Summary", self.font_size_heading, Mm(x), Mm(*y), font_bold);
         *y -= 12.0;
 
         // Güvenlik puanı
@@ -221,15 +221,15 @@ impl PdfReporter {
         _page_width: f32,
     ) -> Result<(), ReportError> {
         // Bölüm başlığı
-        layer.use_text("🎯 Security Dashboard", self.font_size_heading, Mm(x), Mm(*y), font_bold);
+        layer.use_text("Security Dashboard", self.font_size_heading, Mm(x), Mm(*y), font_bold);
         *y -= 12.0;
 
         // Severity dağılımı
         let severities = [
-            ("🚨 Critical", report.summary.critical_findings),
-            ("🔥 High", report.summary.high_findings),
-            ("⚠️ Medium", report.summary.medium_findings),
-            ("ℹ️ Low", report.summary.low_findings),
+            ("Critical", report.summary.critical_findings),
+            ("High", report.summary.high_findings),
+            ("Medium", report.summary.medium_findings),
+            ("Low", report.summary.low_findings),
         ];
 
         for (severity_name, count) in severities.iter() {
@@ -259,7 +259,7 @@ impl PdfReporter {
         _page_width: f32,
     ) -> Result<(), ReportError> {
         // Bölüm başlığı
-        layer.use_text("🔍 Scanner Results Overview", self.font_size_heading, Mm(x), Mm(*y), font_bold);
+        layer.use_text("Scanner Results Overview", self.font_size_heading, Mm(x), Mm(*y), font_bold);
         *y -= 12.0;
 
         // Tablo başlıkları
@@ -326,7 +326,7 @@ impl PdfReporter {
         page_width: f32,
     ) -> Result<(), ReportError> {
         // Bölüm başlığı
-        layer.use_text("🔎 Critical & High Severity Findings", self.font_size_heading, Mm(x), Mm(*y), font_bold);
+        layer.use_text("Critical & High Severity Findings", self.font_size_heading, Mm(x), Mm(*y), font_bold);
         *y -= 12.0;
 
         let mut finding_count = 0;
@@ -345,10 +345,10 @@ impl PdfReporter {
 
                 // Finding ID ve severity
                 let severity_icon = match finding.severity {
-                    crate::scanners::Severity::Critical => "🚨",
-                    crate::scanners::Severity::High => "🔥",
-                    crate::scanners::Severity::Medium => "⚠️",
-                    crate::scanners::Severity::Low => "ℹ️",
+                    crate::scanners::Severity::Critical => "",
+                    crate::scanners::Severity::High => "",
+                    crate::scanners::Severity::Medium => "",
+                    crate::scanners::Severity::Low => "",
                 };
 
                 layer.use_text(
@@ -418,7 +418,7 @@ impl PdfReporter {
         _page_width: f32,
     ) -> Result<(), ReportError> {
         // Bölüm başlığı
-        layer.use_text("📊 Statistics", self.font_size_heading, Mm(x), Mm(*y), font_bold);
+        layer.use_text("Statistics", self.font_size_heading, Mm(x), Mm(*y), font_bold);
         *y -= 12.0;
 
         // Kategori bazlı dağılım
@@ -469,7 +469,7 @@ impl PdfReporter {
         _page_width: f32,
     ) -> Result<(), ReportError> {
         // Bölüm başlığı
-        layer.use_text("💡 Recommendations", self.font_size_heading, Mm(x), Mm(*y), font_bold);
+        layer.use_text("Recommendations", self.font_size_heading, Mm(x), Mm(*y), font_bold);
         *y -= 12.0;
 
         for (i, recommendation) in report.recommendations.iter().enumerate() {
@@ -506,7 +506,7 @@ impl PdfReporter {
         _page_width: f32,
     ) -> Result<(), ReportError> {
         // Bölüm başlığı
-        layer.use_text("💻 System Information", self.font_size_heading, Mm(x), Mm(*y), font_bold);
+        layer.use_text("System Information", self.font_size_heading, Mm(x), Mm(*y), font_bold);
         *y -= 12.0;
 
         let system_info = [

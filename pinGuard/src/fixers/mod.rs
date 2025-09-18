@@ -216,9 +216,9 @@ impl FixPlan {
 pub fn ask_user_confirmation(plan: &FixPlan) -> Result<bool, FixError> {
     use std::io::{self, Write};
     
-    println!("\n🔧 Fix Plan: {}", plan.description);
-    println!("📋 Fixer: {}", plan.fixer_name);
-    println!("⚠️  Risk Level: {:?}", plan.risk_level);
+    println!("Fix Plan: {}", plan.description);
+    println!("Fixer: {}", plan.fixer_name);
+    println!("Risk Level: {:?}", plan.risk_level);
     
     if !plan.commands_to_execute.is_empty() {
         println!("💻 Commands to execute:");
@@ -228,21 +228,21 @@ pub fn ask_user_confirmation(plan: &FixPlan) -> Result<bool, FixError> {
     }
     
     if !plan.files_to_modify.is_empty() {
-        println!("📁 Files to modify:");
+        println!("Files to modify:");
         for file in &plan.files_to_modify {
             println!("   - {}", file);
         }
     }
     
     if plan.backup_required {
-        println!("💾 Backup will be created");
+        println!("Backup will be created");
     }
     
     if plan.reboot_required {
-        println!("🔄 System reboot will be required");
+        println!("System reboot will be required");
     }
     
-    println!("⏱️  Estimated duration: {:?}", plan.estimated_duration);
+    println!("Estimated duration: {:?}", plan.estimated_duration);
     
     print!("\nDo you want to proceed? [y/N]: ");
     io::stdout().flush().map_err(|e| FixError::ConfigError(e.to_string()))?;
@@ -266,7 +266,7 @@ pub fn create_backup(file_path: &str) -> Result<String, FixError> {
         fs::copy(file_path, &backup_path)
             .map_err(|e| FixError::BackupError(format!("Failed to backup {}: {}", file_path, e)))?;
         
-        tracing::info!("💾 Backup created: {}", backup_path);
+        tracing::info!("Backup created: {}", backup_path);
         Ok(backup_path)
     } else {
         Err(FixError::BackupError(format!("Source file does not exist: {}", file_path)))
@@ -277,7 +277,7 @@ pub fn create_backup(file_path: &str) -> Result<String, FixError> {
 pub fn execute_command(command: &str, args: &[&str]) -> Result<String, FixError> {
     use std::process::Command;
     
-    tracing::info!("🔧 Executing: {} {}", command, args.join(" "));
+    tracing::info!("Executing: {} {}", command, args.join(" "));
     
     let output = Command::new(command)
         .args(args)

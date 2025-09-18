@@ -37,13 +37,13 @@ impl Scanner for NetworkAudit {
         let start_time = Instant::now();
         let mut result = ScanResult::new("Network Audit".to_string());
         
-        tracing::info!("🌐 Network audit taraması başlatılıyor...");
+        tracing::info!("Network audit taraması başlatılıyor...");
         
         // Açık portları listele
         let open_ports = self.get_open_ports()?;
         result.set_items_scanned(open_ports.len() as u32);
         
-        tracing::info!("🔍 {} açık port tespit edildi", open_ports.len());
+        tracing::info!("{} açık port tespit edildi", open_ports.len());
         
         // Riskli portları kontrol et
         self.check_risky_ports(&open_ports, &mut result)?;
@@ -60,7 +60,7 @@ impl Scanner for NetworkAudit {
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
         
-        tracing::info!("✅ Network audit tamamlandı: {} bulgu", result.findings.len());
+        tracing::info!("Network audit tamamlandı: {} bulgu", result.findings.len());
         
         Ok(result)
     }
@@ -151,7 +151,7 @@ impl NetworkAudit {
 
     /// Riskli portları kontrol et
     fn check_risky_ports(&self, ports: &[OpenPort], result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🚨 Riskli portlar kontrol ediliyor...");
+        tracing::info!("Riskli portlar kontrol ediliyor...");
 
         let risky_ports = vec![
             (21, "FTP", Severity::High, "Unencrypted file transfer"),
@@ -245,7 +245,7 @@ impl NetworkAudit {
 
     /// Network bağlantılarını kontrol et
     fn check_network_connections(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🔗 Network bağlantıları kontrol ediliyor...");
+        tracing::info!("Network bağlantıları kontrol ediliyor...");
 
         let output = Command::new("ss")
             .args(&["-tuln", "--no-header"])
@@ -296,7 +296,7 @@ impl NetworkAudit {
 
     /// Firewall durumunu kontrol et
     fn check_firewall_status(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🛡️ Firewall durumu kontrol ediliyor...");
+        tracing::info!("Firewall durumu kontrol ediliyor...");
 
         // UFW kontrolü
         let ufw_output = Command::new("ufw")
@@ -370,7 +370,7 @@ impl NetworkAudit {
 
     /// Network servisleri güvenlik kontrolü
     fn check_network_service_security(&self, ports: &[OpenPort], result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🔒 Network servisleri güvenlik kontrolü...");
+        tracing::info!("Network servisleri güvenlik kontrolü...");
 
         // HTTP vs HTTPS kontrolü
         let mut has_http = false;

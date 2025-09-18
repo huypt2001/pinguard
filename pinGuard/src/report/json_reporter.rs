@@ -104,13 +104,13 @@ pub fn print_json_summary(report: &SecurityReport) -> Result<(), ReportError> {
     let reporter = JsonReporter::new(true);
     
     // Sadece özet bilgileri yazdır
-    println!("\n📊 REPORT SUMMARY (JSON)");
+    println!("REPORT SUMMARY (JSON)");
     println!("================================");
     
     let summary_json = reporter.export_section(&report.summary, "summary")?;
     println!("{}", summary_json);
     
-    println!("\n📈 STATISTICS (JSON)");
+    println!("STATISTICS (JSON)");
     println!("================================");
     
     let stats_json = reporter.export_section(&report.statistics, "statistics")?;

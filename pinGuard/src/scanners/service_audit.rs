@@ -35,13 +35,13 @@ impl Scanner for ServiceAudit {
         let start_time = Instant::now();
         let mut result = ScanResult::new("Service Audit".to_string());
         
-        tracing::info!("🔧 Service audit taraması başlatılıyor...");
+        tracing::info!("Service audit taraması başlatılıyor...");
         
         // Aktif servisleri listele
         let services = self.get_active_services()?;
         result.set_items_scanned(services.len() as u32);
         
-        tracing::info!("🔍 {} aktif servis tespit edildi", services.len());
+        tracing::info!("{} aktif servis tespit edildi", services.len());
         
         // Riskli servisleri kontrol et
         self.check_risky_services(&services, &mut result)?;
@@ -58,7 +58,7 @@ impl Scanner for ServiceAudit {
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
         
-        tracing::info!("✅ Service audit tamamlandı: {} bulgu", result.findings.len());
+        tracing::info!("Service audit tamamlandı: {} bulgu", result.findings.len());
         
         Ok(result)
     }
@@ -100,7 +100,7 @@ impl ServiceAudit {
 
     /// Bilinen riskli servisleri kontrol et
     fn check_risky_services(&self, services: &[SystemService], result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🚨 Riskli servisler kontrol ediliyor...");
+        tracing::info!("Riskli servisler kontrol ediliyor...");
         
         let risky_services = self.get_risky_service_patterns();
         
@@ -184,7 +184,7 @@ impl ServiceAudit {
 
     /// Gereksiz servisleri kontrol et
     fn check_unnecessary_services(&self, services: &[SystemService], result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🔍 Gereksiz servisler kontrol ediliyor...");
+        tracing::info!("Gereksiz servisler kontrol ediliyor...");
         
         let unnecessary_patterns = vec![
             "avahi-daemon", "bluetooth", "cups", "ModemManager", "wpa_supplicant"
@@ -221,7 +221,7 @@ impl ServiceAudit {
 
     /// SSH konfigürasyonunu kontrol et
     fn check_ssh_configuration(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🔐 SSH konfigürasyonu kontrol ediliyor...");
+        tracing::info!("SSH konfigürasyonu kontrol ediliyor...");
         
         if let Ok(config_content) = std::fs::read_to_string("/etc/ssh/sshd_config") {
             self.analyze_ssh_config(&config_content, result)?;
@@ -350,7 +350,7 @@ impl ServiceAudit {
 
     /// Network servislerini kontrol et
     fn check_network_services(&self, services: &[SystemService], result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🌐 Network servisleri kontrol ediliyor...");
+        tracing::info!("Network servisleri kontrol ediliyor...");
         
         let network_services = vec![
             "apache2", "nginx", "httpd", "mysql", "mariadb", "postgresql", 

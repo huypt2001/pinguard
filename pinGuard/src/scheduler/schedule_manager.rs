@@ -19,7 +19,7 @@ impl ScheduleManager {
         // Config dizinini oluştur
         if !config_dir.exists() {
             fs::create_dir_all(&config_dir)?;
-            info!("📁 Schedule config dizini oluşturuldu: {}", config_dir.display());
+            info!("Schedule config dizini oluşturuldu: {}", config_dir.display());
         }
 
         let mut manager = Self {
@@ -35,7 +35,7 @@ impl ScheduleManager {
 
     /// Schedule'ı kaydet
     pub fn save_schedule(&mut self, config: &ScheduleConfig) -> SchedulerResult<()> {
-        debug!("💾 Schedule kaydediliyor: {}", config.name);
+        debug!("Schedule kaydediliyor: {}", config.name);
 
         // Config dosyası yolu
         let config_path = self.config_dir.join(format!("{}.json", config.name));
@@ -50,7 +50,7 @@ impl ScheduleManager {
         // Memory'de sakla
         self.schedules.insert(config.name.clone(), config.clone());
 
-        info!("✅ Schedule kaydedildi: {} -> {}", config.name, config_path.display());
+        info!("Schedule kaydedildi: {} -> {}", config.name, config_path.display());
         Ok(())
     }
 
@@ -68,7 +68,7 @@ impl ScheduleManager {
 
     /// Schedule'ı sil
     pub fn remove_schedule(&mut self, name: &str) -> SchedulerResult<()> {
-        debug!("🗑️ Schedule siliniyor: {}", name);
+        debug!("Schedule siliniyor: {}", name);
 
         // Memory'den sil
         if self.schedules.remove(name).is_none() {
@@ -79,10 +79,10 @@ impl ScheduleManager {
         let config_path = self.config_dir.join(format!("{}.json", name));
         if config_path.exists() {
             fs::remove_file(&config_path)?;
-            info!("🗑️ Schedule config dosyası silindi: {}", config_path.display());
+            info!("Schedule config dosyası silindi: {}", config_path.display());
         }
 
-        info!("✅ Schedule silindi: {}", name);
+        info!("Schedule silindi: {}", name);
         Ok(())
     }
 
@@ -110,7 +110,7 @@ impl ScheduleManager {
 
     /// Mevcut schedule'ları dosyalardan yükle
     fn load_schedules(&mut self) -> SchedulerResult<()> {
-        debug!("📂 Schedule'lar yükleniyor: {}", self.config_dir.display());
+        debug!("Schedule'lar yükleniyor: {}", self.config_dir.display());
 
         let entries = fs::read_dir(&self.config_dir)?;
         let mut loaded_count = 0;
@@ -126,13 +126,13 @@ impl ScheduleManager {
                         loaded_count += 1;
                     }
                     Err(e) => {
-                        warn!("⚠️ Schedule yüklenemedi {}: {}", path.display(), e);
+                        warn!("Schedule yüklenemedi {}: {}", path.display(), e);
                     }
                 }
             }
         }
 
-        info!("📋 {} schedule yüklendi", loaded_count);
+        info!("{} schedule yüklendi", loaded_count);
         Ok(())
     }
 
@@ -142,7 +142,7 @@ impl ScheduleManager {
         let config: ScheduleConfig = serde_json::from_str(&content)
             .map_err(|e| SchedulerError::InvalidConfig(format!("JSON parse error: {}", e)))?;
         
-        debug!("📄 Schedule yüklendi: {} -> {}", config.name, path.display());
+        debug!("Schedule yüklendi: {} -> {}", config.name, path.display());
         Ok(config)
     }
 
@@ -168,7 +168,7 @@ impl ScheduleManager {
 
     /// Varsayılan schedule'ları oluştur
     pub fn create_default_schedules(&mut self) -> SchedulerResult<()> {
-        info!("🔧 Varsayılan schedule'lar oluşturuluyor");
+        info!("Varsayılan schedule'lar oluşturuluyor");
 
         // Daily full scan
         if !self.exists("daily-full")? {
@@ -197,7 +197,7 @@ impl ScheduleManager {
             self.save_schedule(&quick)?;
         }
 
-        info!("✅ Varsayılan schedule'lar oluşturuldu");
+        info!("Varsayılan schedule'lar oluşturuldu");
         Ok(())
     }
 }

@@ -22,15 +22,15 @@ impl Fixer for KernelUpdater {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
-        tracing::info!("🐧 Kernel update başlatılıyor: {}", finding.title);
+        tracing::info!("Kernel update başlatılıyor: {}", finding.title);
 
         // Package manager'ı tespit et
         let package_manager = self.detect_package_manager()?;
-        tracing::info!("📋 Package manager tespit edildi: {}", package_manager);
+        tracing::info!("Package manager tespit edildi: {}", package_manager);
 
         // Mevcut kernel bilgisini al
         let current_kernel = self.get_current_kernel_version()?;
-        tracing::info!("🔍 Mevcut kernel: {}", current_kernel);
+        tracing::info!("Mevcut kernel: {}", current_kernel);
 
         match package_manager.as_str() {
             "apt" => self.update_kernel_apt(&mut result)?,
@@ -44,7 +44,7 @@ impl Fixer for KernelUpdater {
         self.schedule_reboot(&mut result)?;
 
         result = result.set_duration(start_time).requires_reboot();
-        tracing::info!("✅ Kernel update tamamlandı: {}", result.message);
+        tracing::info!("Kernel update tamamlandı: {}", result.message);
         
         Ok(result)
     }
@@ -129,22 +129,22 @@ impl KernelUpdater {
 
     /// APT ile kernel güncelleme
     fn update_kernel_apt(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔄 APT repository güncelleniyor...");
+        tracing::info!("APT repository güncelleniyor...");
         
         let _output = execute_command("apt", &["update"])?;
         result.commands_executed.push("apt update".to_string());
 
         // Mevcut kernel sürümünü backup al
         let current_kernel = self.get_current_kernel_version()?;
-        tracing::info!("💾 Mevcut kernel backup alınıyor: {}", current_kernel);
+        tracing::info!("Mevcut kernel backup alınıyor: {}", current_kernel);
 
         // En son kernel'i yükle
-        tracing::info!("📦 Latest kernel yükleniyor...");
+        tracing::info!("Latest kernel yükleniyor...");
         let _output = execute_command("apt", &["install", "-y", "linux-image-generic", "linux-headers-generic"])?;
         result.commands_executed.push("apt install -y linux-image-generic linux-headers-generic".to_string());
 
         // GRUB güncelle
-        tracing::info!("🔄 GRUB konfigürasyonu güncelleniyor...");
+        tracing::info!("GRUB konfigürasyonu güncelleniyor...");
         let _output = execute_command("update-grub", &[])?;
         result.commands_executed.push("update-grub".to_string());
         result.files_modified.push("/boot/grub/grub.cfg".to_string());
@@ -157,17 +157,17 @@ impl KernelUpdater {
 
     /// YUM ile kernel güncelleme
     fn update_kernel_yum(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔄 YUM repository kontrol ediliyor...");
+        tracing::info!("YUM repository kontrol ediliyor...");
         
         let _output = execute_command("yum", &["check-update", "kernel"])?;
         result.commands_executed.push("yum check-update kernel".to_string());
 
-        tracing::info!("📦 Kernel güncelleniyor...");
+        tracing::info!("Kernel güncelleniyor...");
         let _output = execute_command("yum", &["update", "-y", "kernel"])?;
         result.commands_executed.push("yum update -y kernel".to_string());
 
         // GRUB2 güncelle
-        tracing::info!("🔄 GRUB2 konfigürasyonu güncelleniyor...");
+        tracing::info!("GRUB2 konfigürasyonu güncelleniyor...");
         let _output = execute_command("grub2-mkconfig", &["-o", "/boot/grub2/grub.cfg"])?;
         result.commands_executed.push("grub2-mkconfig -o /boot/grub2/grub.cfg".to_string());
         result.files_modified.push("/boot/grub2/grub.cfg".to_string());
@@ -180,17 +180,17 @@ impl KernelUpdater {
 
     /// DNF ile kernel güncelleme
     fn update_kernel_dnf(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔄 DNF repository kontrol ediliyor...");
+        tracing::info!("DNF repository kontrol ediliyor...");
         
         let _output = execute_command("dnf", &["check-update", "kernel"])?;
         result.commands_executed.push("dnf check-update kernel".to_string());
 
-        tracing::info!("📦 Kernel güncelleniyor...");
+        tracing::info!("Kernel güncelleniyor...");
         let _output = execute_command("dnf", &["update", "-y", "kernel"])?;
         result.commands_executed.push("dnf update -y kernel".to_string());
 
         // GRUB2 güncelle
-        tracing::info!("🔄 GRUB2 konfigürasyonu güncelleniyor...");
+        tracing::info!("GRUB2 konfigürasyonu güncelleniyor...");
         let _output = execute_command("grub2-mkconfig", &["-o", "/boot/grub2/grub.cfg"])?;
         result.commands_executed.push("grub2-mkconfig -o /boot/grub2/grub.cfg".to_string());
         result.files_modified.push("/boot/grub2/grub.cfg".to_string());
@@ -203,17 +203,17 @@ impl KernelUpdater {
 
     /// Zypper ile kernel güncelleme
     fn update_kernel_zypper(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔄 Zypper repository güncelleniyor...");
+        tracing::info!("Zypper repository güncelleniyor...");
         
         let _output = execute_command("zypper", &["refresh"])?;
         result.commands_executed.push("zypper refresh".to_string());
 
-        tracing::info!("📦 Kernel güncelleniyor...");
+        tracing::info!("Kernel güncelleniyor...");
         let _output = execute_command("zypper", &["update", "-y", "kernel-default"])?;
         result.commands_executed.push("zypper update -y kernel-default".to_string());
 
         // GRUB2 güncelle
-        tracing::info!("🔄 GRUB2 konfigürasyonu güncelleniyor...");
+        tracing::info!("GRUB2 konfigürasyonu güncelleniyor...");
         let _output = execute_command("grub2-mkconfig", &["-o", "/boot/grub2/grub.cfg"])?;
         result.commands_executed.push("grub2-mkconfig -o /boot/grub2/grub.cfg".to_string());
         result.files_modified.push("/boot/grub2/grub.cfg".to_string());
@@ -226,11 +226,11 @@ impl KernelUpdater {
 
     /// Reboot planlama
     fn schedule_reboot(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔄 Sistem reboot planlanıyor...");
+        tracing::info!("Sistem reboot planlanıyor...");
         
         // Reboot planı oluştur
         let reboot_message = "System will reboot in 1 minute for kernel update";
-        tracing::warn!("⚠️  {}", reboot_message);
+        tracing::warn!("{}", reboot_message);
         
         // Kullanıcılara uyarı gönder
         let _output = execute_command("wall", &[reboot_message])?;

@@ -76,12 +76,12 @@ impl CveManager {
 
     /// Tekil CVE al (cache-first approach)
     pub async fn get_cve(&self, cve_id: &str) -> CveApiResult<CveData> {
-        info!("🔍 CVE alınıyor: {}", cve_id);
+        info!("CVE alınıyor: {}", cve_id);
 
         // Önce cache'ten kontrol et
         match self.cve_cache.get_cve(cve_id) {
             Ok(Some(cached_cve)) => {
-                info!("💾 CVE cache'ten bulundu: {}", cve_id);
+                info!("CVE cache'ten bulundu: {}", cve_id);
                 return Ok(cached_cve.data);
             }
             Ok(None) => {
@@ -98,7 +98,7 @@ impl CveManager {
         // Cache'te yoksa NVD'den al
         match self.nvd_client.get_cve(cve_id).await {
             Ok(cve_data) => {
-                info!("🌐 CVE NVD'den alındı: {}", cve_id);
+                info!("CVE NVD'den alındı: {}", cve_id);
 
                 // Cache'e kaydet
                 if let Err(e) = self.cve_cache.cache_cve(&cve_data) {
@@ -113,7 +113,7 @@ impl CveManager {
                 // Fallback: expire olmuş cache'ten al
                 if self.fallback_enabled {
                     if let Ok(Some(_cached_cve)) = self.try_fallback_cache(cve_id) {
-                        warn!("🔄 Expire olmuş cache'ten fallback: {}", cve_id);
+                        warn!("Expire olmuş cache'ten fallback: {}", cve_id);
                         // return Ok(cached_cve.data); // Bu durumda expire olmuş veriyi döndürebiliriz
                     }
                 }
@@ -125,7 +125,7 @@ impl CveManager {
 
     /// Çoklu CVE al (paralel processing ile)
     pub async fn get_cves(&self, cve_ids: &[String]) -> CveApiResult<Vec<CveData>> {
-        info!("🔍 {} CVE toplu alınıyor", cve_ids.len());
+        info!("{} CVE toplu alınıyor", cve_ids.len());
 
         if cve_ids.is_empty() {
             return Ok(Vec::new());
@@ -138,11 +138,11 @@ impl CveManager {
         for cve_id in cve_ids {
             match self.cve_cache.get_cve(cve_id) {
                 Ok(Some(cached_cve)) => {
-                    debug!("💾 Cache hit: {}", cve_id);
+                    debug!("Cache hit: {}", cve_id);
                     results.push(cached_cve.data);
                 }
                 Ok(None) => {
-                    debug!("💾 Cache miss: {}", cve_id);
+                    debug!("Cache miss: {}", cve_id);
                     missing_cves.push(cve_id.clone());
                 }
                 Err(e) => {
@@ -152,14 +152,14 @@ impl CveManager {
             }
         }
 
-        info!("💾 Cache'ten {} CVE bulundu, {} CVE NVD'den alınacak", 
+        info!("Cache'ten {} CVE bulundu, {} CVE NVD'den alınacak", 
               results.len(), missing_cves.len());
 
         // Missing CVE'leri NVD'den al
         if !missing_cves.is_empty() {
             match self.nvd_client.get_cves(&missing_cves).await {
                 Ok(nvd_cves) => {
-                    info!("🌐 NVD'den {} CVE alındı", nvd_cves.len());
+                    info!("NVD'den {} CVE alındı", nvd_cves.len());
 
                     // Cache'e kaydet
                     for cve_data in &nvd_cves {
@@ -177,7 +177,7 @@ impl CveManager {
                     if self.fallback_enabled {
                         for cve_id in &missing_cves {
                             if let Ok(Some(cached_cve)) = self.try_fallback_cache(cve_id) {
-                                warn!("🔄 Expire olmuş cache'ten fallback: {}", cve_id);
+                                warn!("Expire olmuş cache'ten fallback: {}", cve_id);
                                 results.push(cached_cve.data);
                             }
                         }
@@ -186,7 +186,7 @@ impl CveManager {
             }
         }
 
-        info!("✅ Toplam {} CVE alındı", results.len());
+        info!("Toplam {} CVE alındı", results.len());
         Ok(results)
     }
 
@@ -197,7 +197,7 @@ impl CveManager {
         // Önce cache'ten ara
         let cached_cves = match self.cve_cache.find_cves_for_package(package_name) {
             Ok(cves) => {
-                info!("💾 Cache'te {} CVE bulundu package için: {}", cves.len(), package_name);
+                info!("Cache'te {} CVE bulundu package için: {}", cves.len(), package_name);
                 cves.into_iter().map(|cached| cached.data).collect()
             }
             Err(e) => {
@@ -214,7 +214,7 @@ impl CveManager {
         // NVD'den fresh data al
         match self.nvd_client.search_by_keyword(package_name, Some(100)).await {
             Ok(nvd_cves) => {
-                info!("🌐 NVD'den {} CVE bulundu package için: {}", nvd_cves.len(), package_name);
+                info!("NVD'den {} CVE bulundu package için: {}", nvd_cves.len(), package_name);
 
                 // Cache'e kaydet
                 for cve_data in &nvd_cves {
@@ -237,7 +237,7 @@ impl CveManager {
                 error!("NVD'den package arama hatası: {}", e);
 
                 if self.fallback_enabled && !cached_cves.is_empty() {
-                    warn!("🔄 Fallback: Cache'teki {} CVE döndürülüyor", cached_cves.len());
+                    warn!("Fallback: Cache'teki {} CVE döndürülüyor", cached_cves.len());
                     Ok(cached_cves)
                 } else {
                     Err(e)
@@ -248,11 +248,11 @@ impl CveManager {
 
     /// Recent CVE'leri al ve cache'le
     pub async fn sync_recent_cves(&self, days: u32) -> CveApiResult<usize> {
-        info!("🔄 Son {} gün içindeki CVE'ler senkronize ediliyor", days);
+        info!("Son {} gün içindeki CVE'ler senkronize ediliyor", days);
 
         match self.nvd_client.get_recent_cves(days, Some(1000)).await {
             Ok(recent_cves) => {
-                info!("🌐 NVD'den {} recent CVE alındı", recent_cves.len());
+                info!("NVD'den {} recent CVE alındı", recent_cves.len());
 
                 let mut cached_count = 0;
                 for cve_data in recent_cves {
@@ -261,7 +261,7 @@ impl CveManager {
                     }
                 }
 
-                info!("✅ {} CVE cache'e eklendi", cached_count);
+                info!("{} CVE cache'e eklendi", cached_count);
                 Ok(cached_count)
             }
             Err(e) => {
@@ -273,7 +273,7 @@ impl CveManager {
 
     /// CVE enrichment - var olan CVE'yi detaylı bilgilerle güncelle
     pub async fn enrich_cve(&self, cve_id: &str) -> CveApiResult<CveData> {
-        info!("🔍 CVE enrichment: {}", cve_id);
+        info!("CVE enrichment: {}", cve_id);
 
         // NVD'den fresh data al
         let nvd_cve = self.nvd_client.get_cve(cve_id).await?;
@@ -282,13 +282,13 @@ impl CveManager {
         self.cve_cache.cache_cve(&nvd_cve)
             .map_err(|e| CveApiError::CacheError(e.to_string()))?;
 
-        info!("✅ CVE enriched: {}", cve_id);
+        info!("CVE enriched: {}", cve_id);
         Ok(nvd_cve)
     }
 
     /// Batch CVE enrichment
     pub async fn enrich_cves(&self, cve_ids: &[String]) -> CveApiResult<Vec<CveData>> {
-        info!("🔍 Batch CVE enrichment: {} CVE", cve_ids.len());
+        info!("Batch CVE enrichment: {} CVE", cve_ids.len());
 
         let mut enriched_cves = Vec::new();
 
@@ -305,13 +305,13 @@ impl CveManager {
             sleep(tokio::time::Duration::from_millis(100)).await;
         }
 
-        info!("✅ {} CVE enriched", enriched_cves.len());
+        info!("{} CVE enriched", enriched_cves.len());
         Ok(enriched_cves)
     }
 
     /// Cache maintenance
     pub async fn maintain_cache(&self) -> CveApiResult<CacheMaintenanceResult> {
-        info!("🧹 CVE cache maintenance başlatılıyor...");
+        info!("CVE cache maintenance başlatılıyor...");
 
         let mut result = CacheMaintenanceResult::default();
 
@@ -350,7 +350,7 @@ impl CveManager {
             match self.sync_recent_cves(1).await {
                 Ok(synced_count) => {
                     result.synced_recent_cves = synced_count;
-                    info!("🔄 {} recent CVE senkronize edildi", synced_count);
+                    info!("{} recent CVE senkronize edildi", synced_count);
                 }
                 Err(e) => {
                     warn!("Auto refresh hatası: {}", e);
@@ -358,7 +358,7 @@ impl CveManager {
             }
         }
 
-        info!("✅ Cache maintenance tamamlandı");
+        info!("Cache maintenance tamamlandı");
         Ok(result)
     }
 
@@ -386,9 +386,9 @@ impl CveManager {
         };
 
         if health.is_healthy() {
-            info!("✅ CVE manager sağlıklı");
+            info!("CVE manager sağlıklı");
         } else {
-            warn!("⚠️ CVE manager sağlık sorunları tespit edildi");
+            warn!("CVE manager sağlık sorunları tespit edildi");
         }
 
         Ok(health)
@@ -398,7 +398,7 @@ impl CveManager {
     fn try_fallback_cache(&self, cve_id: &str) -> Result<Option<CachedCve>, crate::database::DatabaseError> {
         // Bu fonksiyon expire check'i bypass ederek cache'ten veri almaya çalışır
         // Normal get_cve expire check yapar, burada ham SQL query ile alabilir
-        debug!("🔄 Fallback cache denemesi: {}", cve_id);
+        debug!("Fallback cache denemesi: {}", cve_id);
         
         // Şimdilik normal cache get'i kullan, gelecekte expire bypass eklenebilir
         self.cve_cache.get_cve(cve_id)

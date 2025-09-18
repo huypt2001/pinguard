@@ -271,11 +271,11 @@ impl HtmlReporter {
                 for finding in &scan_result.findings {
                     let severity_class = format!("severity-{}", format!("{:?}", finding.severity).to_lowercase());
                     let severity_icon = match finding.severity {
-                        crate::scanners::Severity::Critical => "�",
-                        crate::scanners::Severity::High => "�",
-                        crate::scanners::Severity::Medium => "🟡",
-                        crate::scanners::Severity::Low => "ℹ️",
-                        crate::scanners::Severity::Info => "💡",
+                        crate::scanners::Severity::Critical => "",
+                        crate::scanners::Severity::High => "",
+                        crate::scanners::Severity::Medium => "",
+                        crate::scanners::Severity::Low => "",
+                        crate::scanners::Severity::Info => "",
                     };
 
                     findings_html.push_str(&format!(

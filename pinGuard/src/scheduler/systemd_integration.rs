@@ -29,26 +29,26 @@ impl SystemdIntegration {
 
     /// Timer dosyası oluştur
     pub fn create_timer(&self, config: &ScheduleConfig) -> SchedulerResult<()> {
-        info!("⏰ Timer oluşturuluyor: {}", config.name);
+        info!("Timer oluşturuluyor: {}", config.name);
 
         let timer_content = self.generate_timer_content(config)?;
         let timer_path = self.systemd_dir.join(format!("pinGuard-{}.timer", config.name));
 
         fs::write(&timer_path, timer_content)?;
-        info!("✅ Timer dosyası oluşturuldu: {}", timer_path.display());
+        info!("Timer dosyası oluşturuldu: {}", timer_path.display());
 
         Ok(())
     }
 
     /// Service dosyası oluştur
     pub fn create_service(&self, config: &ScheduleConfig) -> SchedulerResult<()> {
-        info!("🔧 Service oluşturuluyor: {}", config.name);
+        info!("Service oluşturuluyor: {}", config.name);
 
         let service_content = self.generate_service_content(config)?;
         let service_path = self.systemd_dir.join(format!("pinGuard-{}.service", config.name));
 
         fs::write(&service_path, service_content)?;
-        info!("✅ Service dosyası oluşturuldu: {}", service_path.display());
+        info!("Service dosyası oluşturuldu: {}", service_path.display());
 
         // Systemd daemon'ını reload et
         self.reload_systemd()?;
@@ -58,7 +58,7 @@ impl SystemdIntegration {
 
     /// Timer'ı etkinleştir
     pub fn enable_timer(&self, schedule_name: &str) -> SchedulerResult<()> {
-        info!("🚀 Timer etkinleştiriliyor: {}", schedule_name);
+        info!("Timer etkinleştiriliyor: {}", schedule_name);
 
         let timer_name = format!("pinGuard-{}.timer", schedule_name);
         
@@ -84,13 +84,13 @@ impl SystemdIntegration {
             return Err(SchedulerError::SystemdError(format!("Start timer failed: {}", error)));
         }
 
-        info!("✅ Timer etkinleştirildi ve başlatıldı: {}", schedule_name);
+        info!("Timer etkinleştirildi ve başlatıldı: {}", schedule_name);
         Ok(())
     }
 
     /// Timer'ı devre dışı bırak
     pub fn disable_timer(&self, schedule_name: &str) -> SchedulerResult<()> {
-        info!("🛑 Timer devre dışı bırakılıyor: {}", schedule_name);
+        info!("Timer devre dışı bırakılıyor: {}", schedule_name);
 
         let timer_name = format!("pinGuard-{}.timer", schedule_name);
         
@@ -116,7 +116,7 @@ impl SystemdIntegration {
             warn!("Timer devre dışı bırakılamadı: {}", error);
         }
 
-        info!("✅ Timer devre dışı bırakıldı: {}", schedule_name);
+        info!("Timer devre dışı bırakıldı: {}", schedule_name);
         Ok(())
     }
 
@@ -155,12 +155,12 @@ impl SystemdIntegration {
 
     /// Timer ve service dosyalarını kaldır
     pub fn remove_timer(&self, schedule_name: &str) -> SchedulerResult<()> {
-        info!("🗑️ Timer dosyaları kaldırılıyor: {}", schedule_name);
+        info!("Timer dosyaları kaldırılıyor: {}", schedule_name);
 
         let timer_path = self.systemd_dir.join(format!("pinGuard-{}.timer", schedule_name));
         if timer_path.exists() {
             fs::remove_file(&timer_path)?;
-            debug!("🗑️ Timer dosyası silindi: {}", timer_path.display());
+            debug!("Timer dosyası silindi: {}", timer_path.display());
         }
 
         Ok(())
@@ -171,7 +171,7 @@ impl SystemdIntegration {
         let service_path = self.systemd_dir.join(format!("pinGuard-{}.service", schedule_name));
         if service_path.exists() {
             fs::remove_file(&service_path)?;
-            debug!("🗑️ Service dosyası silindi: {}", service_path.display());
+            debug!("Service dosyası silindi: {}", service_path.display());
         }
 
         // Systemd daemon'ını reload et
@@ -189,7 +189,7 @@ impl SystemdIntegration {
         
         if !systemd_dir.exists() {
             fs::create_dir_all(&systemd_dir)?;
-            info!("📁 Systemd user dizini oluşturuldu: {}", systemd_dir.display());
+            info!("Systemd user dizini oluşturuldu: {}", systemd_dir.display());
         }
 
         Ok(systemd_dir)
@@ -262,7 +262,7 @@ WantedBy=timers.target
             "0 3 * * 0" => Ok("Sun *-*-* 03:00:00".to_string()),
             "0 6,12,18 * * *" => Ok("*-*-* 06,12,18:00:00".to_string()),
             _ => {
-                warn!("⚠️ Desteklenmeyen cron formatı, varsayılan değer kullanılıyor: {}", cron);
+                warn!("Desteklenmeyen cron formatı, varsayılan değer kullanılıyor: {}", cron);
                 Ok("*-*-* 02:00:00".to_string())
             }
         }
@@ -293,7 +293,7 @@ WantedBy=timers.target
 
     /// Systemd daemon'ını reload et
     fn reload_systemd(&self) -> SchedulerResult<()> {
-        debug!("🔄 Systemd daemon reload ediliyor");
+        debug!("Systemd daemon reload ediliyor");
 
         let output = Command::new("systemctl")
             .args(&["--user", "daemon-reload"])

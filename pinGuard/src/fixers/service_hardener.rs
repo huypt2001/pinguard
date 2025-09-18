@@ -23,7 +23,7 @@ impl Fixer for ServiceHardener {
         let start_time = Instant::now();
         let mut result = FixResult::new(finding.id.clone(), self.name().to_string());
 
-        tracing::info!("🔧 Service hardening başlatılıyor: {}", finding.title);
+        tracing::info!("Service hardening başlatılıyor: {}", finding.title);
 
         // Finding türüne göre uygun düzeltme yöntemini seç
         if finding.id.starts_with("SVC-RISKY-SERVICE") {
@@ -39,7 +39,7 @@ impl Fixer for ServiceHardener {
         }
 
         result = result.set_duration(start_time);
-        tracing::info!("✅ Service hardening tamamlandı: {}", result.message);
+        tracing::info!("Service hardening tamamlandı: {}", result.message);
         
         Ok(result)
     }
@@ -82,7 +82,7 @@ impl ServiceHardener {
     fn disable_risky_service(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let service_name = self.extract_service_name(&finding.affected_item)?;
         
-        tracing::info!("⚠️  Riskli servis devre dışı bırakılıyor: {}", service_name);
+        tracing::info!("Riskli servis devre dışı bırakılıyor: {}", service_name);
 
         // Önce servisi durdur
         let _output = execute_command("systemctl", &["stop", &service_name])?;
@@ -109,7 +109,7 @@ impl ServiceHardener {
 
     /// SSH konfigürasyonunu sertleştir
     fn harden_ssh_config(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🔐 SSH konfigürasyonu sertleştiriliyor...");
+        tracing::info!("SSH konfigürasyonu sertleştiriliyor...");
 
         let ssh_config_path = "/etc/ssh/sshd_config";
         
@@ -204,7 +204,7 @@ impl ServiceHardener {
     fn disable_unnecessary_service(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let service_name = self.extract_service_name(&finding.affected_item)?;
         
-        tracing::info!("🔧 Gereksiz servis devre dışı bırakılıyor: {}", service_name);
+        tracing::info!("Gereksiz servis devre dışı bırakılıyor: {}", service_name);
 
         // Servisi devre dışı bırak (ama durdurma)
         let _output = execute_command("systemctl", &["disable", &service_name])?;
@@ -229,7 +229,7 @@ impl ServiceHardener {
     fn secure_service_config(&self, finding: &Finding, result: &mut FixResult) -> Result<(), FixError> {
         let service_name = self.extract_service_name(&finding.affected_item)?;
         
-        tracing::info!("🔐 Servis konfigürasyonu güvenliği artırılıyor: {}", service_name);
+        tracing::info!("Servis konfigürasyonu güvenliği artırılıyor: {}", service_name);
 
         // Belirli servisler için özel sertleştirme
         match service_name.as_str() {
@@ -248,7 +248,7 @@ impl ServiceHardener {
 
     /// Apache konfigürasyonunu sertleştir
     fn harden_apache_config(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🌐 Apache konfigürasyonu sertleştiriliyor...");
+        tracing::info!("Apache konfigürasyonu sertleştiriliyor...");
 
         // Apache security config dosyası oluştur
         let security_config = r#"
@@ -288,7 +288,7 @@ TraceEnable Off
 
     /// Nginx konfigürasyonunu sertleştir
     fn harden_nginx_config(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🌐 Nginx konfigürasyonu sertleştiriliyor...");
+        tracing::info!("Nginx konfigürasyonu sertleştiriliyor...");
 
         let security_config = r#"
 # Security headers
@@ -325,7 +325,7 @@ more_clear_headers Server;
 
     /// MySQL konfigürasyonunu sertleştir
     fn harden_mysql_config(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🗄️  MySQL konfigürasyonu sertleştiriliyor...");
+        tracing::info!("MySQL konfigürasyonu sertleştiriliyor...");
 
         // mysql_secure_installation benzeri işlemler
         result.status = FixStatus::RequiresUserAction;
@@ -336,7 +336,7 @@ more_clear_headers Server;
 
     /// PostgreSQL konfigürasyonunu sertleştir
     fn harden_postgresql_config(&self, result: &mut FixResult) -> Result<(), FixError> {
-        tracing::info!("🗄️  PostgreSQL konfigürasyonu sertleştiriliyor...");
+        tracing::info!("PostgreSQL konfigürasyonu sertleştiriliyor...");
 
         result.status = FixStatus::RequiresUserAction;
         result.message = "PostgreSQL hardening requires manual configuration review".to_string();

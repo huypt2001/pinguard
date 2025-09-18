@@ -41,12 +41,12 @@ impl DatabaseManager {
         
         // PRAGMA journal_mode=WAL returns results, so we use query instead of execute
         let _ = conn.prepare("PRAGMA journal_mode=WAL")?.query_row([], |row| {
-            info!("📋 Journal mode: {}", row.get::<_, String>(0)?);
+            info!("Journal mode: {}", row.get::<_, String>(0)?);
             Ok(())
         });
         
         conn.execute("PRAGMA foreign_keys=ON", [])?;
-        info!("🔑 Foreign keys etkinleştirildi");
+        info!("Foreign keys etkinleştirildi");
         
         let mut db = Self { 
             connection: conn,
@@ -70,7 +70,7 @@ impl DatabaseManager {
 
     /// Migration'ları çalıştır
     pub fn run_migrations(&mut self) -> DatabaseResult<()> {
-        info!("🔄 Database migration'ları çalıştırılıyor...");
+        info!("Database migration'ları çalıştırılıyor...");
 
         // Migration tablosunu oluştur
         self.connection.execute(
@@ -97,7 +97,7 @@ impl DatabaseManager {
                 .query_row([name], |row| row.get::<_, i32>(0))?;
 
             if applied == 0 {
-                info!("📋 Migration uygulanıyor: {}", name);
+                info!("Migration uygulanıyor: {}", name);
                 match migration_fn(&mut self.connection) {
                     Ok(_) => {
                         // Migration'ı kaydet
@@ -105,19 +105,19 @@ impl DatabaseManager {
                             "INSERT INTO migrations (name) VALUES (?1)",
                             [name],
                         )?;
-                        info!("✅ Migration tamamlandı: {}", name);
+                        info!("Migration tamamlandı: {}", name);
                     }
                     Err(e) => {
-                        error!("❌ Migration '{}' hatası: {}", name, e);
+                        error!("Migration '{}' hatası: {}", name, e);
                         return Err(e);
                     }
                 }
             } else {
-                debug!("⏭️ Migration zaten uygulanmış: {}", name);
+                debug!("Migration zaten uygulanmış: {}", name);
             }
         }
 
-        info!("✅ Tüm migration'lar tamamlandı");
+        info!("Tüm migration'lar tamamlandı");
         Ok(())
     }
 
@@ -185,7 +185,7 @@ impl DatabaseManager {
 
     /// Veritabanını optimize et
     pub fn optimize(&self) -> DatabaseResult<()> {
-        info!("🔧 Veritabanı optimizasyonu başlatılıyor...");
+        info!("Veritabanı optimizasyonu başlatılıyor...");
 
         // VACUUM - unused space'i temizle
         self.connection.execute("VACUUM", [])?;
@@ -193,13 +193,13 @@ impl DatabaseManager {
         // ANALYZE - query planner istatistiklerini güncelle
         self.connection.execute("ANALYZE", [])?;
 
-        info!("✅ Veritabanı optimizasyonu tamamlandı");
+        info!("Veritabanı optimizasyonu tamamlandı");
         Ok(())
     }
 
     /// Veritabanı backup oluştur
     pub fn backup(&self, backup_path: &str) -> DatabaseResult<()> {
-        info!("💾 Veritabanı backup'ı oluşturuluyor: {}", backup_path);
+        info!("Veritabanı backup'ı oluşturuluyor: {}", backup_path);
         
         if self.db_path == ":memory:" {
             return Err(DatabaseError::ValidationError("Cannot backup in-memory database".to_string()));
@@ -215,7 +215,7 @@ impl DatabaseManager {
         std::fs::copy(&self.db_path, backup_path)
             .map_err(|e| DatabaseError::ConnectionError(format!("Backup failed: {}", e)))?;
 
-        info!("✅ Backup başarıyla oluşturuldu");
+        info!("Backup başarıyla oluşturuldu");
         Ok(())
     }
 }

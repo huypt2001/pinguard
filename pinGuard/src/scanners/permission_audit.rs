@@ -39,7 +39,7 @@ impl Scanner for PermissionAudit {
         let start_time = Instant::now();
         let mut result = ScanResult::new("Permission Audit".to_string());
         
-        tracing::info!("🔒 Permission audit taraması başlatılıyor...");
+        tracing::info!("Permission audit taraması başlatılıyor...");
         
         // Kritik dosya ve dizinlerin listesi
         let critical_paths = self.get_critical_paths();
@@ -61,7 +61,7 @@ impl Scanner for PermissionAudit {
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
         
-        tracing::info!("✅ Permission audit tamamlandı: {} bulgu", result.findings.len());
+        tracing::info!("Permission audit tamamlandı: {} bulgu", result.findings.len());
         
         Ok(result)
     }
@@ -235,7 +235,7 @@ impl PermissionAudit {
 
     /// Dünya yazılabilir dosyaları bul
     fn find_world_writable_files(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🔍 Dünya yazılabilir dosyalar kontrol ediliyor...");
+        tracing::info!("Dünya yazılabilir dosyalar kontrol ediliyor...");
         
         let suspicious_dirs = vec!["/etc", "/usr", "/bin", "/sbin", "/lib", "/lib64"];
         
@@ -279,7 +279,7 @@ impl PermissionAudit {
 
     /// SUID/SGID dosyaları kontrol et
     fn check_suid_sgid_files(&self, result: &mut ScanResult) -> Result<(), ScanError> {
-        tracing::info!("🔍 SUID/SGID dosyalar kontrol ediliyor...");
+        tracing::info!("SUID/SGID dosyalar kontrol ediliyor...");
         
         let search_dirs = vec!["/usr/bin", "/usr/sbin", "/bin", "/sbin"];
         
