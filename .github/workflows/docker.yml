@@ -82,7 +82,7 @@ jobs:
     - name: Run security scan
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: test-image
+        image-ref: pinguard:test
         format: 'sarif'
         output: 'trivy-results.sarif'
     
