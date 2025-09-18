@@ -13,9 +13,7 @@ fn benchmark_package_scan(c: &mut Criterion) {
 
 fn benchmark_scanner_creation(c: &mut Criterion) {
     c.bench_function("scanner_creation", |b| {
-        b.iter(|| {
-            black_box(PackageAudit::new())
-        })
+        b.iter(|| black_box(PackageAudit::new()))
     });
 }
 
