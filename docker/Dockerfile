@@ -24,6 +24,7 @@ RUN cargo build --release && rm -rf src benches
 
 # Copy the actual source code
 COPY pinGuard/src ./src
+COPY pinGuard/benches ./benches
 
 # Build the application in release mode
 RUN cargo build --release
