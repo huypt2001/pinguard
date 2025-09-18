@@ -63,6 +63,7 @@ temp/
 # Build artifacts
 dist/
 build/
+release_assets/
 
 # Benchmark results
 criterion/
