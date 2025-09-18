@@ -1,7 +1,82 @@
-/pinGuard/target
-/pinGuard/reports
-/docs
-/docs/*
-docs/
-docs/*
+# Rust
+/pinGuard/target/
+**/*.rs.bk
+Cargo.lock
+
+# PinGuard specific
 /pinGuard/pinGuard.db
+/pinGuard/pinGuard.db-*
+/pinGuard/scan_results.json
+/pinGuard/reports/
+/pinGuard/backups/
+*.log
+
+# Configuration
+config.local.yaml
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# Test artifacts
+test-results/
+coverage/
+.coverage
+htmlcov/
+
+# Docker
+.dockerignore
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+dist/
+build/
+
+# Benchmark results
+criterion/
+
+# Documentation
+docs/_build/
+docs/.doctrees/
+
+# Security
+*.pem
+*.key
+*.crt
+secrets.yaml
+
+# Local development
+local/
+dev/

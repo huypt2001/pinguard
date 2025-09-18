@@ -1,18 +1,44 @@
-# Use the official Rust image as the base image
+# Test environment for PinGuard
 FROM rust:1.75-slim
+
+# Install build and test dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    libsqlite3-dev \
+    curl \
+    wget \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory
 WORKDIR /app
 
-# Copy the Cargo.toml and Cargo.lock files
-COPY pinGuard/Cargo.toml pinGuard/Cargo.lock ./
+# Copy the entire project
+COPY pinGuard/ ./
 
-# Copy the source code
-COPY pinGuard/src ./src
+# Install additional test tools
+RUN cargo install cargo-audit cargo-tarpaulin cargo-deny
 
-# Copy test files if any
-COPY pinGuard/tests ./tests
-COPY pinGuard/benches ./benches
+# Create test script
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "Running cargo check..."\n\
+cargo check\n\
+echo "Running cargo test..."\n\
+cargo test\n\
+echo "Running cargo audit..."\n\
+cargo audit\n\
+echo "Running cargo clippy..."\n\
+cargo clippy -- -D warnings\n\
+echo "Running cargo fmt check..."\n\
+cargo fmt --all -- --check\n\
+echo "All tests passed!"\n\
+' > /app/run_tests.sh && chmod +x /app/run_tests.sh
 
-# Run tests
-CMD ["cargo", "test", "--release"]
+# Set environment for testing
+ENV RUST_BACKTRACE=1
+ENV RUST_LOG=debug
+
+# Default command runs all tests
+CMD ["/app/run_tests.sh"]

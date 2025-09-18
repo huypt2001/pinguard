@@ -1,0 +1,38 @@
+# Test configuration for Docker environment
+scanner:
+  modules:
+    package_audit: true
+    kernel_check: false  # Disabled in container
+    permission_audit: true
+    service_audit: false  # Disabled in container
+    user_audit: true
+    network_audit: false  # Disabled in container
+  concurrent_scans: true
+  max_scan_time: 60
+
+report:
+  format: "json"
+  output_dir: "/var/lib/pinGuard/reports"
+  template: "default"
+
+database:
+  path: "/var/lib/pinGuard/pinGuard.db"
+  auto_migrate: true
+  connection_pool_size: 5
+
+cve:
+  api_url: "http://mock-nvd-api:8080"  # Use mock service
+  cache_duration: 3600
+  auto_update: false  # Disabled for testing
+
+fixer:
+  auto_fix: false
+  require_confirmation: true
+  backup_before_fix: true
+  backup_dir: "/var/lib/pinGuard/backups"
+  enabled_modules: []  # Disabled for testing
+
+logging:
+  level: "debug"
+  log_to_file: true
+  log_file: "/var/log/pinGuard/pinGuard.log"

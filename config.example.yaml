@@ -1,0 +1,230 @@
+# PinGuard Configuration File
+# This is the default configuration for PinGuard
+# Copy this file to /etc/pinGuard/config.yaml or specify with --config flag
+
+# =============================================================================
+# SCANNER CONFIGURATION
+# =============================================================================
+scanner:
+  # Which modules to enable for scanning
+  modules:
+    package_audit: true      # Check for vulnerable packages
+    kernel_check: true       # Check kernel version and patches
+    permission_audit: true   # Audit file/directory permissions
+    service_audit: true      # Check service configurations
+    user_audit: true         # Audit user accounts and policies
+    network_audit: true      # Check network configurations and open ports
+  
+  # Performance settings
+  concurrent_scans: true     # Run multiple scans in parallel
+  max_scan_time: 300        # Maximum time for a single scan (seconds)
+  scan_timeout: 600         # Overall scan timeout (seconds)
+  max_parallel_scans: 4     # Maximum number of parallel scans
+  
+  # Scan depth and scope
+  deep_scan: false          # Enable deep scanning (slower but more thorough)
+  skip_system_files: false # Skip system files in permission audit
+  include_dev_packages: true # Include development packages in audit
+
+# =============================================================================
+# REPORT CONFIGURATION
+# =============================================================================
+report:
+  # Output format: json, html, pdf, xml
+  format: "json"
+  
+  # Output directory for reports
+  output_dir: "./reports"
+  
+  # Report template (default, detailed, summary)
+  template: "default"
+  
+  # Include detailed CVE information in reports
+  include_cve_details: true
+  
+  # Include remediation suggestions
+  include_remediation: true
+  
+  # Report file naming pattern
+  # Available variables: {timestamp}, {hostname}, {scan_id}
+  filename_pattern: "pinGuard_scan_{timestamp}_{hostname}"
+  
+  # Compression for large reports
+  compress_reports: false
+  
+  # Maximum report size before compression (MB)
+  max_report_size_mb: 50
+
+# =============================================================================
+# DATABASE CONFIGURATION
+# =============================================================================
+database:
+  # Database file path
+  path: "./pinGuard.db"
+  
+  # Automatically run migrations on startup
+  auto_migrate: true
+  
+  # Connection pool settings
+  connection_pool_size: 10
+  connection_timeout: 30
+  
+  # Database maintenance
+  auto_vacuum: true
+  vacuum_interval_hours: 24
+  
+  # Backup settings
+  auto_backup: false
+  backup_interval_hours: 24
+  backup_retention_days: 30
+  backup_dir: "./backups"
+
+# =============================================================================
+# CVE DATABASE CONFIGURATION
+# =============================================================================
+cve:
+  # NVD API configuration
+  api_url: "https://services.nvd.nist.gov/rest/json/cves/2.0"
+  api_key: ""  # Optional: Get from https://nvd.nist.gov/developers/request-an-api-key
+  
+  # Cache settings
+  cache_duration: 86400     # 24 hours (seconds)
+  max_cache_size: 100000    # Maximum number of CVEs to cache
+  cache_cleanup_interval: 3600  # Clean expired cache every hour
+  
+  # Auto-update settings
+  auto_update: true
+  update_interval_hours: 12
+  update_on_startup: true
+  
+  # Fallback settings
+  fallback_enabled: true    # Use cached data if API is unavailable
+  offline_mode: false       # Only use cached data
+  
+  # Rate limiting (requests per minute)
+  # With API key: 50/min, Without: 5/min
+  rate_limit: 5
+
+# =============================================================================
+# FIXER CONFIGURATION
+# =============================================================================
+fixer:
+  # Safety settings
+  auto_fix: false           # Automatically apply fixes (DANGEROUS!)
+  require_confirmation: true # Ask for confirmation before each fix
+  dry_run: false           # Show what would be fixed without applying
+  
+  # Backup settings
+  backup_before_fix: true   # Create backups before making changes
+  backup_dir: "./backups"
+  backup_retention_days: 30
+  
+  # Module enablement
+  enabled_modules:
+    - "package_updater"     # Update vulnerable packages
+    - "kernel_updater"      # Update kernel (requires reboot)
+    - "permission_fixer"    # Fix file permissions
+    - "service_hardener"    # Harden service configurations
+    - "user_policy_fixer"   # Fix user account policies
+    - "firewall_configurator" # Configure firewall rules
+  
+  # Package updater settings
+  package_updater:
+    update_all_packages: false  # Update all packages or just vulnerable ones
+    exclude_packages: []        # Packages to never update
+    use_dist_upgrade: false     # Use dist-upgrade instead of upgrade
+    
+  # Service hardener settings
+  service_hardener:
+    disable_unnecessary_services: true
+    apply_security_configs: true
+    restart_services: false     # Restart services after configuration changes
+    
+  # Firewall configurator settings
+  firewall_configurator:
+    enable_firewall: true
+    default_policy: "deny"      # deny, allow
+    preserve_existing_rules: true
+
+# =============================================================================
+# SCHEDULER CONFIGURATION
+# =============================================================================
+scheduler:
+  # Enable scheduled scans
+  enabled: false
+  
+  # Default scan schedule (cron format)
+  default_schedule: "0 2 * * *"  # Daily at 2 AM
+  
+  # Systemd integration
+  use_systemd: true
+  systemd_user: "root"
+  
+  # Notification settings
+  notifications:
+    enabled: false
+    email:
+      smtp_server: ""
+      smtp_port: 587
+      username: ""
+      password: ""
+      from_address: ""
+      to_addresses: []
+    webhook:
+      url: ""
+      secret: ""
+
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+logging:
+  # Log level: trace, debug, info, warn, error
+  level: "info"
+  
+  # Log to file
+  log_to_file: true
+  log_file: "./pinGuard.log"
+  
+  # Log rotation
+  rotate_logs: true
+  max_log_size_mb: 100
+  max_log_files: 5
+  
+  # Structured logging (JSON format)
+  json_format: false
+
+# =============================================================================
+# SECURITY CONFIGURATION
+# =============================================================================
+security:
+  # API security (if REST API is enabled in future)
+  api_key: ""
+  enable_tls: true
+  
+  # File permissions for created files
+  file_permissions: "0600"
+  dir_permissions: "0700"
+  
+  # Privilege dropping (experimental)
+  drop_privileges: false
+  run_as_user: "pinGuard"
+  run_as_group: "pinGuard"
+
+# =============================================================================
+# ADVANCED CONFIGURATION
+# =============================================================================
+advanced:
+  # Memory limits
+  max_memory_usage_mb: 1024
+  
+  # Temporary directory
+  temp_dir: "/tmp/pinGuard"
+  
+  # Clean up temporary files
+  cleanup_temp_files: true
+  
+  # Plugin directory (future feature)
+  plugin_dir: "./plugins"
+  
+  # Custom vulnerability databases
+  custom_vuln_dbs: []
