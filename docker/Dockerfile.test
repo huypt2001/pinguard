@@ -1,5 +1,5 @@
 # Test environment for PinGuard
-FROM rust:1.75-slim
+FROM rust:1.90.0
 
 # Install build and test dependencies
 RUN apt-get update && apt-get install -y \
