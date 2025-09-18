@@ -1,0 +1,65 @@
+# PinGuard Configuration File
+# Bu dosya PinGuard'ın genel ayarlarını içerir
+
+# Ana configuration
+app:
+  name: "PinGuard"
+  version: "0.1.0"
+  log_level: "info"
+  
+# Tarama ayarları
+scanner:
+  enabled_modules:
+    - "package_audit"
+    - "kernel_check"
+    - "permission_audit"
+    - "service_audit"
+    - "user_audit"
+    - "network_audit"
+  
+  # Paket audit ayarları
+  package_audit:
+    check_cve: true
+    check_outdated: true
+    exclude_packages: []
+    
+  # Kernel kontrol ayarları
+  kernel_check:
+    check_eol: true
+    check_patches: true
+    
+# Rapor ayarları
+report:
+  format: "json"
+  output_dir: "./reports"
+  template: "default"
+
+# Database ayarları
+database:
+  path: "./pinGuard.db"
+  auto_migrate: true
+  connection_pool_size: 10
+  
+# CVE veri tabanı ayarları  
+cve:
+  api_url: "https://services.nvd.nist.gov/rest/json/cves/2.0"
+  cache_duration: 86400  # 24 saat (saniye)
+  auto_update: true
+
+# Düzeltme ayarları
+fixer:
+  auto_fix: false
+  require_confirmation: true
+  backup_before_fix: true
+  backup_dir: "./backups"
+  enabled_modules:
+    - "package_updater"
+    - "kernel_updater"
+    - "permission_fixer"
+    - "service_hardener"
+    - "user_policy_fixer"
+    - "firewall_configurator"
+
+# Diğer ayarlar
+key: "example_key"
+value: "example_value"

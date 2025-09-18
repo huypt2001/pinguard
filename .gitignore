@@ -1,0 +1,7 @@
+/pinGuard/target
+/pinGuard/reports
+/docs
+/docs/*
+docs/
+docs/*
+/pinGuard/pinGuard.db
