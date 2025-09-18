@@ -1,6 +1,6 @@
 # Multi-stage build for PinGuard
 # Build stage
-FROM rust:1.90.0 as builder
+FROM rust:1.89.0 AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
