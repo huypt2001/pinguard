@@ -24,7 +24,7 @@ struct RiskyService {
 
 impl Scanner for ServiceAudit {
     fn name(&self) -> &'static str {
-        "Service Audit"
+        "service_audit"
     }
 
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool {

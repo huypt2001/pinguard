@@ -44,9 +44,8 @@ fn handle_module_scan(
             display.scan_summary(result.findings.len(), critical, high, medium, low);
             
             // Show detailed findings if requested
-            if !matches.get_flag("quiet") {
-                show_findings(&result.findings, display);
-            }
+            show_findings(&result.findings, display);
+            
             
             // Save results if output specified
             if let Some(output_file) = matches.get_one::<String>("output") {
@@ -127,7 +126,7 @@ fn handle_full_scan(
     display.scan_summary(all_findings.len(), critical, high, medium, low);
     
     // Show detailed findings if requested
-    if !matches.get_flag("quiet") && !all_findings.is_empty() {
+    if !all_findings.is_empty() {
         show_findings(&all_findings, display);
     }
     

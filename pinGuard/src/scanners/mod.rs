@@ -1,4 +1,5 @@
 // Original scanners (legacy)
+pub mod package_audit;
 pub mod kernel_check;
 pub mod manager;
 pub mod network_audit;

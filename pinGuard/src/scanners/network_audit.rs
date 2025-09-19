@@ -27,7 +27,7 @@ struct OpenPort {
 
 impl Scanner for NetworkAudit {
     fn name(&self) -> &'static str {
-        "Network Audit"
+        "network_audit"
     }
 
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool {

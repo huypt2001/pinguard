@@ -34,7 +34,7 @@ enum PasswordStatus {
 
 impl Scanner for UserAudit {
     fn name(&self) -> &'static str {
-        "User Audit"
+        "user_audit"
     }
 
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool {

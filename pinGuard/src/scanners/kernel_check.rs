@@ -15,7 +15,7 @@ struct KernelInfo {
 
 impl Scanner for KernelCheck {
     fn name(&self) -> &'static str {
-        "Kernel Check"
+        "kernel_check"
     }
 
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool {

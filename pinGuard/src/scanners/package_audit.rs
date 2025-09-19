@@ -52,7 +52,7 @@ impl PackageAudit {
 
 impl Scanner for PackageAudit {
     fn name(&self) -> &'static str {
-        "Package Audit"
+        "package_audit"
     }
 
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool {

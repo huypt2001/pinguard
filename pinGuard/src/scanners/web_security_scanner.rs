@@ -776,7 +776,7 @@ impl WebSecurityScanner {
 
 impl Scanner for WebSecurityScanner {
     fn name(&self) -> &'static str {
-        "Web Application Security"
+        "web_security"
     }
 
     fn scan(&self) -> Result<ScanResult, ScanError> {
