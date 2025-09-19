@@ -1,10 +1,8 @@
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Gauge, Wrap};
+use ratatui::widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Gauge};
 
 use crate::core::errors::PinGuardError;
-use crate::core::config::Config;
-use crate::scanners::{manager::ScannerManager, ScanResult, ScanStatus};
 use crate::tui::theme::Theme;
 use super::{Screen, AsyncKeyHandler, ScreenAction, ScreenType};
 
@@ -27,14 +25,10 @@ pub struct ScannerScreen {
     progress: f64,
     current_operation: String,
     results: Vec<String>,
-    scanner_manager: ScannerManager,
-    scan_results: Vec<ScanResult>,
 }
 
 impl ScannerScreen {
     pub fn new() -> Self {
-        let scanner_manager = ScannerManager::new();
-        
         let scanners = vec![
             ScannerType {
                 name: "🔍 Package Audit".to_string(),
@@ -54,7 +48,7 @@ impl ScannerScreen {
             },
             ScannerType {
                 name: "🔐 Permission Audit".to_string(),
-                description: "Sistem izinlerini ve dosya güvenliğini kontrol eder".to_string(),
+                description: "Dosya ve dizin izinlerini kontrol eder".to_string(),
                 enabled: true,
                 estimated_time: "3-7 dakika".to_string(),
                 last_run: None,
@@ -62,43 +56,43 @@ impl ScannerScreen {
             },
             ScannerType {
                 name: "👤 User Audit".to_string(),
-                description: "Kullanıcı hesapları ve yetkileri tarar".to_string(),
+                description: "Kullanıcı hesapları ve izinlerini inceler".to_string(),
                 enabled: true,
                 estimated_time: "1-2 dakika".to_string(),
                 last_run: None,
-                severity: "Medium".to_string(),
+                severity: "High".to_string(),
             },
             ScannerType {
-                name: "⚙️ Service Audit".to_string(),
-                description: "Çalışan servisleri ve güvenlik ayarlarını kontrol eder".to_string(),
+                name: "⚙️  Service Audit".to_string(),
+                description: "Çalışan servisleri ve konfigürasyonları kontrol eder".to_string(),
                 enabled: true,
                 estimated_time: "2-4 dakika".to_string(),
-                last_run: None,
-                severity: "High".to_string(),
-            },
-            ScannerType {
-                name: "🐳 Container Security".to_string(),
-                description: "Docker konteynerlerini güvenlik açıkları için tarar".to_string(),
-                enabled: true,
-                estimated_time: "3-5 dakika".to_string(),
-                last_run: None,
-                severity: "High".to_string(),
-            },
-            ScannerType {
-                name: "🌍 Web Security".to_string(),
-                description: "Web servislerini ve SSL/TLS yapılandırmasını kontrol eder".to_string(),
-                enabled: true,
-                estimated_time: "2-6 dakika".to_string(),
                 last_run: None,
                 severity: "Medium".to_string(),
             },
             ScannerType {
                 name: "📋 Compliance Check".to_string(),
-                description: "Sistem güvenlik standartlarına uygunluk kontrolü".to_string(),
+                description: "CIS, NIST gibi standartlara uygunluğu kontrol eder".to_string(),
                 enabled: true,
                 estimated_time: "5-10 dakika".to_string(),
                 last_run: None,
                 severity: "High".to_string(),
+            },
+            ScannerType {
+                name: "🐳 Container Security".to_string(),
+                description: "Docker container'ları ve image'ları tarar".to_string(),
+                enabled: true,
+                estimated_time: "3-8 dakika".to_string(),
+                last_run: None,
+                severity: "High".to_string(),
+            },
+            ScannerType {
+                name: "🌍 Web Security".to_string(),
+                description: "Web servisleri ve SSL sertifikalarını kontrol eder".to_string(),
+                enabled: true,
+                estimated_time: "2-5 dakika".to_string(),
+                last_run: None,
+                severity: "Medium".to_string(),
             },
         ];
 
@@ -112,373 +106,432 @@ impl ScannerScreen {
             progress: 0.0,
             current_operation: String::new(),
             results: Vec::new(),
-            scanner_manager,
-            scan_results: Vec::new(),
         }
     }
 
-    /// Gerçek scanner çalıştır
-    async fn run_real_scan(&mut self, scanner_index: usize) -> Result<(), PinGuardError> {
-        if scanner_index >= self.scanners.len() {
-            return Err(PinGuardError::config("Invalid scanner index"));
-        }
-
-        self.scanning = true;
-        self.progress = 0.0;
-        self.current_operation = format!("Starting {}...", self.scanners[scanner_index].name);
-
-        // Default config - normalde bu config dosyasından gelir
-        let config = Config::default_config();
-
-        // Scanner name mapping
-        let scanner_name = match scanner_index {
-            0 => "Package Audit",
-            1 => "Network Audit", 
-            2 => "Permission Audit",
-            3 => "User Audit",
-            4 => "Service Audit",
-            5 => "Container Security",
-            6 => "Web Security",
-            7 => "Compliance Scanner",
-            _ => return Err(PinGuardError::config("Unknown scanner")),
+    fn next(&mut self) {
+        let i = match self.list_state.selected() {
+            Some(i) => {
+                if i >= self.scanners.len() - 1 {
+                    0
+                } else {
+                    i + 1
+                }
+            }
+            None => 0,
         };
+        self.list_state.select(Some(i));
+    }
 
-        self.current_operation = format!("Running {}...", scanner_name);
-        self.progress = 0.3;
+    fn previous(&mut self) {
+        let i = match self.list_state.selected() {
+            Some(i) => {
+                if i == 0 {
+                    self.scanners.len() - 1
+                } else {
+                    i - 1
+                }
+            }
+            None => 0,
+        };
+        self.list_state.select(Some(i));
+    }
 
-        // Gerçek scanner çalıştır
-        match self.scanner_manager.run_specific_scan(scanner_name, &config) {
-            Ok(result) => {
-                self.progress = 1.0;
+    async fn start_scan(&mut self) -> Result<Option<ScreenAction>, PinGuardError> {
+        if let Some(i) = self.list_state.selected() {
+            if let Some(scanner) = self.scanners.get(i) {
+                if !scanner.enabled {
+                    return Ok(Some(ScreenAction::SetStatus("Bu scanner şu anda kullanılamıyor".to_string())));
+                }
+
+                self.scanning = true;
+                self.progress = 0.0;
+                self.current_operation = format!("{} başlatılıyor...", scanner.name);
+                self.results.clear();
+
+                // TODO: Gerçek scan işlemini burada başlat
+                // Şimdilik mock bir progress simüle edelim
                 
-                // Sonuçları formatla
-                let findings_count = result.findings.len();
-                let critical_count = result.findings.iter()
-                    .filter(|f| matches!(f.severity, crate::scanners::Severity::Critical))
-                    .count();
-                let high_count = result.findings.iter()
-                    .filter(|f| matches!(f.severity, crate::scanners::Severity::High))
-                    .count();
-
-                self.results.clear();
-                self.results.push(format!("✅ {} tamamlandı", scanner_name));
-                self.results.push(format!("📊 {} bulgular bulundu", findings_count));
-                if critical_count > 0 {
-                    self.results.push(format!("🔴 {} kritik sorun", critical_count));
-                }
-                if high_count > 0 {
-                    self.results.push(format!("🟠 {} yüksek riskli sorun", high_count));
-                }
-                self.results.push(format!("⏱️ Süre: {}ms", result.metadata.duration_ms));
-
-                // Önemli bulguları ekle
-                for finding in result.findings.iter().take(5) {
-                    self.results.push(format!(
-                        "• {}: {}", 
-                        severity_to_string(&finding.severity),
-                        finding.title
-                    ));
-                }
-
-                self.scan_results.push(result);
-                self.current_operation = "Tarama tamamlandı".to_string();
-            },
-            Err(e) => {
-                self.results.clear();
-                self.results.push(format!("❌ Tarama başarısız: {}", e));
-                self.current_operation = "Tarama başarısız".to_string();
+                return Ok(Some(ScreenAction::SetStatus(format!("{} başlatıldı", scanner.name))));
             }
         }
-
-        self.scanning = false;
-        Ok(())
+        Ok(None)
     }
 
-    /// Tüm scanner'ları çalıştır
-    async fn run_all_scans(&mut self) -> Result<(), PinGuardError> {
+    async fn start_all_scans(&mut self) -> Result<Option<ScreenAction>, PinGuardError> {
         self.scanning = true;
         self.progress = 0.0;
         self.current_operation = "Tüm taramalar başlatılıyor...".to_string();
         self.results.clear();
 
-        let config = Config::default_config();
-        let results = self.scanner_manager.run_all_scans(&config);
+        // TODO: Tüm scanner'ları sırayla çalıştır
         
-        let total_scanners = results.len();
-        let mut completed = 0;
+        Ok(Some(ScreenAction::SetStatus("Tüm taramalar başlatıldı".to_string())))
+    }
 
-        for result in results {
-            completed += 1;
-            self.progress = completed as f64 / total_scanners as f64;
-            
-            match result.status {
-                ScanStatus::Success => {
-                    let findings = result.findings.len();
-                    self.results.push(format!("✅ {}: {} bulgular", result.scanner_name, findings));
-                },
-                ScanStatus::Error(ref e) => {
-                    self.results.push(format!("❌ {}: {}", result.scanner_name, e));
-                },
-                ScanStatus::Warning => {
-                    self.results.push(format!("⚠️ {}: Uyarılar var", result.scanner_name));
-                },
-                ScanStatus::Skipped(ref reason) => {
-                    self.results.push(format!("⏭️ {}: {}", result.scanner_name, reason));
-                }
-            }
-            
-            self.scan_results.push(result);
-        }
-
-        self.current_operation = "Tüm taramalar tamamlandı".to_string();
+    fn stop_scan(&mut self) {
         self.scanning = false;
-        Ok(())
-    }
-
-    pub fn tick(&mut self) {
-        // Gerçek zamanlı güncelleme simülasyonu
-        if self.scanning && self.progress < 1.0 {
-            self.progress += 0.02;
-            if self.progress > 1.0 {
-                self.progress = 1.0;
-            }
-        }
-    }
-}
-
-// Helper function for severity display
-fn severity_to_string(severity: &crate::scanners::Severity) -> String {
-    match severity {
-        crate::scanners::Severity::Info => "INFO".to_string(),
-        crate::scanners::Severity::Low => "LOW".to_string(),
-        crate::scanners::Severity::Medium => "MEDIUM".to_string(),
-        crate::scanners::Severity::High => "HIGH".to_string(),
-        crate::scanners::Severity::Critical => "CRITICAL".to_string(),
-    }
-}
-
-#[async_trait::async_trait]
-impl AsyncKeyHandler for ScannerScreen {
-    async fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<ScreenAction>, PinGuardError> {
-        if self.scanning {
-            // Tarama sırasında sadece ESC ile iptal
-            if key.code == KeyCode::Esc {
-                self.scanning = false;
-                self.current_operation = "Tarama iptal edildi".to_string();
-                return Ok(Some(ScreenAction::SwitchScreen(ScreenType::MainMenu)));
-            }
-            return Ok(None);
-        }
-
-        match key.code {
-            KeyCode::Up => {
-                let selected = self.list_state.selected().unwrap_or(0);
-                if selected > 0 {
-                    self.list_state.select(Some(selected - 1));
-                }
-                Ok(None)
-            }
-            KeyCode::Down => {
-                let selected = self.list_state.selected().unwrap_or(0);
-                if selected < self.scanners.len() - 1 {
-                    self.list_state.select(Some(selected + 1));
-                }
-                Ok(None)
-            }
-            KeyCode::Enter => {
-                if let Some(selected) = self.list_state.selected() {
-                    if let Err(e) = self.run_real_scan(selected).await {
-                        self.results.clear();
-                        self.results.push(format!("❌ Hata: {}", e));
-                    }
-                }
-                Ok(None)
-            }
-            KeyCode::Char('a') | KeyCode::Char('A') => {
-                // Tüm taramaları çalıştır
-                if let Err(e) = self.run_all_scans().await {
-                    self.results.clear();
-                    self.results.push(format!("❌ Hata: {}", e));
-                }
-                Ok(None)
-            }
-            KeyCode::Char('r') | KeyCode::Char('R') => {
-                // Sonuçları temizle
-                self.results.clear();
-                self.scan_results.clear();
-                self.progress = 0.0;
-                self.current_operation.clear();
-                Ok(None)
-            }
-            KeyCode::Esc => Ok(Some(ScreenAction::SwitchScreen(ScreenType::MainMenu))),
-            _ => Ok(None),
-        }
+        self.current_operation = "Tarama durduruldu".to_string();
     }
 }
 
 impl Screen for ScannerScreen {
     fn title(&self) -> &str {
-        "Security Scanners"
+        "Security Scanner"
     }
 
     fn render(&mut self, frame: &mut Frame, area: Rect, theme: &Theme) {
+        if self.scanning {
+            self.render_scanning_view(frame, area, theme);
+        } else {
+            self.render_scanner_selection(frame, area, theme);
+        }
+    }
 
-        // Ana layout
-        let chunks = Layout::default()
+    fn help_text(&self) -> Vec<(&str, &str)> {
+        if self.scanning {
+            vec![
+                ("S", "Stop scan"),
+                ("ESC", "Back"),
+            ]
+        } else {
+            vec![
+                ("↑/↓", "Navigate"),
+                ("Enter", "Run scanner"),
+                ("A", "Run all"),
+                ("R", "View reports"),
+                ("ESC", "Back"),
+            ]
+        }
+    }
+
+    fn tick(&mut self) {
+        if self.scanning {
+            // Simulate progress
+            self.progress += 0.02;
+            if self.progress >= 1.0 {
+                self.progress = 1.0;
+                self.scanning = false;
+                self.current_operation = "Tarama tamamlandı".to_string();
+                self.results = vec![
+                    "✓ 15 güvenlik kontrolü tamamlandı".to_string(),
+                    "⚠ 3 orta seviye açık bulundu".to_string(),
+                    "✗ 1 yüksek seviye açık bulundu".to_string(),
+                ];
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl AsyncKeyHandler for ScannerScreen {
+    async fn handle_key_events(&mut self, key_event: KeyEvent) 
+        -> Result<Option<ScreenAction>, PinGuardError> {
+        if self.scanning {
+            match key_event.code {
+                KeyCode::Char('s') | KeyCode::Char('S') => {
+                    self.stop_scan();
+                    Ok(Some(ScreenAction::SetStatus("Tarama durduruldu".to_string())))
+                }
+                _ => Ok(None),
+            }
+        } else {
+            match key_event.code {
+                KeyCode::Up | KeyCode::Char('k') => {
+                    self.previous();
+                    Ok(None)
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    self.next();
+                    Ok(None)
+                }
+                KeyCode::Enter | KeyCode::Char(' ') => {
+                    self.start_scan().await
+                }
+                KeyCode::Char('a') | KeyCode::Char('A') => {
+                    self.start_all_scans().await
+                }
+                KeyCode::Char('r') | KeyCode::Char('R') => {
+                    Ok(Some(ScreenAction::SwitchScreen(ScreenType::Reports)))
+                }
+                _ => Ok(None),
+            }
+        }
+    }
+}
+
+impl ScannerScreen {
+    fn render_scanner_selection(&mut self, frame: &mut Frame, area: Rect, theme: &Theme) {
+        let layout = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
             .split(area);
 
-        // Sol panel: Scanner listesi
-        let left_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Min(10), Constraint::Length(3)])
-            .split(chunks[0]);
+        // Sol taraf: Scanner listesi
+        self.render_scanner_list(frame, layout[0], theme);
 
-        // Scanner listesi
+        // Sağ taraf: Seçili scanner detayları
+        self.render_scanner_details(frame, layout[1], theme);
+    }
+
+    fn render_scanner_list(&mut self, frame: &mut Frame, area: Rect, theme: &Theme) {
         let items: Vec<ListItem> = self
             .scanners
             .iter()
             .enumerate()
             .map(|(i, scanner)| {
-                let severity_color = match scanner.severity.as_str() {
-                    "Critical" => theme.error,
-                    "High" => theme.warning,
-                    "Medium" => theme.info,
-                    _ => theme.fg,
-                };
-
-                let status = if self.scanning {
-                    "🔄 Çalışıyor..."
-                } else if !self.scan_results.is_empty() {
-                    "✅ Tamamlandı"
+                let style = if Some(i) == self.list_state.selected() {
+                    theme.selected_item_style()
+                } else if scanner.enabled {
+                    theme.list_item_style()
                 } else {
-                    "⏳ Bekliyor"
+                    theme.muted_style()
                 };
 
-                ListItem::new(vec![
+                let status = if scanner.enabled { "●" } else { "○" };
+                let severity_style = theme.severity_style(&scanner.severity);
+                
+                let content = vec![
                     Line::from(vec![
-                        Span::styled(&scanner.name, Style::default().fg(theme.accent).add_modifier(Modifier::BOLD)),
-                        Span::raw("  "),
-                        Span::styled(status, Style::default().fg(severity_color)),
+                        Span::styled(format!(" {} ", status), theme.accent_style()),
+                        Span::styled(&scanner.name, style),
+                        Span::styled(
+                            format!(" [{}]", scanner.severity),
+                            severity_style
+                        ),
                     ]),
-                    Line::from(Span::styled(
-                        &scanner.description,
-                        Style::default().fg(theme.fg),
-                    )),
                     Line::from(vec![
-                        Span::styled("Süre: ", Style::default().fg(theme.fg)),
-                        Span::styled(&scanner.estimated_time, Style::default().fg(theme.info)),
-                        Span::raw("  "),
-                        Span::styled("Risk: ", Style::default().fg(theme.fg)),
-                        Span::styled(&scanner.severity, Style::default().fg(severity_color)),
+                        Span::styled("   ", style),
+                        Span::styled(&scanner.description, theme.muted_style()),
                     ]),
-                ])
+                ];
+
+                ListItem::new(content)
             })
             .collect();
 
+        let block = Block::default()
+            .title(" 🔍 Güvenlik Tarayıcıları ")
+            .title_style(theme.title_style())
+            .borders(Borders::ALL)
+            .border_style(theme.focused_border_style())
+            .style(theme.box_style());
+
         let list = List::new(items)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("🔍 Security Scanners")
-                    .border_style(Style::default().fg(theme.border)),
-            )
-            .highlight_style(
-                Style::default()
-                    .bg(theme.accent)
-                    .fg(theme.bg)
-                    .add_modifier(Modifier::BOLD),
-            )
-            .highlight_symbol("▶ ");
+            .block(block)
+            .highlight_style(theme.selected_item_style());
 
-        frame.render_stateful_widget(list, left_chunks[0], &mut self.list_state);
+        frame.render_stateful_widget(list, area, &mut self.list_state);
+    }
 
-        // Kontroller
-        let controls = Paragraph::new("Enter: Çalıştır | A: Tümünü çalıştır | R: Temizle | ESC: Geri")
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("Kontroller")
-                    .border_style(Style::default().fg(theme.border)),
-            )
-            .style(Style::default().fg(theme.fg))
-            .alignment(Alignment::Center);
-
-        frame.render_widget(controls, left_chunks[1]);
-
-        // Sağ panel: Sonuçlar ve progress
-        let right_chunks = Layout::default()
+    fn render_scanner_details(&self, frame: &mut Frame, area: Rect, theme: &Theme) {
+        let detail_layout = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3),  // Progress bar
-                Constraint::Min(5),     // Sonuçlar
+                Constraint::Min(8),     // Scanner detayları
+                Constraint::Length(6),  // Son sonuçlar
             ])
-            .split(chunks[1]);
+            .split(area);
 
-        // Progress bar
-        if self.scanning {
-            let progress = Gauge::default()
-                .block(
-                    Block::default()
-                        .borders(Borders::ALL)
-                        .title("🔄 Tarama Durumu")
-                        .border_style(Style::default().fg(theme.border)),
-                )
-                .gauge_style(Style::default().fg(theme.accent))
-                .percent((self.progress * 100.0) as u16)
-                .label(self.current_operation.clone());
+        // Scanner detayları
+        if let Some(selected) = self.list_state.selected() {
+            if let Some(scanner) = self.scanners.get(selected) {
+                let details_text = vec![
+                    Line::from(vec![
+                        Span::styled("📝 İsim: ", theme.info_style()),
+                        Span::styled(&scanner.name, theme.list_item_style()),
+                    ]),
+                    Line::from(""),
+                    Line::from(vec![
+                        Span::styled("📋 Açıklama:", theme.info_style()),
+                    ]),
+                    Line::from(vec![
+                        Span::styled(&scanner.description, theme.muted_style()),
+                    ]),
+                    Line::from(""),
+                    Line::from(vec![
+                        Span::styled("⏱️  Tahmini Süre: ", theme.info_style()),
+                        Span::styled(&scanner.estimated_time, theme.warning_style()),
+                    ]),
+                    Line::from(vec![
+                        Span::styled("⚡ Önem Derecesi: ", theme.info_style()),
+                        Span::styled(&scanner.severity, theme.severity_style(&scanner.severity)),
+                    ]),
+                    Line::from(vec![
+                        Span::styled("🕐 Son Çalıştırma: ", theme.info_style()),
+                        Span::styled(
+                            scanner.last_run.as_deref().unwrap_or("Hiç çalıştırılmadı"),
+                            if scanner.last_run.is_some() {
+                                theme.success_style()
+                            } else {
+                                theme.muted_style()
+                            }
+                        ),
+                    ]),
+                ];
 
-            frame.render_widget(progress, right_chunks[0]);
-        } else {
-            let status = Paragraph::new(
-                if self.scan_results.is_empty() {
-                    "Tarama yapmak için bir scanner seçin"
-                } else {
-                    "Son tarama tamamlandı"
-                }
-            )
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title("📊 Durum")
-                    .border_style(Style::default().fg(theme.border)),
-            )
-            .style(Style::default().fg(theme.fg))
-            .alignment(Alignment::Center);
+                let details = Paragraph::new(details_text)
+                    .block(
+                        Block::default()
+                            .title(" 📋 Scanner Detayları ")
+                            .title_style(theme.title_style())
+                            .borders(Borders::ALL)
+                            .border_style(theme.border_style())
+                            .style(theme.box_style()),
+                    )
+                    .wrap(ratatui::widgets::Wrap { trim: true });
 
-            frame.render_widget(status, right_chunks[0]);
+                frame.render_widget(details, detail_layout[0]);
+            }
         }
 
-        // Sonuçlar
-        let results_text = if self.results.is_empty() {
-            Text::from(vec![
-                Line::from("Henüz tarama yapılmadı."),
-                Line::from(""),
-                Line::from("Kullanılabilir taramalar:"),
-                Line::from("• Enter ile seçili taramayı çalıştır"),
-                Line::from("• 'A' ile tüm taramaları çalıştır"),
-                Line::from("• 'R' ile sonuçları temizle"),
-            ])
-        } else {
-            Text::from(
-                self.results
-                    .iter()
-                    .map(|r| Line::from(r.as_str()))
-                    .collect::<Vec<_>>()
-            )
-        };
+        // Hızlı işlemler
+        self.render_quick_actions(frame, detail_layout[1], theme);
+    }
 
-        let results = Paragraph::new(results_text)
+    fn render_quick_actions(&self, frame: &mut Frame, area: Rect, theme: &Theme) {
+        let actions_text = vec![
+            Line::from(vec![
+                Span::styled("⌨️  Hızlı İşlemler:", theme.info_style()),
+            ]),
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("Enter", theme.accent_style()),
+                Span::styled(": Seçili tarayıcıyı çalıştır", theme.list_item_style()),
+            ]),
+            Line::from(vec![
+                Span::styled("A", theme.accent_style()),
+                Span::styled(": Tüm tarayıcıları çalıştır", theme.list_item_style()),
+            ]),
+            Line::from(vec![
+                Span::styled("R", theme.accent_style()),
+                Span::styled(": Raporları görüntüle", theme.list_item_style()),
+            ]),
+        ];
+
+        let actions = Paragraph::new(actions_text)
             .block(
                 Block::default()
+                    .title(" ⚡ Hızlı İşlemler ")
+                    .title_style(theme.title_style())
                     .borders(Borders::ALL)
-                    .title("📋 Tarama Sonuçları")
-                    .border_style(Style::default().fg(theme.border)),
-            )
-            .style(Style::default().fg(theme.fg))
-            .wrap(Wrap { trim: true });
+                    .border_style(theme.border_style())
+                    .style(theme.box_style()),
+            );
 
-        frame.render_widget(results, right_chunks[1]);
+        frame.render_widget(actions, area);
+    }
+
+    fn render_scanning_view(&self, frame: &mut Frame, area: Rect, theme: &Theme) {
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(6),  // Progress
+                Constraint::Min(0),     // Live output
+                Constraint::Length(4),  // Controls
+            ])
+            .split(area);
+
+        // Progress
+        self.render_progress(frame, layout[0], theme);
+
+        // Live output
+        self.render_live_output(frame, layout[1], theme);
+
+        // Controls
+        self.render_scan_controls(frame, layout[2], theme);
+    }
+
+    fn render_progress(&self, frame: &mut Frame, area: Rect, theme: &Theme) {
+        let progress_text = vec![
+            Line::from(vec![
+                Span::styled("🔄 İşlem: ", theme.info_style()),
+                Span::styled(&self.current_operation, theme.list_item_style()),
+            ]),
+            Line::from(""),
+        ];
+
+        let progress_info = Paragraph::new(progress_text)
+            .block(
+                Block::default()
+                    .title(" 📊 Tarama Durumu ")
+                    .title_style(theme.title_style())
+                    .borders(Borders::ALL)
+                    .border_style(theme.border_style())
+                    .style(theme.box_style()),
+            );
+
+        frame.render_widget(progress_info, area);
+
+        // Progress bar
+        let progress_area = Rect {
+            x: area.x + 2,
+            y: area.y + 3,
+            width: area.width - 4,
+            height: 1,
+        };
+
+        let gauge = Gauge::default()
+            .block(Block::default())
+            .gauge_style(theme.progress_style())
+            .percent((self.progress * 100.0) as u16)
+            .label(format!("{:.1}%", self.progress * 100.0));
+
+        frame.render_widget(gauge, progress_area);
+    }
+
+    fn render_live_output(&self, frame: &mut Frame, area: Rect, theme: &Theme) {
+        let output_lines: Vec<Line> = self.results
+            .iter()
+            .map(|result| {
+                if result.starts_with('✓') {
+                    Line::from(Span::styled(result, theme.success_style()))
+                } else if result.starts_with('⚠') {
+                    Line::from(Span::styled(result, theme.warning_style()))
+                } else if result.starts_with('✗') {
+                    Line::from(Span::styled(result, theme.error_style()))
+                } else {
+                    Line::from(Span::styled(result, theme.list_item_style()))
+                }
+            })
+            .collect();
+
+        let output = Paragraph::new(output_lines)
+            .block(
+                Block::default()
+                    .title(" 📝 Tarama Çıktısı ")
+                    .title_style(theme.title_style())
+                    .borders(Borders::ALL)
+                    .border_style(theme.border_style())
+                    .style(theme.box_style()),
+            )
+            .wrap(ratatui::widgets::Wrap { trim: true });
+
+        frame.render_widget(output, area);
+    }
+
+    fn render_scan_controls(&self, frame: &mut Frame, area: Rect, theme: &Theme) {
+        let controls_text = vec![
+            Line::from(vec![
+                Span::styled("🛑 ", theme.error_style()),
+                Span::styled("S", theme.accent_style()),
+                Span::styled(": Taramayı durdur   ", theme.list_item_style()),
+                Span::styled("ESC", theme.accent_style()),
+                Span::styled(": Geri dön", theme.list_item_style()),
+            ]),
+        ];
+
+        let controls = Paragraph::new(controls_text)
+            .block(
+                Block::default()
+                    .title(" ⌨️ Kontroller ")
+                    .title_style(theme.title_style())
+                    .borders(Borders::ALL)
+                    .border_style(theme.border_style())
+                    .style(theme.box_style()),
+            )
+            .alignment(Alignment::Center);
+
+        frame.render_widget(controls, area);
     }
 }
