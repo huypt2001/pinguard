@@ -69,6 +69,7 @@ pub fn build_cli_app() -> Command {
         .subcommand(build_database_command())
         .subcommand(build_cve_command())
         .subcommand(build_schedule_command())
+        .subcommand(build_backup_command())
         .subcommand(build_interactive_command())
         .subcommand(build_completion_command())
         .subcommand(build_version_command())
@@ -496,4 +497,97 @@ fn build_version_command() -> Command {
     Command::new("version")
         .about("📋 Show version information")
         .long_about("Display version and build information")
+}
+
+/// Build the backup subcommand
+fn build_backup_command() -> Command {
+    Command::new("backup")
+        .about("💾 Backup and restore system state")
+        .long_about(
+            "Manage system backups and restore points.\n\n\
+            Available operations:\n\
+            • create   - Create a new backup snapshot\n\
+            • list     - List available backups\n\
+            • restore  - Restore from a backup\n\
+            • verify   - Verify backup integrity\n\
+            • cleanup  - Clean up old backups\n\
+            • stats    - Show backup statistics"
+        )
+        .subcommand(
+            Command::new("create")
+                .about("Create a new backup snapshot")
+                .arg(
+                    Arg::new("description")
+                        .short('d')
+                        .long("description")
+                        .value_name("TEXT")
+                        .help("Description for this backup")
+                        .default_value("Manual backup via CLI")
+                )
+                .arg(
+                    Arg::new("paths")
+                        .short('p')
+                        .long("paths")
+                        .value_name("PATH")
+                        .action(ArgAction::Append)
+                        .help("Specific paths to backup")
+                        .long_help("Specify custom paths to backup. Default: /etc, /usr/local, /var/log")
+                        .value_hint(ValueHint::DirPath)
+                )
+        )
+        .subcommand(
+            Command::new("list")
+                .about("List available backup snapshots")
+                .arg(
+                    Arg::new("stats")
+                        .short('s')
+                        .long("stats")
+                        .action(ArgAction::SetTrue)
+                        .help("Show detailed statistics")
+                )
+        )
+        .subcommand(
+            Command::new("restore")
+                .about("Restore system from a backup")
+                .arg(
+                    Arg::new("id")
+                        .value_name("BACKUP_ID")
+                        .help("Backup ID to restore from")
+                        .required(true)
+                )
+                .arg(
+                    Arg::new("dry-run")
+                        .long("dry-run")
+                        .action(ArgAction::SetTrue)
+                        .help("Simulate restore without making changes")
+                )
+        )
+        .subcommand(
+            Command::new("verify")
+                .about("Verify backup integrity")
+                .arg(
+                    Arg::new("id")
+                        .value_name("BACKUP_ID")
+                        .help("Backup ID to verify")
+                        .required(true)
+                )
+        )
+        .subcommand(
+            Command::new("cleanup")
+                .about("Clean up old backups")
+                .arg(
+                    Arg::new("days")
+                        .short('d')
+                        .long("days")
+                        .value_name("DAYS")
+                        .help("Remove backups older than N days")
+                        .default_value("30")
+                )
+        )
+        .subcommand(
+            Command::new("stats")
+                .about("Show backup system statistics")
+        )
+        .subcommand_required(true)
+        .arg_required_else_help(true)
 }

@@ -8,6 +8,7 @@ mod fixers;
 mod report;
 mod scanners;
 mod scheduler;
+mod backup;
 
 use cli::CliApp;
 

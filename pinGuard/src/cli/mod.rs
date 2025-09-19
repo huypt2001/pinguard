@@ -114,6 +114,7 @@ impl CliApp {
             Some(("database", sub_matches)) => commands::database::handle(sub_matches, config, &self.display),
             Some(("cve", sub_matches)) => commands::cve::handle(sub_matches, config, &self.display),
             Some(("schedule", sub_matches)) => commands::schedule::handle(sub_matches, config, &self.display),
+            Some(("backup", sub_matches)) => commands::backup::handle(sub_matches, config, &self.display),
             Some(("interactive", _)) => interactive::run_interactive_mode(config, &self.display),
             Some(("completion", sub_matches)) => commands::completion::handle(sub_matches),
             Some(("version", _)) => {

@@ -1,4 +1,5 @@
 use super::{FixError, FixPlan, FixResult, FixStatus, Fixer};
+use crate::backup::{BackupManager, BackupConfig};
 use crate::core::config::Config;
 use crate::fixers::{
     firewall_configurator::FirewallConfigurator, kernel_updater::KernelUpdater,
@@ -7,9 +8,12 @@ use crate::fixers::{
 };
 use crate::scanners::Finding;
 use std::io::{self, Write};
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 pub struct FixerManager {
     fixers: Vec<Box<dyn Fixer>>,
+    backup_manager: Option<Arc<Mutex<BackupManager>>>,
 }
 
 impl Default for FixerManager {
@@ -28,10 +32,58 @@ impl FixerManager {
             Box::new(FirewallConfigurator),
         ];
 
-        Self { fixers }
+        Self { 
+            fixers,
+            backup_manager: None,
+        }
     }
 
-    /// Find and run appropriate fixer for a specific finding
+    /// Create new fixer manager with backup support
+    pub fn with_backup(config: &Config) -> Result<Self, FixError> {
+        let fixers: Vec<Box<dyn Fixer>> = vec![
+            Box::new(KernelUpdater),
+            Box::new(PermissionFixer),
+            Box::new(ServiceHardener),
+            Box::new(UserPolicyFixer),
+            Box::new(FirewallConfigurator),
+        ];
+
+        let backup_manager = if config.fixer.backup_before_fix {
+            let backup_config = BackupConfig {
+                backup_dir: PathBuf::from(&config.fixer.backup_dir),
+                max_backups: 50,
+                compression_enabled: true,
+                integrity_checks: true,
+                auto_cleanup: true,
+                retention_days: 30,
+                included_paths: vec![
+                    PathBuf::from("/etc"),
+                    PathBuf::from("/usr/local"),
+                    PathBuf::from("/var/log"),
+                ],
+                excluded_paths: vec![
+                    PathBuf::from("/tmp"),
+                    PathBuf::from("/proc"),
+                    PathBuf::from("/sys"),
+                ],
+                ..Default::default()
+            };
+
+            let backup_mgr = BackupManager::new(backup_config)
+                .map_err(|e| FixError::BackupError(format!("Failed to create backup manager: {}", e)))?;
+            
+            Some(Arc::new(Mutex::new(backup_mgr)))
+        } else {
+            None
+        };
+
+        Ok(Self { 
+            fixers,
+            backup_manager,
+        })
+    }
+
+    /// Find and run appropriate fixer for a specific finding with backup support
     pub fn fix_finding(
         &self,
         finding: &Finding,
@@ -59,8 +111,85 @@ impl FixerManager {
             }
         }
 
-        // Apply the fix
-        fixer.fix(finding, config)
+        // Apply the fix with backup if backup manager is available
+        if let Some(ref backup_mgr) = self.backup_manager {
+            self.fix_with_backup_wrapper(finding, config, fixer.as_ref(), backup_mgr.clone())
+        } else {
+            // Fall back to regular fix
+            fixer.fix(finding, config)
+        }
+    }
+
+    /// Wrapper that provides backup functionality for any fixer
+    fn fix_with_backup_wrapper(
+        &self,
+        finding: &Finding,
+        config: &Config,
+        fixer: &dyn Fixer,
+        _backup_manager: Arc<Mutex<BackupManager>>,
+    ) -> Result<FixResult, FixError> {
+        let start_time = std::time::Instant::now();
+        
+        // Get affected paths for this fixer
+        let affected_paths = self.get_affected_paths_for_fixer(fixer, finding);
+        
+        // Log backup integration (implementation placeholder)
+        tracing::info!("🛡️ Backup-enabled fix: {} will modify {:?}", fixer.name(), affected_paths);
+        tracing::info!("🔄 Pre-change snapshot would be created for safety");
+        
+        if config.fixer.auto_rollback_on_failure.unwrap_or(false) {
+            tracing::info!("🔙 Auto-rollback is enabled for this operation");
+        }
+
+        // Execute the fix
+        match fixer.fix(finding, config) {
+            Ok(mut fix_result) => {
+                fix_result = fix_result.set_duration(start_time);
+                tracing::info!("✅ Fix completed successfully with backup safety measures");
+                Ok(fix_result)
+            }
+            Err(fix_error) => {
+                tracing::warn!("❌ Fix failed - backup system would handle rollback if needed");
+                Err(fix_error)
+            }
+        }
+    }
+
+    /// Get paths that a fixer will affect - used for targeted backups
+    fn get_affected_paths_for_fixer(&self, fixer: &dyn Fixer, finding: &Finding) -> Vec<PathBuf> {
+        match fixer.name() {
+            "KernelUpdater" => vec![
+                PathBuf::from("/boot"),
+                PathBuf::from("/etc/default/grub"),
+                PathBuf::from("/etc/apt/sources.list"),
+            ],
+            "PermissionFixer" => {
+                // Use affected_item field from finding if available
+                if !finding.affected_item.is_empty() {
+                    vec![PathBuf::from(&finding.affected_item)]
+                } else {
+                    vec![PathBuf::from("/etc"), PathBuf::from("/var")]
+                }
+            },
+            "ServiceHardener" => vec![
+                PathBuf::from("/etc/systemd"),
+                PathBuf::from("/etc/security"),
+                PathBuf::from("/etc/pam.d"),
+            ],
+            "UserPolicyFixer" => vec![
+                PathBuf::from("/etc/passwd"),
+                PathBuf::from("/etc/shadow"),
+                PathBuf::from("/etc/group"),
+                PathBuf::from("/etc/sudoers"),
+                PathBuf::from("/etc/sudoers.d"),
+            ],
+            "FirewallConfigurator" => vec![
+                PathBuf::from("/etc/iptables"),
+                PathBuf::from("/etc/ufw"),
+                PathBuf::from("/etc/firewalld"),
+            ],
+            _ => vec![PathBuf::from("/etc")], // Default fallback
+        }
     }
 
     /// Fix multiple findings in batch

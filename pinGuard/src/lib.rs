@@ -10,6 +10,7 @@ pub mod fixers;
 pub mod report;
 pub mod scanners;
 pub mod scheduler;
+pub mod backup;
 
 // Test utilities (only available during testing)
 #[cfg(test)]

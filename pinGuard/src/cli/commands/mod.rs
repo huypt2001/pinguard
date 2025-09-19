@@ -8,5 +8,6 @@ pub mod database;
 pub mod cve;
 pub mod schedule;
 pub mod completion;
+pub mod backup;
 
 use crate::core::errors::PinGuardResult;

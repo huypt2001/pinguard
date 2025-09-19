@@ -88,6 +88,7 @@ pub struct FixerConfig {
     pub require_confirmation: bool,
     pub backup_before_fix: bool,
     pub backup_dir: String,
+    pub auto_rollback_on_failure: Option<bool>,
     pub enabled_modules: Vec<String>,
 }
 
@@ -165,6 +166,7 @@ impl Config {
                 require_confirmation: true,
                 backup_before_fix: true,
                 backup_dir: "./backups".to_string(),
+                auto_rollback_on_failure: Some(false),
                 enabled_modules: vec![
                     "package_updater".to_string(),
                     "kernel_updater".to_string(),
