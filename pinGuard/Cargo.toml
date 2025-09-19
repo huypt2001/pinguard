@@ -26,12 +26,13 @@ name = "pinGuard"
 path = "src/main.rs"
 
 [features]
-default = ["tls", "json-reports"]
+default = ["tls", "json-reports", "tui"]
 tls = ["reqwest/native-tls"]
 rustls = ["reqwest/rustls-tls"]
 json-reports = ["serde_json"]
 html-reports = []
 pdf-reports = ["printpdf"]
+tui = ["ratatui", "crossterm", "tui-input"]
 benchmarks = []
 
 [dependencies]
@@ -58,6 +59,11 @@ anyhow = "1.0"
 sha2 = "0.10"
 flate2 = "1.0"
 tempfile = "3.8"
+
+# TUI Dependencies
+ratatui = { version = "0.26", features = ["all-widgets"], optional = true }
+crossterm = { version = "0.27", optional = true }
+tui-input = { version = "0.8", optional = true }
 
 [dev-dependencies]
 tempfile = "3.0"

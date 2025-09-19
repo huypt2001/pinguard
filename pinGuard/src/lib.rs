@@ -12,6 +12,10 @@ pub mod scanners;
 pub mod scheduler;
 pub mod backup;
 
+// TUI module (only available when feature is enabled)
+#[cfg(feature = "tui")]
+pub mod tui;
+
 // Test utilities (only available during testing)
 #[cfg(test)]
 pub mod testing;
