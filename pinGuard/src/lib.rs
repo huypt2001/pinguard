@@ -2,6 +2,7 @@
 //!
 //! This library provides security scanning and remediation capabilities for Linux systems.
 
+pub mod cli;
 pub mod core;
 pub mod cve;
 pub mod database;
