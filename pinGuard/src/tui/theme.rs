@@ -131,11 +131,16 @@ impl Theme {
         }
     }
 
-    /// Severity göstergesi için style döndür
+    /// Severity göstergisi için style döndür
     pub fn severity_style(&self, severity: &str) -> Style {
         Style::default()
             .fg(self.severity_color(severity))
             .add_modifier(Modifier::BOLD)
+    }
+
+    /// Accent style (vurgu için)
+    pub fn accent_style(&self) -> Style {
+        Style::default().fg(self.accent).add_modifier(Modifier::BOLD)
     }
 }
 

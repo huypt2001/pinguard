@@ -173,7 +173,7 @@ impl Screen for MainMenuScreen {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 impl AsyncKeyHandler for MainMenuScreen {
     async fn handle_key_events(&mut self, key_event: KeyEvent) 
         -> Result<Option<ScreenAction>, PinGuardError> {

@@ -64,7 +64,7 @@ pub trait Screen {
 }
 
 /// Async key handler trait
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 pub trait AsyncKeyHandler {
     /// Klavye input'unu handle et
     async fn handle_key_events(&mut self, key_event: KeyEvent) 

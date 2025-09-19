@@ -40,7 +40,7 @@ impl Screen for SettingsScreen {
     }
 }
 
-#[async_trait::async_trait]
+#[async_trait::async_trait(?Send)]
 impl AsyncKeyHandler for SettingsScreen {
     async fn handle_key_events(&mut self, _key_event: KeyEvent) 
         -> Result<Option<ScreenAction>, PinGuardError> {

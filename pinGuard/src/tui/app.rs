@@ -94,6 +94,32 @@ impl App {
     /// Ekran değiştir
     pub fn switch_screen(&mut self, screen_type: ScreenType) {
         if self.screens.contains_key(&screen_type) {
+            // Fixer'a geçerken scanner'dan scan sonuçlarını aktar
+            if screen_type == ScreenType::Fixer {
+                let scan_results = if let Some(AppScreen::Scanner(scanner_screen)) = self.screens.get(&ScreenType::Scanner) {
+                    scanner_screen.get_scan_results().to_vec()
+                } else {
+                    Vec::new()
+                };
+                
+                if let Some(AppScreen::Fixer(fixer_screen)) = self.screens.get_mut(&ScreenType::Fixer) {
+                    fixer_screen.load_findings(&scan_results);
+                }
+            }
+            
+            // Reports'a geçerken scanner'dan scan sonuçlarını aktar
+            if screen_type == ScreenType::Reports {
+                let scan_results = if let Some(AppScreen::Scanner(scanner_screen)) = self.screens.get(&ScreenType::Scanner) {
+                    scanner_screen.get_scan_results().to_vec()
+                } else {
+                    Vec::new()
+                };
+                
+                if let Some(AppScreen::Reports(reports_screen)) = self.screens.get_mut(&ScreenType::Reports) {
+                    reports_screen.load_scan_results(scan_results);
+                }
+            }
+            
             self.current_screen = screen_type;
         }
     }
@@ -303,12 +329,5 @@ impl App {
 impl Default for App {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-// Theme için accent_style eklememiz gerekiyor
-impl Theme {
-    pub fn accent_style(&self) -> Style {
-        Style::default().fg(self.accent).add_modifier(Modifier::BOLD)
     }
 }
