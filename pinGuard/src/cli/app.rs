@@ -98,7 +98,7 @@ fn build_scan_command() -> Command {
                 .value_name("MODULE")
                 .help("Scan specific module only")
                 .long_help("Run only a specific scan module instead of full scan")
-                .value_parser(["package", "kernel", "service", "network", "permission", "user", "container", "web"])
+                .value_parser(["package", "kernel", "service", "network", "permission", "user", "container", "web", "compliance"])
         )
         .arg(
             Arg::new("output")

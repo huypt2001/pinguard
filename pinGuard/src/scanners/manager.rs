@@ -4,6 +4,7 @@ use crate::scanners::{
     package_audit::PackageAudit, kernel_check::KernelCheck, network_audit::NetworkAudit,
     permission_audit::PermissionAudit, service_audit::ServiceAudit, user_audit::UserAudit,
     container_security::ContainerSecurityScanner, web_security_scanner::WebSecurityScanner,
+    compliance::ComplianceScanner,
 };
 
 pub struct ScannerManager {
@@ -28,6 +29,7 @@ impl ScannerManager {
             Box::new(NetworkAudit),
             Box::new(ContainerSecurityScanner::new()),
             Box::new(WebSecurityScanner::default()),
+            Box::new(ComplianceScanner::new()),
         ];
 
         Self { scanners }

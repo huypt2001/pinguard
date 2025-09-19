@@ -62,14 +62,14 @@ This document contains a comprehensive list of features and improvements that ca
 - [ ] Multi-cloud compliance checking
 
 ### Compliance Scanner 🔴 P0
-- [ ] CIS (Center for Internet Security) benchmark compliance
-- [ ] NIST Cybersecurity Framework alignment
-- [ ] PCI DSS compliance checking
-- [ ] ISO 27001 controls verification
-- [ ] GDPR compliance assessment
-- [ ] HIPAA security requirements
-- [ ] SOX compliance controls
-- [ ] Custom compliance framework support
+- [x] CIS (Center for Internet Security) benchmark compliance
+- [x] NIST Cybersecurity Framework alignment
+- [x] PCI DSS compliance checking
+- [x] ISO 27001 controls verification
+- [x] GDPR compliance assessment
+- [x] HIPAA security requirements
+- [x] SOX compliance controls
+- [x] Custom compliance framework support
 
 ---
 

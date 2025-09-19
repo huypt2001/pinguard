@@ -8,6 +8,7 @@ pub mod service_audit;
 pub mod user_audit;
 pub mod container_security;
 pub mod web_security_scanner;
+pub mod compliance;
 
 // Enhanced scanners using new trait system
 pub mod enhanced_package_audit;
