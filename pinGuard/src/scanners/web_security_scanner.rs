@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::process::Command;
 use std::time::Instant;
 use tracing::{debug, info, warn};
+use std::fs;
 
 /// Web Application Security Scanner
 /// Scans for web application vulnerabilities, SSL/TLS issues, and web server misconfigurations
@@ -76,6 +77,57 @@ pub struct OwaspVulnerability {
     pub test_endpoint: String,
     pub payload_used: String,
     pub response_indicators: Vec<String>,
+}
+
+/// Web application firewall detection
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebApplicationFirewall {
+    pub detected: bool,
+    pub waf_type: Option<String>,
+    pub vendor: Option<String>,
+    pub bypass_techniques: Vec<String>,
+}
+
+/// SQL injection test result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SqlInjectionTest {
+    pub endpoint: String,
+    pub parameter: String,
+    pub payload: String,
+    pub vulnerable: bool,
+    pub error_messages: Vec<String>,
+    pub database_type: Option<String>,
+}
+
+/// Cross-site scripting test result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct XssTest {
+    pub endpoint: String,
+    pub parameter: String,
+    pub payload: String,
+    pub vulnerable: bool,
+    pub xss_type: String, // reflected, stored, dom
+    pub filtered: bool,
+}
+
+/// Directory traversal test result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DirectoryTraversalTest {
+    pub endpoint: String,
+    pub payload: String,
+    pub vulnerable: bool,
+    pub files_accessed: Vec<String>,
+    pub depth_reached: u32,
+}
+
+/// Authentication bypass test result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthBypassTest {
+    pub endpoint: String,
+    pub method: String,
+    pub bypass_successful: bool,
+    pub technique_used: String,
+    pub response_code: u16,
 }
 
 impl Default for WebSecurityScanner {
@@ -781,9 +833,9 @@ impl Scanner for WebSecurityScanner {
 
     fn scan(&self) -> Result<ScanResult, ScanError> {
         let start_time = Instant::now();
-        let mut result = ScanResult::new("Web Application Security".to_string());
+        let mut result = ScanResult::new("Enhanced Web Application Security".to_string());
 
-        info!("Starting web application security scan...");
+        info!("Starting enhanced web application security scan...");
 
         // Discover web services
         let services = match self.discover_web_services() {
@@ -808,7 +860,7 @@ impl Scanner for WebSecurityScanner {
 
         let mut all_findings = Vec::new();
 
-        // SSL/TLS Certificate validation
+        // Temel güvenlik kontrolleri
         match self.validate_ssl_certificates(&services) {
             Ok(mut findings) => {
                 info!("SSL/TLS certificate validation found {} issues", findings.len());
@@ -820,7 +872,6 @@ impl Scanner for WebSecurityScanner {
             }
         }
 
-        // HTTP security headers analysis
         match self.analyze_security_headers(&services) {
             Ok(mut findings) => {
                 info!("Security headers analysis found {} issues", findings.len());
@@ -832,43 +883,88 @@ impl Scanner for WebSecurityScanner {
             }
         }
 
-        // Web server configuration analysis
-        match self.analyze_web_server_configs(&services) {
-            Ok(mut findings) => {
-                info!("Web server config analysis found {} issues", findings.len());
-                all_findings.append(&mut findings);
-            }
-            Err(e) => {
-                warn!("Web server config analysis failed: {}", e);
-                result.status = ScanStatus::Warning;
-            }
-        }
-
-        // OWASP Top 10 vulnerability detection
         match self.detect_owasp_vulnerabilities(&services) {
             Ok(mut findings) => {
-                info!("OWASP vulnerability detection found {} issues", findings.len());
+                info!("OWASP vulnerability scan found {} issues", findings.len());
                 all_findings.append(&mut findings);
             }
             Err(e) => {
-                warn!("OWASP vulnerability detection failed: {}", e);
+                warn!("OWASP vulnerability scan failed: {}", e);
                 result.status = ScanStatus::Warning;
             }
         }
 
-        // Update result with findings
+        // Gelişmiş güvenlik analizleri
+        match self.analyze_web_application_firewall(&services) {
+            Ok(mut findings) => {
+                info!("WAF analysis found {} issues", findings.len());
+                all_findings.append(&mut findings);
+            }
+            Err(e) => {
+                warn!("WAF analysis failed: {}", e);
+                result.status = ScanStatus::Warning;
+            }
+        }
+
+        match self.test_sql_injection_vulnerabilities(&services) {
+            Ok(mut findings) => {
+                info!("SQL injection testing found {} issues", findings.len());
+                all_findings.append(&mut findings);
+            }
+            Err(e) => {
+                warn!("SQL injection testing failed: {}", e);
+                result.status = ScanStatus::Warning;
+            }
+        }
+
+        match self.test_xss_vulnerabilities(&services) {
+            Ok(mut findings) => {
+                info!("XSS testing found {} issues", findings.len());
+                all_findings.append(&mut findings);
+            }
+            Err(e) => {
+                warn!("XSS testing failed: {}", e);
+                result.status = ScanStatus::Warning;
+            }
+        }
+
+        match self.test_directory_traversal(&services) {
+            Ok(mut findings) => {
+                info!("Directory traversal testing found {} issues", findings.len());
+                all_findings.append(&mut findings);
+            }
+            Err(e) => {
+                warn!("Directory traversal testing failed: {}", e);
+                result.status = ScanStatus::Warning;
+            }
+        }
+
+        match self.analyze_authentication_security(&services) {
+            Ok(mut findings) => {
+                info!("Authentication security analysis found {} issues", findings.len());
+                all_findings.append(&mut findings);
+            }
+            Err(e) => {
+                warn!("Authentication security analysis failed: {}", e);
+                result.status = ScanStatus::Warning;
+            }
+        }
+
+        // Sonuçları ekle
         for finding in all_findings {
             result.add_finding(finding);
         }
 
-        let duration = start_time.elapsed();
-        result.set_duration(duration.as_millis() as u64);
-        result.metadata.scanner_version = "0.1.0".to_string();
+        result.set_duration(start_time.elapsed().as_millis() as u64);
+
+        if result.status != ScanStatus::Warning && result.status != ScanStatus::Skipped("No web services found".to_string()) {
+            result.status = ScanStatus::Success;
+        }
 
         info!(
-            "Web application security scan completed in {}ms with {} findings",
-            duration.as_millis(),
-            result.findings.len()
+            "Enhanced web security scan completed: {} findings in {}ms",
+            result.findings.len(),
+            start_time.elapsed().as_millis()
         );
 
         Ok(result)
@@ -876,6 +972,328 @@ impl Scanner for WebSecurityScanner {
 
     fn is_enabled(&self, config: &crate::core::config::Config) -> bool {
         config.scanner.enabled_modules.contains(&"web_security".to_string())
+    }
+}
+
+impl WebSecurityScanner {
+    /// Analyze Web Application Firewall presence
+    fn analyze_web_application_firewall(&self, services: &[WebService]) -> Result<Vec<Finding>, ScanError> {
+        info!("Analyzing Web Application Firewall presence...");
+        let mut findings = Vec::new();
+
+        for service in services {
+            // Check for WAF indicators in headers
+            let mut waf_detected = false;
+            let mut waf_type = None;
+
+            // Common WAF detection signatures
+            for (header, value) in &service.response_headers {
+                let header_lower = header.to_lowercase();
+                let value_lower = value.to_lowercase();
+
+                if header_lower.contains("cloudflare") || value_lower.contains("cloudflare") {
+                    waf_detected = true;
+                    waf_type = Some("Cloudflare".to_string());
+                } else if header_lower.contains("x-sucuri") || value_lower.contains("sucuri") {
+                    waf_detected = true;
+                    waf_type = Some("Sucuri".to_string());
+                } else if header_lower.contains("x-akamai") || value_lower.contains("akamai") {
+                    waf_detected = true;
+                    waf_type = Some("Akamai".to_string());
+                }
+            }
+
+            if !waf_detected {
+                findings.push(Finding {
+                    id: format!("WEB-NO-WAF-{}", service.port),
+                    title: format!("No Web Application Firewall detected on port {}", service.port),
+                    description: format!(
+                        "Web service on port {} does not appear to be protected by a Web Application Firewall.",
+                        service.port
+                    ),
+                    severity: Severity::Medium,
+                    category: Category::Security,
+                    affected_item: format!("{}://{}:{}", service.protocol, service.binding, service.port),
+                    current_value: Some("No WAF detected".to_string()),
+                    recommended_value: Some("Consider implementing WAF protection".to_string()),
+                    references: vec![
+                        "https://owasp.org/www-community/Web_Application_Firewall".to_string(),
+                    ],
+                    cve_ids: vec![],
+                    fix_available: true,
+                });
+            }
+        }
+
+        Ok(findings)
+    }
+
+    /// Test for SQL injection vulnerabilities
+    fn test_sql_injection_vulnerabilities(&self, services: &[WebService]) -> Result<Vec<Finding>, ScanError> {
+        info!("Testing for SQL injection vulnerabilities...");
+        let mut findings = Vec::new();
+
+        // Basic SQL injection payloads
+        let sql_payloads = vec![
+            "' OR '1'='1",
+            "'; DROP TABLE users; --",
+            "' UNION SELECT NULL,NULL,NULL--",
+            "admin'--",
+            "1' OR 1=1#",
+        ];
+
+        for service in services.iter().take(3) { // Limit testing to avoid overwhelming the service
+            for payload in &sql_payloads {
+                // Test basic endpoint with SQL injection payload
+                let test_url = format!("{}://{}:{}/login?user={}", 
+                    service.protocol.to_lowercase(), 
+                    service.binding, 
+                    service.port, 
+                    payload
+                );
+
+                if let Ok(output) = Command::new("curl")
+                    .args(&["-s", "-m", "5", &test_url])
+                    .output()
+                {
+                    let response = String::from_utf8_lossy(&output.stdout);
+                    
+                    // Check for SQL error indicators
+                    if response.contains("SQL syntax") || 
+                       response.contains("mysql_fetch") ||
+                       response.contains("ORA-") ||
+                       response.contains("PostgreSQL") ||
+                       response.contains("SQLite") {
+                        
+                        findings.push(Finding {
+                            id: format!("WEB-SQL-INJECTION-{}-{}", service.port, payload.len()),
+                            title: format!("Potential SQL injection on port {}", service.port),
+                            description: format!(
+                                "SQL injection vulnerability detected on {}. Payload '{}' returned database error messages.",
+                                test_url, payload
+                            ),
+                            severity: Severity::High,
+                            category: Category::Security,
+                            affected_item: test_url,
+                            current_value: Some("Vulnerable to SQL injection".to_string()),
+                            recommended_value: Some("Implement parameterized queries".to_string()),
+                            references: vec![
+                                "https://owasp.org/www-community/attacks/SQL_Injection".to_string(),
+                            ],
+                            cve_ids: vec![],
+                            fix_available: true,
+                        });
+                        break; // Stop testing this service after finding vulnerability
+                    }
+                }
+            }
+        }
+
+        Ok(findings)
+    }
+
+    /// Test for Cross-Site Scripting (XSS) vulnerabilities
+    fn test_xss_vulnerabilities(&self, services: &[WebService]) -> Result<Vec<Finding>, ScanError> {
+        info!("Testing for XSS vulnerabilities...");
+        let mut findings = Vec::new();
+
+        // Basic XSS payloads
+        let xss_payloads = vec![
+            "<script>alert('XSS')</script>",
+            "<img src=x onerror=alert('XSS')>",
+            "javascript:alert('XSS')",
+            "<svg onload=alert('XSS')>",
+        ];
+
+        for service in services.iter().take(3) { // Limit testing
+            for payload in &xss_payloads {
+                let test_url = format!("{}://{}:{}/search?q={}", 
+                    service.protocol.to_lowercase(), 
+                    service.binding, 
+                    service.port, 
+                    payload
+                );
+
+                if let Ok(output) = Command::new("curl")
+                    .args(&["-s", "-m", "5", &test_url])
+                    .output()
+                {
+                    let response = String::from_utf8_lossy(&output.stdout);
+                    
+                    // Check if payload is reflected unescaped
+                    if response.contains(payload) && !response.contains("&lt;script&gt;") {
+                        findings.push(Finding {
+                            id: format!("WEB-XSS-{}-{}", service.port, payload.len()),
+                            title: format!("Potential XSS vulnerability on port {}", service.port),
+                            description: format!(
+                                "Cross-Site Scripting vulnerability detected. Payload '{}' was reflected unescaped.",
+                                payload
+                            ),
+                            severity: Severity::High,
+                            category: Category::Security,
+                            affected_item: test_url,
+                            current_value: Some("Vulnerable to XSS".to_string()),
+                            recommended_value: Some("Implement proper input validation and output encoding".to_string()),
+                            references: vec![
+                                "https://owasp.org/www-community/attacks/xss/".to_string(),
+                            ],
+                            cve_ids: vec![],
+                            fix_available: true,
+                        });
+                        break; // Stop testing this service after finding vulnerability
+                    }
+                }
+            }
+        }
+
+        Ok(findings)
+    }
+
+    /// Test for directory traversal vulnerabilities
+    fn test_directory_traversal(&self, services: &[WebService]) -> Result<Vec<Finding>, ScanError> {
+        info!("Testing for directory traversal vulnerabilities...");
+        let mut findings = Vec::new();
+
+        // Directory traversal payloads
+        let traversal_payloads = vec![
+            "../../../etc/passwd",
+            "..\\..\\..\\windows\\system32\\drivers\\etc\\hosts",
+            "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd",
+            "....//....//....//etc/passwd",
+        ];
+
+        for service in services.iter().take(3) { // Limit testing
+            for payload in &traversal_payloads {
+                let test_url = format!("{}://{}:{}/file?path={}", 
+                    service.protocol.to_lowercase(), 
+                    service.binding, 
+                    service.port, 
+                    payload
+                );
+
+                if let Ok(output) = Command::new("curl")
+                    .args(&["-s", "-m", "5", &test_url])
+                    .output()
+                {
+                    let response = String::from_utf8_lossy(&output.stdout);
+                    
+                    // Check for signs of successful directory traversal
+                    if response.contains("root:") || 
+                       response.contains("bin/bash") ||
+                       response.contains("# Copyright") ||
+                       response.contains("localhost") {
+                        
+                        findings.push(Finding {
+                            id: format!("WEB-DIR-TRAVERSAL-{}-{}", service.port, payload.len()),
+                            title: format!("Directory traversal vulnerability on port {}", service.port),
+                            description: format!(
+                                "Directory traversal vulnerability detected. Payload '{}' accessed system files.",
+                                payload
+                            ),
+                            severity: Severity::High,
+                            category: Category::Security,
+                            affected_item: test_url,
+                            current_value: Some("Vulnerable to directory traversal".to_string()),
+                            recommended_value: Some("Implement proper input validation and file access controls".to_string()),
+                            references: vec![
+                                "https://owasp.org/www-community/attacks/Path_Traversal".to_string(),
+                            ],
+                            cve_ids: vec![],
+                            fix_available: true,
+                        });
+                        break; // Stop testing this service after finding vulnerability
+                    }
+                }
+            }
+        }
+
+        Ok(findings)
+    }
+
+    /// Analyze authentication security
+    fn analyze_authentication_security(&self, services: &[WebService]) -> Result<Vec<Finding>, ScanError> {
+        info!("Analyzing authentication security...");
+        let mut findings = Vec::new();
+
+        for service in services {
+            // Test for default credentials
+            let default_creds = vec![
+                ("admin", "admin"),
+                ("admin", "password"),
+                ("root", "root"),
+                ("admin", ""),
+                ("", "admin"),
+            ];
+
+            for (username, password) in &default_creds {
+                let auth_test = format!("{}://{}:{}@{}:{}/", 
+                    service.protocol.to_lowercase(),
+                    username,
+                    password,
+                    service.binding, 
+                    service.port
+                );
+
+                if let Ok(output) = Command::new("curl")
+                    .args(&["-s", "-m", "5", "--connect-timeout", "3", &auth_test])
+                    .output()
+                {
+                    if output.status.success() {
+                        let response = String::from_utf8_lossy(&output.stdout);
+                        
+                        // Check if authentication was successful
+                        if !response.contains("401") && 
+                           !response.contains("403") && 
+                           !response.contains("Unauthorized") &&
+                           !response.is_empty() {
+                            
+                            findings.push(Finding {
+                                id: format!("WEB-DEFAULT-CREDS-{}-{}", service.port, username),
+                                title: format!("Default credentials detected on port {}", service.port),
+                                description: format!(
+                                    "Default credentials '{}:{}' appear to work on this web service.",
+                                    username, if password.is_empty() { "<empty>" } else { password }
+                                ),
+                                severity: Severity::High,
+                                category: Category::Security,
+                                affected_item: format!("{}:{}", service.binding, service.port),
+                                current_value: Some(format!("{}:{}", username, password)),
+                                recommended_value: Some("Change default credentials".to_string()),
+                                references: vec![
+                                    "https://owasp.org/www-community/vulnerabilities/Use_of_hard-coded_credentials".to_string(),
+                                ],
+                                cve_ids: vec![],
+                                fix_available: true,
+                            });
+                            break; // Stop testing this service after finding default creds
+                        }
+                    }
+                }
+            }
+
+            // Check for weak authentication methods
+            if let Some(auth_header) = service.response_headers.get("WWW-Authenticate") {
+                if auth_header.to_lowercase().contains("basic") {
+                    findings.push(Finding {
+                        id: format!("WEB-BASIC-AUTH-{}", service.port),
+                        title: format!("Basic authentication in use on port {}", service.port),
+                        description: "Service is using HTTP Basic Authentication which transmits credentials in base64 encoding (not encrypted).".to_string(),
+                        severity: Severity::Medium,
+                        category: Category::Security,
+                        affected_item: format!("{}:{}", service.binding, service.port),
+                        current_value: Some("Basic Authentication".to_string()),
+                        recommended_value: Some("Use modern authentication methods".to_string()),
+                        references: vec![
+                            "https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication".to_string(),
+                        ],
+                        cve_ids: vec![],
+                        fix_available: true,
+                    });
+                }
+            }
+        }
+
+        Ok(findings)
     }
 }
 

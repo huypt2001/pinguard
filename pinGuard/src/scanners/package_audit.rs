@@ -1,5 +1,6 @@
 use super::{Category, Finding, ScanError, ScanResult, ScanStatus, Scanner, Severity};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::process::Command;
 use std::time::Instant;
 use tracing::{debug, error, info, warn};
@@ -19,6 +20,23 @@ struct Package {
     status: String,
     vulnerabilities: Vec<String>, // CVE IDs
     cve_details: Vec<CveData>,    // Enriched CVE data
+    dependencies: Vec<String>,    // Package dependencies
+    size: u64,                    // Package size in bytes
+    source: String,               // Source package
+    essential: bool,              // Essential system package
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct VulnerabilityStats {
+    total_packages: usize,
+    vulnerable_packages: usize,
+    critical_cves: usize,
+    high_cves: usize,
+    medium_cves: usize,
+    low_cves: usize,
+    outdated_packages: usize,
+    unverified_packages: usize,
+    risky_packages: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -64,15 +82,29 @@ impl Scanner for PackageAudit {
 
     fn scan(&self) -> Result<ScanResult, ScanError> {
         let start_time = Instant::now();
-        let mut result = ScanResult::new("Package Audit".to_string());
+        let mut result = ScanResult::new("Enhanced Package Audit".to_string());
 
-        info!("Starting package audit scan...");
+        info!("Starting enhanced package audit scan...");
 
         // Paket listesini al
-        let packages = self.get_installed_packages()?;
+        let mut packages = self.get_installed_packages()?;
         result.set_items_scanned(packages.len() as u32);
 
         info!("{} paket tespit edildi", packages.len());
+
+        // Enhanced dependency analysis (sample only for performance)
+        if packages.len() > 100 {
+            info!("Large package count detected, analyzing sample for dependencies...");
+            let sample_size = 50; // Analyze only first 50 packages
+            if let Err(e) = self.analyze_package_dependencies(&mut packages[0..sample_size]) {
+                warn!("Dependency analysis failed: {}", e);
+            }
+        } else if let Err(e) = self.analyze_package_dependencies(&mut packages) {
+            warn!("Dependency analysis failed: {}", e);
+        }
+
+        // Risky package detection
+        self.check_risky_packages(&packages, &mut result)?;
 
         // Eski paketleri bul
         self.check_outdated_packages(&packages, &mut result)?;
@@ -92,11 +124,18 @@ impl Scanner for PackageAudit {
             info!("CVE manager not available, skipping CVE check");
         }
 
+        // Generate comprehensive statistics
+        let stats = self.generate_vulnerability_stats(&result);
+        info!(
+            "📊 Package Security Summary: {}/{} packages have vulnerabilities, {} outdated, {} from unverified sources",
+            stats.vulnerable_packages, stats.total_packages, stats.outdated_packages, stats.unverified_packages
+        );
+
         result.set_duration(start_time.elapsed().as_millis() as u64);
         result.status = ScanStatus::Success;
 
         info!(
-            "Package audit completed: {} findings",
+            "Enhanced package audit completed: {} findings",
             result.findings.len()
         );
 
@@ -137,6 +176,10 @@ impl PackageAudit {
                     status: parts[3].to_string(),
                     vulnerabilities: Vec::new(),
                     cve_details: Vec::new(),
+                    dependencies: Vec::new(),
+                    size: 0,
+                    source: parts[0].to_string(), // Default to package name
+                    essential: false,
                 });
             }
         }
@@ -178,11 +221,190 @@ impl PackageAudit {
                     status: parts[3].to_string(),
                     vulnerabilities: Vec::new(),
                     cve_details: Vec::new(),
+                    dependencies: Vec::new(),
+                    size: 0,
+                    source: parts[0].to_string(), // Default to package name
+                    essential: false,
                 });
             }
         }
 
         Ok(packages)
+    }
+
+    /// Enhanced package dependency analysis
+    fn analyze_package_dependencies(&self, packages: &mut [Package]) -> Result<(), ScanError> {
+        info!("Analyzing package dependencies...");
+        
+        for package in packages.iter_mut() {
+            // Get dependencies for each package
+            match self.get_package_dependencies(&package.name) {
+                Ok(deps) => package.dependencies = deps,
+                Err(_) => continue, // Skip on error
+            }
+            
+            // Get package size and source info
+            if let Ok(info) = self.get_package_info(&package.name) {
+                package.size = info.0;
+                package.source = info.1;
+                package.essential = info.2;
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Get package dependencies
+    fn get_package_dependencies(&self, package_name: &str) -> Result<Vec<String>, ScanError> {
+        let output = Command::new("apt-cache")
+            .args(["depends", package_name])
+            .output()
+            .map_err(|e| ScanError::CommandError(format!("apt-cache depends failed: {}", e)))?;
+            
+        if !output.status.success() {
+            return Ok(Vec::new());
+        }
+        
+        let text = String::from_utf8_lossy(&output.stdout);
+        let mut dependencies = Vec::new();
+        
+        for line in text.lines() {
+            if line.trim().starts_with("Depends:") {
+                if let Some(dep) = line.split("Depends:").nth(1) {
+                    dependencies.push(dep.trim().to_string());
+                }
+            }
+        }
+        
+        Ok(dependencies)
+    }
+    
+    /// Get package size, source and essential status
+    fn get_package_info(&self, package_name: &str) -> Result<(u64, String, bool), ScanError> {
+        let output = Command::new("dpkg-query")
+            .args(["-W", "--showformat=${Installed-Size}|${Source}|${Essential}\n", package_name])
+            .output()
+            .map_err(|e| ScanError::CommandError(format!("dpkg-query info failed: {}", e)))?;
+            
+        if !output.status.success() {
+            return Ok((0, package_name.to_string(), false));
+        }
+        
+        let text = String::from_utf8_lossy(&output.stdout);
+        let parts: Vec<&str> = text.trim().split('|').collect();
+        
+        let size = parts.get(0).and_then(|s| s.parse::<u64>().ok()).unwrap_or(0) * 1024; // KB to bytes
+        let source = parts.get(1).map(|s| s.to_string()).unwrap_or_else(|| package_name.to_string());
+        let essential = parts.get(2).map(|s| *s == "yes").unwrap_or(false);
+        
+        Ok((size, source, essential))
+    }
+    
+    /// Check for risky or suspicious packages
+    fn check_risky_packages(&self, packages: &[Package], result: &mut ScanResult) -> Result<(), ScanError> {
+        info!("Checking for risky packages...");
+        
+        let risky_patterns = [
+            "backdoor", "keylogger", "rootkit", "trojan", "malware",
+            "bitcoin", "miner", "crypto", "tor", "proxy", "tunnel"
+        ];
+        
+        let suspicious_sources = HashSet::from([
+            "unknown", "unofficial", "third-party", "custom"
+        ]);
+        
+        for package in packages {
+            // Check package name for risky patterns
+            let package_lower = package.name.to_lowercase();
+            for pattern in &risky_patterns {
+                if package_lower.contains(pattern) {
+                    let finding = Finding {
+                        id: format!("PKG-RISKY-{}", package.name),
+                        title: format!("Risky package detected: {}", package.name),
+                        description: format!(
+                            "Package '{}' contains suspicious keyword '{}' and may pose security risks.",
+                            package.name, pattern
+                        ),
+                        severity: Severity::High,
+                        category: Category::Security,
+                        affected_item: package.name.clone(),
+                        current_value: Some(package.version.clone()),
+                        recommended_value: Some("Review and remove if unnecessary".to_string()),
+                        references: vec![
+                            "https://wiki.debian.org/PackageSecurity".to_string(),
+                        ],
+                        cve_ids: vec![],
+                        fix_available: true,
+                    };
+                    result.add_finding(finding);
+                }
+            }
+            
+            // Check for packages from suspicious sources
+            if suspicious_sources.contains(package.source.as_str()) {
+                let finding = Finding {
+                    id: format!("PKG-SRC-{}", package.name),
+                    title: format!("Package from unverified source: {}", package.name),
+                    description: format!(
+                        "Package '{}' is from potentially unverified source: '{}'",
+                        package.name, package.source
+                    ),
+                    severity: Severity::Medium,
+                    category: Category::Security,
+                    affected_item: package.name.clone(),
+                    current_value: Some(package.source.clone()),
+                    recommended_value: Some("Verify package authenticity".to_string()),
+                    references: vec![
+                        "https://wiki.debian.org/RepositoryFormat".to_string(),
+                    ],
+                    cve_ids: vec![],
+                    fix_available: false,
+                };
+                result.add_finding(finding);
+            }
+        }
+        
+        Ok(())
+    }
+    
+    /// Generate vulnerability statistics
+    fn generate_vulnerability_stats(&self, result: &ScanResult) -> VulnerabilityStats {
+        let mut stats = VulnerabilityStats {
+            total_packages: result.metadata.items_scanned as usize,
+            vulnerable_packages: 0,
+            critical_cves: 0,
+            high_cves: 0,
+            medium_cves: 0,
+            low_cves: 0,
+            outdated_packages: 0,
+            unverified_packages: 0,
+            risky_packages: 0,
+        };
+        
+        let mut vulnerable_packages = HashSet::new();
+        
+        for finding in &result.findings {
+            match finding.severity {
+                Severity::Critical => stats.critical_cves += 1,
+                Severity::High => stats.high_cves += 1,
+                Severity::Medium => stats.medium_cves += 1,
+                Severity::Low => stats.low_cves += 1,
+                _ => {}
+            }
+            
+            if finding.id.contains("CVE") {
+                vulnerable_packages.insert(&finding.affected_item);
+            } else if finding.id.contains("OUT") {
+                stats.outdated_packages += 1;
+            } else if finding.id.contains("SRC") {
+                stats.unverified_packages += 1;
+            } else if finding.id.contains("RISKY") {
+                stats.risky_packages += 1;
+            }
+        }
+        
+        stats.vulnerable_packages = vulnerable_packages.len();
+        stats
     }
 
     /// Check outdated packages

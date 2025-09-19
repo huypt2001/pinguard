@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 use std::process::Command;
 use std::time::Instant;
 use tracing::{debug, info, warn};
+use std::collections::{HashMap, HashSet};
+use std::fs;
 
 use crate::cve::cve_manager::CveManager;
 use crate::database::cve_cache::{CveData, CveSeverity};
@@ -70,6 +72,44 @@ struct KubernetesNode {
     container_runtime: String,
     os_image: String,
     kernel_version: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ContainerRuntime {
+    name: String,
+    version: String,
+    vulnerabilities: Vec<String>,
+    security_features: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RegistryConfiguration {
+    url: String,
+    auth_method: String,
+    tls_verify: bool,
+    vulnerabilities_scanned: bool,
+    access_controls: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ContainerSecurityPolicy {
+    name: String,
+    allowed_images: Vec<String>,
+    forbidden_capabilities: Vec<String>,
+    required_security_contexts: Vec<String>,
+    resource_limits: HashMap<String, String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ImageScanResult {
+    image_name: String,
+    scan_time: String,
+    vulnerabilities_found: u32,
+    critical_vulns: u32,
+    high_vulns: u32,
+    medium_vulns: u32,
+    low_vulns: u32,
+    base_image_vulns: u32,
 }
 
 impl Default for ContainerSecurityScanner {
@@ -702,12 +742,12 @@ impl Scanner for ContainerSecurityScanner {
 
     fn scan(&self) -> Result<ScanResult, ScanError> {
         let start_time = Instant::now();
-        let mut result = ScanResult::new("Container Security Scanner".to_string());
+        let mut result = ScanResult::new("Enhanced Container Security Scanner".to_string());
         let mut all_findings = Vec::new();
 
-        info!("Starting container security scan...");
+        info!("Starting enhanced container security scan...");
 
-        // Scan Docker containers
+        // Temel container güvenlik taramaları
         match self.scan_docker_containers() {
             Ok(mut findings) => {
                 info!("Found {} container security issues", findings.len());
@@ -719,7 +759,6 @@ impl Scanner for ContainerSecurityScanner {
             }
         }
 
-        // Scan Docker images
         match self.scan_docker_images() {
             Ok(mut findings) => {
                 info!("Found {} image security issues", findings.len());
@@ -731,7 +770,6 @@ impl Scanner for ContainerSecurityScanner {
             }
         }
 
-        // Audit Docker daemon
         match self.audit_docker_daemon() {
             Ok(mut findings) => {
                 info!("Found {} Docker daemon configuration issues", findings.len());
@@ -743,31 +781,78 @@ impl Scanner for ContainerSecurityScanner {
             }
         }
 
-        // Audit Kubernetes cluster
-        match self.audit_kubernetes_cluster() {
+        // Gelişmiş güvenlik analizleri
+        match self.analyze_container_runtime_security(&mut result) {
+            Ok(mut findings) => {
+                info!("Found {} runtime security issues", findings.len());
+                all_findings.append(&mut findings);
+            }
+            Err(e) => {
+                warn!("Failed to analyze runtime security: {}", e);
+                result.status = ScanStatus::Warning;
+            }
+        }
+
+        match self.check_registry_configurations(&mut result) {
+            Ok(mut findings) => {
+                info!("Found {} registry configuration issues", findings.len());
+                all_findings.append(&mut findings);
+            }
+            Err(e) => {
+                warn!("Failed to check registry configurations: {}", e);
+                result.status = ScanStatus::Warning;
+            }
+        }
+
+        match self.analyze_image_vulnerabilities(&mut result) {
+            Ok(mut findings) => {
+                info!("Found {} image vulnerability issues", findings.len());
+                all_findings.append(&mut findings);
+            }
+            Err(e) => {
+                warn!("Failed to analyze image vulnerabilities: {}", e);
+                result.status = ScanStatus::Warning;
+            }
+        }
+
+        match self.check_container_network_security(&mut result) {
+            Ok(mut findings) => {
+                info!("Found {} network security issues", findings.len());
+                all_findings.append(&mut findings);
+            }
+            Err(e) => {
+                warn!("Failed to check network security: {}", e);
+                result.status = ScanStatus::Warning;
+            }
+        }
+
+        match self.analyze_kubernetes_security(&mut result) {
             Ok(mut findings) => {
                 info!("Found {} Kubernetes security issues", findings.len());
                 all_findings.append(&mut findings);
             }
             Err(e) => {
-                debug!("Kubernetes scan skipped: {}", e);
-                // Don't set warning status for K8s issues as it's optional
+                warn!("Failed to analyze Kubernetes security: {}", e);
+                result.status = ScanStatus::Warning;
             }
         }
 
-        // Update result with findings
+        result.set_items_scanned(all_findings.len() as u32);
+
         for finding in all_findings {
             result.add_finding(finding);
         }
 
-        let duration = start_time.elapsed();
-        result.set_duration(duration.as_millis() as u64);
-        result.metadata.scanner_version = "0.1.1".to_string();
+        result.set_duration(start_time.elapsed().as_millis() as u64);
+
+        if result.status != ScanStatus::Warning {
+            result.status = ScanStatus::Success;
+        }
 
         info!(
-            "Container security scan completed in {}ms with {} findings",
-            duration.as_millis(),
-            result.findings.len()
+            "Enhanced container security scan completed: {} findings in {}ms",
+            result.findings.len(),
+            start_time.elapsed().as_millis()
         );
 
         Ok(result)
@@ -778,6 +863,195 @@ impl Scanner for ContainerSecurityScanner {
             .scanner
             .enabled_modules
             .contains(&"container_security".to_string())
+    }
+}
+
+impl ContainerSecurityScanner {
+    fn analyze_container_runtime_security(&self, _result: &mut ScanResult) -> Result<Vec<Finding>, ScanError> {
+        info!("Analyzing container runtime security...");
+        let mut findings = Vec::new();
+
+        // Check for container escape vulnerabilities
+        if let Ok(output) = Command::new("docker")
+            .args(&["info", "--format", "{{.SecurityOptions}}"])
+            .output()
+        {
+            let security_opts = String::from_utf8_lossy(&output.stdout);
+            
+            if !security_opts.contains("apparmor") && !security_opts.contains("selinux") {
+                findings.push(Finding {
+                    id: "CONTAINER-NO-MANDATORY-ACCESS-CONTROL".to_string(),
+                    title: "No mandatory access control enabled".to_string(),
+                    description: "Docker is not using AppArmor or SELinux for mandatory access control, which could allow container escapes.".to_string(),
+                    severity: Severity::High,
+                    category: Category::Security,
+                    affected_item: "Docker Runtime".to_string(),
+                    current_value: Some("No MAC enabled".to_string()),
+                    recommended_value: Some("Enable AppArmor or SELinux".to_string()),
+                    references: vec![
+                        "https://docs.docker.com/engine/security/apparmor/".to_string(),
+                        "https://docs.docker.com/engine/security/selinux/".to_string(),
+                    ],
+                    cve_ids: vec![],
+                    fix_available: true,
+                });
+            }
+        }
+
+        Ok(findings)
+    }
+
+    /// Check registry configurations
+    fn check_registry_configurations(&self, _result: &mut ScanResult) -> Result<Vec<Finding>, ScanError> {
+        info!("Checking registry configurations...");
+        let mut findings = Vec::new();
+
+        // Check for insecure registries
+        if let Ok(output) = Command::new("docker")
+            .args(&["info", "--format", "{{.InsecureRegistries}}"])
+            .output()
+        {
+            let insecure_registries = String::from_utf8_lossy(&output.stdout);
+            
+            if !insecure_registries.trim().is_empty() && insecure_registries != "[]" {
+                findings.push(Finding {
+                    id: "CONTAINER-INSECURE-REGISTRIES".to_string(),
+                    title: "Insecure registries configured".to_string(),
+                    description: format!(
+                        "Docker is configured to use insecure registries: {}. This allows unencrypted communication.",
+                        insecure_registries.trim()
+                    ),
+                    severity: Severity::High,
+                    category: Category::Security,
+                    affected_item: "Docker Configuration".to_string(),
+                    current_value: Some(insecure_registries.trim().to_string()),
+                    recommended_value: Some("Use only secure registries".to_string()),
+                    references: vec![
+                        "https://docs.docker.com/registry/insecure/".to_string(),
+                    ],
+                    cve_ids: vec![],
+                    fix_available: true,
+                });
+            }
+        }
+
+        Ok(findings)
+    }
+
+    /// Analyze image vulnerabilities
+    fn analyze_image_vulnerabilities(&self, _result: &mut ScanResult) -> Result<Vec<Finding>, ScanError> {
+        info!("Analyzing image vulnerabilities...");
+        let mut findings = Vec::new();
+
+        // Check for old base images
+        if let Ok(images) = self.get_docker_images() {
+            for image in images.iter().take(10) { // Limit to first 10 images
+                // Check for common vulnerable images
+                let vulnerable_images = vec!["node:10", "python:2.7", "ubuntu:16.04", "nginx:1.16"];
+                let image_name = format!("{}:{}", image.repository, image.tag);
+                
+                for vulnerable in vulnerable_images {
+                    if image_name.contains(vulnerable) {
+                        findings.push(Finding {
+                            id: format!("CONTAINER-VULNERABLE-IMAGE-{}", image.id[..12].to_string()),
+                            title: format!("Known vulnerable image: {}", image_name),
+                            description: format!(
+                                "Image '{}' is known to have security vulnerabilities. Consider upgrading to a newer version.",
+                                image_name
+                            ),
+                            severity: Severity::High,
+                            category: Category::Security,
+                            affected_item: image_name.clone(),
+                            current_value: Some(image_name.clone()),
+                            recommended_value: Some("Upgrade to secure version".to_string()),
+                            references: vec![
+                                "https://hub.docker.com/".to_string(),
+                            ],
+                            cve_ids: vec![],
+                            fix_available: true,
+                        });
+                    }
+                }
+            }
+        }
+
+        Ok(findings)
+    }
+
+    /// Check container network security
+    fn check_container_network_security(&self, _result: &mut ScanResult) -> Result<Vec<Finding>, ScanError> {
+        info!("Checking container network security...");
+        let mut findings = Vec::new();
+
+        // Check for containers using host network
+        if let Ok(containers) = self.get_running_containers() {
+            for container in containers {
+                if container.network_mode == "host" {
+                    findings.push(Finding {
+                        id: format!("CONTAINER-HOST-NETWORK-{}", container.id[..12].to_string()),
+                        title: format!("Container using host network: {}", container.name),
+                        description: format!(
+                            "Container '{}' is using host network mode, which shares the host's network stack and reduces isolation.",
+                            container.name
+                        ),
+                        severity: Severity::High,
+                        category: Category::Security,
+                        affected_item: format!("Container: {}", container.name),
+                        current_value: Some("network_mode: host".to_string()),
+                        recommended_value: Some("Use bridge or custom network".to_string()),
+                        references: vec![
+                            "https://docs.docker.com/network/host/".to_string(),
+                        ],
+                        cve_ids: vec![],
+                        fix_available: true,
+                    });
+                }
+            }
+        }
+
+        Ok(findings)
+    }
+
+    /// Analyze Kubernetes security
+    fn analyze_kubernetes_security(&self, _result: &mut ScanResult) -> Result<Vec<Finding>, ScanError> {
+        info!("Analyzing Kubernetes security...");
+        let mut findings = Vec::new();
+
+        // Check if kubectl is available
+        if let Ok(output) = Command::new("kubectl").args(&["version", "--client"]).output() {
+            if output.status.success() {
+                // Check for cluster access
+                if let Ok(cluster_output) = Command::new("kubectl").args(&["cluster-info"]).output() {
+                    if cluster_output.status.success() {
+                        // Check for pod security policies/standards
+                        if let Ok(psp_output) = Command::new("kubectl")
+                            .args(&["get", "podsecuritypolicy"])
+                            .output()
+                        {
+                            if !psp_output.status.success() || String::from_utf8_lossy(&psp_output.stdout).contains("No resources found") {
+                                findings.push(Finding {
+                                    id: "K8S-NO-POD-SECURITY-POLICY".to_string(),
+                                    title: "No Pod Security Policies configured".to_string(),
+                                    description: "Kubernetes cluster does not have Pod Security Policies configured, which could allow insecure pod configurations.".to_string(),
+                                    severity: Severity::High,
+                                    category: Category::Security,
+                                    affected_item: "Kubernetes Cluster".to_string(),
+                                    current_value: Some("No PSP configured".to_string()),
+                                    recommended_value: Some("Configure Pod Security Policies/Standards".to_string()),
+                                    references: vec![
+                                        "https://kubernetes.io/docs/concepts/policy/pod-security-policy/".to_string(),
+                                    ],
+                                    cve_ids: vec![],
+                                    fix_available: true,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(findings)
     }
 }
 
